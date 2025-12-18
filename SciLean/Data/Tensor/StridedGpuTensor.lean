@@ -114,4 +114,91 @@ def gemm (A : StridedGpuTensor Float (Idx m × Idx k))
 
 end StridedGpuTensor
 
+-- Attention operations for strided tensors
+
+namespace StridedGpuTensor
+
+variable {seqLen headDim : ℕ}
+
+/-- Flash Attention with strided inputs.
+    Computes: output = softmax(Q @ K^T / sqrt(headDim)) @ V
+
+    Q, K, V have shape (seqLen, headDim).
+    Returns output of shape (seqLen, headDim).
+
+    Handles transposed inputs by making contiguous copies if needed.
+    The internal kernel already handles K^T, so we only need to ensure
+    Q and V are in the expected layout. -/
+def flashAttention
+    (Q : StridedGpuTensor Float (Idx seqLen × Idx headDim))
+    (K : StridedGpuTensor Float (Idx seqLen × Idx headDim))
+    (V : StridedGpuTensor Float (Idx seqLen × Idx headDim)) :
+    IO (StridedGpuTensor Float (Idx seqLen × Idx headDim)) := do
+  -- The kernel expects contiguous row-major inputs
+  -- Make contiguous copies if any input is transposed
+  let qBuf ← if Q.isContiguous then pure Q.data.buffer else do
+    let c ← Q.contiguous; pure c.data.buffer
+  let kBuf ← if K.isContiguous then pure K.data.buffer else do
+    let c ← K.contiguous; pure c.data.buffer
+  let vBuf ← if V.isContiguous then pure V.data.buffer else do
+    let c ← V.contiguous; pure c.data.buffer
+
+  let result ← Metal.GpuBuffer.flashAttention qBuf kBuf vBuf seqLen.toUSize headDim.toUSize
+  return ⟨StridedGpuBuffer.fromContiguous result #[seqLen, headDim]⟩
+
+/-- Flash Attention with causal mask and strided inputs.
+    Position i can only attend to positions ≤ i (for autoregressive models).
+
+    Q, K, V have shape (seqLen, headDim).
+    Returns output of shape (seqLen, headDim). -/
+def flashAttentionCausal
+    (Q : StridedGpuTensor Float (Idx seqLen × Idx headDim))
+    (K : StridedGpuTensor Float (Idx seqLen × Idx headDim))
+    (V : StridedGpuTensor Float (Idx seqLen × Idx headDim)) :
+    IO (StridedGpuTensor Float (Idx seqLen × Idx headDim)) := do
+  -- Make contiguous copies if needed
+  let qBuf ← if Q.isContiguous then pure Q.data.buffer else do
+    let c ← Q.contiguous; pure c.data.buffer
+  let kBuf ← if K.isContiguous then pure K.data.buffer else do
+    let c ← K.contiguous; pure c.data.buffer
+  let vBuf ← if V.isContiguous then pure V.data.buffer else do
+    let c ← V.contiguous; pure c.data.buffer
+
+  let result ← Metal.GpuBuffer.flashAttentionCausal qBuf kBuf vBuf seqLen.toUSize headDim.toUSize
+  return ⟨StridedGpuBuffer.fromContiguous result #[seqLen, headDim]⟩
+
+/-- Scaled dot-product attention using strided GEMM.
+    Computes: output = softmax(Q @ K^T / sqrt(headDim)) @ V
+
+    This version uses explicit GEMM operations instead of a fused kernel,
+    which allows K to be a transposed view (O(1) transpose).
+
+    Note: Less memory-efficient than flash attention for long sequences,
+    but more flexible with strided inputs. -/
+def scaledDotProductAttention
+    (Q : StridedGpuTensor Float (Idx seqLen × Idx headDim))
+    (K : StridedGpuTensor Float (Idx seqLen × Idx headDim))
+    (V : StridedGpuTensor Float (Idx seqLen × Idx headDim)) :
+    IO (StridedGpuTensor Float (Idx seqLen × Idx headDim)) := do
+  -- Step 1: Compute attention scores = Q @ K^T
+  -- K^T is an O(1) view operation!
+  let K_T := K.transpose  -- (seqLen, headDim) -> (headDim, seqLen)
+  let scores ← gemm Q K_T  -- (seqLen, headDim) @ (headDim, seqLen) = (seqLen, seqLen)
+
+  -- Step 2: Scale by 1/sqrt(headDim)
+  let scaleVal := 1.0 / Float.sqrt headDim.toFloat
+  let scaledScores ← Metal.GpuBuffer.scale (seqLen * seqLen).toUSize scaleVal scores.data.buffer
+  let scaledTensor : StridedGpuTensor Float (Idx seqLen × Idx seqLen) :=
+    ⟨StridedGpuBuffer.fromContiguous scaledScores #[seqLen, seqLen]⟩
+
+  -- Step 3: Softmax (row-wise)
+  let attnWeights ← Metal.GpuBuffer.softmax scaledTensor.data.buffer seqLen.toUSize seqLen.toUSize
+  let attnTensor : StridedGpuTensor Float (Idx seqLen × Idx seqLen) :=
+    ⟨StridedGpuBuffer.fromContiguous attnWeights #[seqLen, seqLen]⟩
+
+  -- Step 4: Apply to values: output = attnWeights @ V
+  gemm attnTensor V  -- (seqLen, seqLen) @ (seqLen, headDim) = (seqLen, headDim)
+
+end StridedGpuTensor
+
 end SciLean
