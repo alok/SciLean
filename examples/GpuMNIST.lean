@@ -17,6 +17,7 @@ All GPU<->CPU transfers must use `.upload` or `.download` - no implicit coercion
 
 import SciLean.FFI.Metal
 import SciLean.FFI.Float32Array
+import Batteries.Lean.Float
 
 open SciLean.Metal
 
@@ -124,8 +125,8 @@ structure GpuGradients where
 /-! ## Forward Pass -/
 
 /-- Forward pass (internal, no batching): x → h = gelu(W1 @ x + b1) → o = W2 @ h + b2 → softmax(o)
-    Returns (softmax_output, hidden_pre_activation, hidden_post_activation)
-    for use in backward pass -/
+    Returns (softmax output, hidden pre-activation, hidden post-activation)
+    for use in backward. -/
 def forwardBatchInternal (weights : GpuWeights) (x : GpuBuffer)
     (batchSize : USize) : IO (GpuBuffer × GpuBuffer × GpuBuffer × GpuBuffer) := do
   -- x is [batchSize, 784] stored as [batchSize * 784]
@@ -195,7 +196,7 @@ def backwardBatch (weights : GpuWeights) (x y target h_pre h : GpuBuffer)
 
 /-! ## SGD Update -/
 
-/-- SGD update (internal, no batching): w = w - lr * grad -/
+/-- SGD update (internal, no batching): w = w - lr times grad. -/
 def sgdUpdateInternal (weights : GpuWeights) (grads : GpuGradients)
     (lr : Float) : IO GpuWeights := do
   -- w1 = w1 - lr * dw1
@@ -219,7 +220,7 @@ def debugBuffer (name : String) (gpuBuf : GpuBuffer) (n : Nat) : IO Unit := do
   let cpuBuf ← gpuBuf.download
   let mut sum : Float := 0
   let mut minVal : Float := Float.inf
-  let mut maxVal : Float := Float.negInf
+  let mut maxVal : Float := -Float.inf
   let mut hasNaN := false
   let mut hasInf := false
   let mut numZeros : Nat := 0
@@ -390,7 +391,7 @@ def diagBatchSizes (cpuImages cpuLabels : CpuBuffer)
 
 /-- Combined training step: forward + backward + update in a single command buffer.
     This eliminates per-operation dispatch overhead for maximum throughput.
-    lr should already be scaled for batch size (lr_effective = lr / batchSize for averaging). -/
+    The learning rate should already be scaled for batch size. -/
 def trainStep (weights : GpuWeights) (images labels : GpuBuffer)
     (batchSize : USize) (lr : Float) : IO GpuWeights :=
   withBatch do
