@@ -271,7 +271,7 @@ def defFunTrans (f : Ident) (args : TSyntaxArray `ident)
 
     let statement ← mkEq lhs rhs
 
-    -- add new theorem to the enviroment
+    -- add new theorem to the environment
     let _ ← generateFunTransDefAndTheorem statement proof ctx cfg.suffix {defineNewFunction:=isDef}
 
     pure ()

@@ -27,11 +27,11 @@ private structure SystemInverse where
   lctx : LocalContext
   /-- array of new let fvars -/
   letVars : Array Expr
-  /-- array of xVars that have been succesfully eliminated and replaced by yVals -/
+  /-- array of xVars that have been successfully eliminated and replaced by yVals -/
   resolvedXVars : Array Expr
-  /-- array of xVars that have not been succesfully eliminated and still appear in xVals -/
+  /-- array of xVars that have not been successfully eliminated and still appear in xVals -/
   unresolvedXVars : Array Expr
-  /-- values of xVars in terms of yVals and potentialy few xVars that have not been eliminated -/
+  /-- values of xVars in terms of yVals and potentially few xVars that have not been eliminated -/
   xVals : Array Expr
 
 

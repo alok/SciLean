@@ -28,9 +28,9 @@ structure HasUniqueSolution {F Xs} [UncurryAll F Xs Prop] (P : F) : Prop extends
 
 /-- Finds unique {lit}`(x₁, ..., xₙ)` such that {lit}`P x₁ ... xₙ` holds.
 
-TODO: Can we return a solution if it exists and it not necessarily unique? I'm not sure if we would be able to prove {name}`decomposeSolution` then.
+TODO: Can we return a solution if it exists and it not necessarily unique? I'm not sure if we would be able to prove `decomposeSolution` then.
 
-TODO: This is related to mathlib's {name}`Classical.epsilon` i.e. the Hilbert epsilon function. Maybe redefine this function using it.
+TODO: This is related to mathlib's `Classical.epsilon` i.e. the Hilbert epsilon function. Maybe redefine this function using it.
 -/
 noncomputable
 def solveFun {F : Sort _} {Xs : outParam (Type _)} [UncurryAll F Xs Prop] [Nonempty Xs] (f : F /- Xs → ... → Prop -/) : Xs :=
@@ -81,7 +81,7 @@ theorem decompose_has_unique_solution {Xs Ys Zs : Type _} [Nonempty Xs] [Nonempt
 
 
 
-/-- This theorem allows us to decompose one problem {given}`P` into two succesives problems {given}`Q₁` and {given}`Q₂`.
+/-- This theorem allows us to decompose one problem {given}`P` into two successive problems {given}`Q₁` and {given}`Q₂`.
 -/
 theorem decomposeSolution {Xs Ys Zs : Type _} [Nonempty Xs] [Nonempty Ys] [Nonempty Zs]
   (f : Ys → Zs → Xs)  -- decomposition of unknowns
@@ -260,7 +260,7 @@ produces
   (x,y,z,w)
 ```
 
-Warring: this tactic currently uses {lit}`sorry`!-/
+Warning: this tactic currently uses {lit}`sorry`!-/
 local syntax (name:=solve_for_core_tactic) "solve_for_core " ident+ " from " num+ " := " term : conv
 
 @[inherit_doc solve_for_core_tactic]

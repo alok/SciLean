@@ -138,7 +138,7 @@ def LambdaTheorem.type (thm : LambdaTheorem) : LambdaTheoremType :=
   | .const .. => LambdaTheoremType.const
   | .proj .. => LambdaTheoremType.proj
 
-/-- Enviroment extension for lambda theorems -/
+/-- Environment extension for lambda theorems -/
 initialize lambdaTheoremsExt : SimpleScopedEnvExtension LambdaTheorem (Std.HashMap (Name×LambdaTheoremType) (Array LambdaTheorem)) ←
   registerSimpleScopedEnvExtension {
     name     := by exact decl_name%
@@ -147,11 +147,11 @@ initialize lambdaTheoremsExt : SimpleScopedEnvExtension LambdaTheorem (Std.HashM
       (fun v? => match v? with | .some v => v.push e | .none => #[e])
   }
 
-/-- Add lambda theorem to the enviroment. -/
+/-- Add lambda theorem to the environment. -/
 def addLambdaTheorem (thm : LambdaTheorem) : CoreM Unit :=
   lambdaTheoremsExt.add thm
 
-/-- Add lambda theorem to the enviroment. -/
+/-- Get lambda theorems from the environment. -/
 def getLambdaTheorems (dataSynthName : Name) (thmType : LambdaTheoremType) :
     CoreM (Array LambdaTheorem) := do
   return (lambdaTheoremsExt.getState (← getEnv))[(dataSynthName,thmType)]?.getD #[]

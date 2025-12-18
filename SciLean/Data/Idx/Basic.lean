@@ -25,7 +25,7 @@ Warning: This type is sometimes used in inconsistent way! It is treated identica
 
          Another way to deal with this problem is to make this type completely opaque, add an
          axiom that it is isomorphic to `Fin n` and panic at runtime on overflow. This would
-         prevent us from stating inconsitent theorems that could be exploited to prove `False`.
+         prevent us from stating inconsistent theorems that could be exploited to prove `False`.
 -/
 structure Idx (n : ℕ) where
   /-- Creates a `Idx n` from `i : USize` and a proof that `i.toNat < n`. -/

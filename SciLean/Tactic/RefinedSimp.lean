@@ -152,20 +152,20 @@ def theoremGuard (e : Expr) (thm : RefinedSimpTheorem) : MetaM Bool := do
           | continue
         if body == .bvar 0 then
           trace[Meta.Tactic.simp.guard] "not applying {← ppOrigin thm.origin} to \
-                          {← ppExpr e} bacause {← ppExpr x} is identity function"
+                          {← ppExpr e} because {← ppExpr x} is identity function"
           return false
       | .notConst =>
         let .lam _ _ body _ := x
           | continue
         if ¬body.hasLooseBVars then
           trace[Meta.Tactic.simp.guard] "not applying {← ppOrigin thm.origin} to \
-                          {← ppExpr e} bacause {← ppExpr x} is constant function"
+                          {← ppExpr e} because {← ppExpr x} is constant function"
           return false
 
       | .notAppOf n =>
         if x.isAppOf n then
           trace[Meta.Tactic.simp.guard] "not applying {← ppOrigin thm.origin} to \
-                          {← ppExpr e} bacause {← ppExpr x} is application of {n}"
+                          {← ppExpr e} because {← ppExpr x} is application of {n}"
           return false
         continue
     return true

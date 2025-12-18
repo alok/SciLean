@@ -286,7 +286,7 @@ def defFunProp (f : Ident) (args : TSyntaxArray `ident)
     if subgoals.length ≠ 0 then
        throwErrorAt fprop.raw s!"failed to prove `{← ppExpr statement}` with tactic `{tac.raw.prettyPrint}`"
 
-    -- add new theorem to the enviroment
+    -- add new theorem to the environment
     let _ ← defineFunPropTheorem statement proof ctx cfg.suffix {}
 
     -- generate transitive theorem

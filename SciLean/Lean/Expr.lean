@@ -188,11 +188,11 @@ def replaceExprs (e : Expr) (xs ys : Array Expr) : MetaM Expr :=
           return .yield y
       return .noMatch)
 
-/-- Replace `nth`-th occurance of bound variable i in `e` with `v`.
+/-- Replace `nth`-th occurrence of bound variable i in `e` with `v`.
 
-Returns `.inl e'` if succesfully replaced or `.inr n` if `n` occurances, `n < nth`, of `i`-th bound variables have been found in `e`.
+Returns `.inl e'` if successfully replaced or `.inr n` if `n` occurrences, `n < nth`, of `i`-th bound variables have been found in `e`.
 
-WARRNING: Currently it ignores types.
+WARNING: Currently it ignores types.
 -/
 def instantiateOnceNth (e v : Expr) (i : Nat) (nth : Nat) : Expr ⊕ Nat :=
   match e with
@@ -233,9 +233,9 @@ def instantiateOnceNth (e v : Expr) (i : Nat) (nth : Nat) : Expr ⊕ Nat :=
 
 /-- Replace bound variable with index `i` in `e` with `v` only once.
 
-You can specify that you want to replace `nth`-th occurance of that bvar.
+You can specify that you want to replace `nth`-th occurrence of that bvar.
 
-WARRNING: Currently it ignores types.
+WARNING: Currently it ignores types.
 -/
 def instantiateOnce (e v : Expr) (i : Nat) (nth := 0) : Expr :=
   match instantiateOnceNth e v i nth with

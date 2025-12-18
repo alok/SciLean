@@ -10,7 +10,7 @@ variable {R : Type} [RealScalar R]
 
 
 inductive LineSearchError where
-  /-- Line search failed bacause reached maximum iteration -/
+  /-- Line search failed because reached maximum iteration -/
   | maxIterationn
   /-- Called method is not supported -/
   | notSupported

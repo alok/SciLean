@@ -26,7 +26,7 @@ This class allows us to write code independent of particular implementation of r
 
 The main motivation for this class is to treat floating point numbers as real numbers but to minimize the impact of such unsoundness. We can write code with valid proofs and only at the last step before compilation provide inconsistent instance `Scalar Float Float`.
 
-An alternative approach to get executable code would be to add a custom compiler step which would replace every occurance of real or complex numbers with their floating point equivalent. Implementing such compiler step turned out to be quite a non-trivial task thus we are taking this type class approach. -/
+An alternative approach to get executable code would be to add a custom compiler step which would replace every occurrence of real or complex numbers with their floating point equivalent. Implementing such compiler step turned out to be quite a non-trivial task thus we are taking this type class approach. -/
 class Scalar (R : outParam (Type _)) (K : (Type _)) extends RCLike K where
   -- used for specification
   toComplex : K → ℂ

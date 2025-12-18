@@ -461,7 +461,7 @@ partial def simpForall (e : Expr) : LSimpM Result := return { expr := e }
   --           : (∀ a : p₁, q₁ a) = (∀ a : p₂, q₂ a)
   --       ```
   --       Remark: we should consider whether we want to add congruence lemma support for arbitrary `forall`-expressions.
-  --       Then, the theroem above can be marked as `@[congr]` and the following code deleted.
+  --       Then, the theorem above can be marked as `@[congr]` and the following code deleted.
   --       -/
   --       let p₁ := domain
   --       let p₂ := rd.expr
