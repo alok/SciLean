@@ -350,6 +350,10 @@ lean_exe GpuFusedKernelTest where
   root := `test.gpu_fused_kernels
   moreLinkArgs := metalLinkArgs
 
+lean_exe GpuStridedTensorTest where
+  root := `test.gpu_strided_tensor
+  moreLinkArgs := metalLinkArgs
+
 lean_exe GpuBatchingBenchmark where
   buildType := .release
   root := `examples.GpuBatchingBenchmark

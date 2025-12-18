@@ -87,3 +87,133 @@ Build docs: `cd verso-docs && lake build && .lake/build/bin/generate-docs`
 
   use lean-lsp-mcp hover on nested src code after writing it to ENSURE its in
   the right namespace. like `Float.inf` may need to be `_root_.Float.inf`.
+
+## Strided Tensor System (In Progress)
+
+**Goal:** Replace current `GpuTensor`/`GpuBufferN` with PyTorch-style strided tensors. Enables O(1) transpose/slice/permute without data copies. Critical for efficient GEMM backward in autodiff.
+
+### Core Types
+
+```lean
+-- N-D layout with strides (Array Nat for FFI compatibility)
+structure TensorLayout where
+  shape : Array Nat      -- e.g., [batch, channels, height, width]
+  strides : Array Nat    -- bytes between elements per dimension
+  offset : Nat := 0
+
+-- GPU buffer + layout metadata
+structure StridedGpuBuffer (α : Type*) [PlainDataType α] where
+  buffer : Metal.GpuBuffer
+  layout : TensorLayout
+
+-- Type-safe wrapper (shape in type via IndexType)
+structure StridedGpuTensor (α : Type*) [PlainDataType α] (ι : Type*)
+    {n : outParam ℕ} [IndexType ι n] where
+  data : StridedGpuBuffer α
+```
+
+### O(1) View Operations
+
+```lean
+-- Transpose: swap strides, no data movement
+def TensorLayout.transpose (l : TensorLayout) : TensorLayout :=
+  let n := l.rank
+  let newShape := l.shape.set! (n-2) l.shape[n-1]! |>.set! (n-1) l.shape[n-2]!
+  let newStrides := l.strides.set! (n-2) l.strides[n-1]! |>.set! (n-1) l.strides[n-2]!
+  ⟨newShape, newStrides, l.offset⟩
+
+-- Permute, slice, squeeze, unsqueeze - all O(1)
+```
+
+### GEMM Backward (The Goal)
+
+```lean
+-- For C = A @ B:
+-- dA = dC @ B^T   (O(1) transpose view!)
+-- dB = A^T @ dC   (O(1) transpose view!)
+
+@[data_synth]
+theorem StridedGpuTensor.gemm.arg_AB.HasRevFDerivM_rule :
+    HasRevFDerivM Float
+      (fun (AB : StridedGpuTensor Float (Idx m × Idx k) ×
+                 StridedGpuTensor Float (Idx k × Idx n)) =>
+        StridedGpuTensor.gemm AB.1 AB.2)
+      (fun AB => do
+        let C ← StridedGpuTensor.gemm AB.1 AB.2
+        pure (C, fun dC => do
+          let B_T := AB.2.transpose  -- O(1), no copy
+          let A_T := AB.1.transpose  -- O(1), no copy
+          let dA ← StridedGpuTensor.gemm dC B_T
+          let dB ← StridedGpuTensor.gemm A_T dC
+          pure (dA, dB))) := by trivial
+```
+
+### Metal FFI
+
+MPS supports strided access via `rowBytes` parameter:
+```objc
+MPSMatrixDescriptor* desc = [MPSMatrixDescriptor
+    matrixDescriptorWithRows: m
+    columns: k
+    rowBytes: row_stride * sizeof(float)  // non-contiguous stride
+    dataType: MPSDataTypeFloat32];
+```
+
+### Implementation Order
+
+1. `SciLean/Data/Tensor/Layout.lean` - TensorLayout struct
+2. `SciLean/FFI/Metal/StridedBuffer.lean` - StridedGpuBuffer
+3. `SciLean/Data/Tensor/StridedGpuTensor.lean` - Type-safe wrapper
+4. `ffi/metal_backend.mm` - copyStrided + gemmStrided kernels
+5. `SciLean/FFI/Metal.lean` - FFI bindings
+6. `SciLean/AD/TensorRevFDeriv.lean` - GEMM backward rule
+7. Replace `GpuTensor` → `StridedGpuTensor` throughout
+
+### Migration
+
+Total switch to strided (not a compatibility layer):
+- Port existing ops to use StridedGpuTensor
+- Remove GpuTensor/GpuBufferN once complete
+- All tensors carry layout metadata from creation
+
+## GPU Observability / Tracing
+
+Hook into Lean's compiler tracer for GPU operation visibility.
+
+### Trace Classes
+```lean
+-- Register in SciLean/FFI/Metal/Trace.lean
+initialize registerTraceClass `GPU.metal
+initialize registerTraceClass `GPU.metal.alloc
+initialize registerTraceClass `GPU.metal.transfer
+initialize registerTraceClass `GPU.metal.compute
+initialize registerTraceClass `GPU.metal.batch
+```
+
+### Usage Pattern
+```lean
+-- Wrap GPU ops with withTraceNode for hierarchical traces
+def tracedGemm (A B : GpuBuffer) (m k n : USize) : IO GpuBuffer := do
+  withTraceNode `GPU.metal.compute
+    (fun r => return s!"[{ExceptToEmoji.toEmoji r}] GEMM {m}x{k}x{n}") do
+    Metal.GpuBuffer.gemm A B m k n
+```
+
+### Enable Tracing
+```lean
+-- In Lean files
+set_option trace.GPU.metal true
+set_option trace.GPU.metal.compute true
+
+-- From command line
+lake env lean -D trace.GPU.metal=true MyFile.lean
+```
+
+### Timing Integration
+Use `Aesop.time` for nano-precision timing, accumulate in `Batteries.RBMap`:
+```lean
+def timeGPU (key : String) (op : IO α) : IO α := do
+  let (result, nanos) ← Aesop.time op
+  trace[GPU.metal.timing] "{key}: {nanos.print}"
+  return result
+```

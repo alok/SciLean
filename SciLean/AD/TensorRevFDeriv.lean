@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: SciLean contributors
 -/
 import SciLean.Data.Tensor
+import SciLean.Data.Tensor.StridedGpuTensor
 import SciLean.AD.RevFDeriv
 import SciLean.Analysis.Scalar.FloatAsReal
 import SciLean.Analysis.AdjointSpace.Basic
@@ -598,7 +599,7 @@ theorem GpuTensor.biasAdd.arg_xb.HasRevFDerivM_rule :
           pure (dy, dbias))) := by
   trivial
 
--- ### GEMM Backward (placeholder, needs transpose ops) -/
+-- ### GEMM Backward (legacy, placeholder) -/
 
 @[data_synth]
 theorem GpuTensor.gemm.arg_AB.HasRevFDerivM_rule :
@@ -608,9 +609,171 @@ theorem GpuTensor.gemm.arg_AB.HasRevFDerivM_rule :
       (fun AB => do
         let C ← GpuTensor.gemm AB.1 AB.2
         pure (C, fun dC => do
-          -- TODO: Implement proper backward using gemmNT/gemmTN with transpose
-          -- For now, return zeros (placeholder)
-          pure (AB.1, AB.2))) := by
+          -- For C = A @ B where A : (m,k), B : (k,n), C : (m,n)
+          -- dA = dC @ B^T  shape: (m,n) @ (n,k) = (m,k)
+          -- dB = A^T @ dC  shape: (k,m) @ (m,n) = (k,n)
+          let dA ← GpuTensor.gemmNT dC AB.2  -- dC @ B^T
+          let dB ← GpuTensor.gemmTN AB.1 dC  -- A^T @ dC
+          pure (dA, dB))) := by
+  trivial
+
+-- ### Strided GEMM Backward with O(1) Transpose Views -/
+
+-- ### Algebra Instances for StridedGpuTensor -/
+
+-- These enable @[data_synth] rules for strided tensors.
+-- Like GpuTensor, actual operations go through IO monad; these are structural placeholders.
+
+axiom StridedGpuTensor.defaultFloat : StridedGpuTensor Float (Idx n)
+axiom StridedGpuTensor.defaultFloat2D : StridedGpuTensor Float (Idx m × Idx n)
+
+-- 1D StridedGpuTensor instances
+noncomputable instance : Inhabited (StridedGpuTensor Float (Idx n)) := ⟨StridedGpuTensor.defaultFloat⟩
+noncomputable instance : Zero (StridedGpuTensor Float (Idx n)) where zero := StridedGpuTensor.defaultFloat
+noncomputable instance : Add (StridedGpuTensor Float (Idx n)) where add a _ := a
+noncomputable instance : Neg (StridedGpuTensor Float (Idx n)) where neg a := a
+noncomputable instance : SMul Float (StridedGpuTensor Float (Idx n)) where smul _ a := a
+noncomputable instance : HSMul ℕ (StridedGpuTensor Float (Idx n)) (StridedGpuTensor Float (Idx n)) where hSMul _ a := a
+noncomputable instance : HSMul ℤ (StridedGpuTensor Float (Idx n)) (StridedGpuTensor Float (Idx n)) where hSMul _ a := a
+
+noncomputable instance : AddCommGroup (StridedGpuTensor Float (Idx n)) where
+  add := (· + ·)
+  neg := (- ·)
+  zero := 0
+  add_assoc := sorry_proof
+  zero_add := sorry_proof
+  add_zero := sorry_proof
+  add_comm := sorry_proof
+  nsmul := fun l t => l • t
+  nsmul_zero := sorry_proof
+  nsmul_succ := sorry_proof
+  zsmul := fun z t => z • t
+  zsmul_zero' := sorry_proof
+  zsmul_succ' := sorry_proof
+  zsmul_neg' := sorry_proof
+  neg_add_cancel := sorry_proof
+  sub_eq_add_neg := sorry_proof
+
+noncomputable instance : Module Float (StridedGpuTensor Float (Idx n)) where
+  smul := (· • ·)
+  one_smul := sorry_proof
+  mul_smul := sorry_proof
+  smul_zero := sorry_proof
+  smul_add := sorry_proof
+  add_smul := sorry_proof
+  zero_smul := sorry_proof
+
+noncomputable instance : Norm (StridedGpuTensor Float (Idx n)) where norm _ := 0
+noncomputable instance : Inner Float (StridedGpuTensor Float (Idx n)) where inner _ _ := 0
+
+noncomputable instance : NormedAddCommGroup (StridedGpuTensor Float (Idx n)) where
+  dist := fun a b => ‖a - b‖
+  dist_self := sorry_proof
+  dist_comm := sorry_proof
+  dist_triangle := sorry_proof
+  edist := fun a b => ENNReal.ofReal ‖a - b‖
+  edist_dist := sorry_proof
+  eq_of_dist_eq_zero := sorry_proof
+
+noncomputable instance : NormedSpace Float (StridedGpuTensor Float (Idx n)) where
+  norm_smul_le := sorry_proof
+
+noncomputable instance : AdjointSpace Float (StridedGpuTensor Float (Idx n)) where
+  inner_top_equiv_norm := ⟨1, 1, by norm_num, by norm_num, sorry_proof⟩
+  conj_symm := sorry_proof
+  add_left := sorry_proof
+  smul_left := sorry_proof
+
+-- 2D StridedGpuTensor instances
+noncomputable instance : Inhabited (StridedGpuTensor Float (Idx m × Idx n)) := ⟨StridedGpuTensor.defaultFloat2D⟩
+noncomputable instance : Zero (StridedGpuTensor Float (Idx m × Idx n)) where zero := StridedGpuTensor.defaultFloat2D
+noncomputable instance : Add (StridedGpuTensor Float (Idx m × Idx n)) where add a _ := a
+noncomputable instance : Neg (StridedGpuTensor Float (Idx m × Idx n)) where neg a := a
+noncomputable instance : SMul Float (StridedGpuTensor Float (Idx m × Idx n)) where smul _ a := a
+noncomputable instance : HSMul ℕ (StridedGpuTensor Float (Idx m × Idx n)) (StridedGpuTensor Float (Idx m × Idx n)) where hSMul _ a := a
+noncomputable instance : HSMul ℤ (StridedGpuTensor Float (Idx m × Idx n)) (StridedGpuTensor Float (Idx m × Idx n)) where hSMul _ a := a
+
+noncomputable instance : AddCommGroup (StridedGpuTensor Float (Idx m × Idx n)) where
+  add := (· + ·)
+  neg := (- ·)
+  zero := 0
+  add_assoc := sorry_proof
+  zero_add := sorry_proof
+  add_zero := sorry_proof
+  add_comm := sorry_proof
+  nsmul := fun l t => l • t
+  nsmul_zero := sorry_proof
+  nsmul_succ := sorry_proof
+  zsmul := fun z t => z • t
+  zsmul_zero' := sorry_proof
+  zsmul_succ' := sorry_proof
+  zsmul_neg' := sorry_proof
+  neg_add_cancel := sorry_proof
+  sub_eq_add_neg := sorry_proof
+
+noncomputable instance : Module Float (StridedGpuTensor Float (Idx m × Idx n)) where
+  smul := (· • ·)
+  one_smul := sorry_proof
+  mul_smul := sorry_proof
+  smul_zero := sorry_proof
+  smul_add := sorry_proof
+  add_smul := sorry_proof
+  zero_smul := sorry_proof
+
+noncomputable instance : Norm (StridedGpuTensor Float (Idx m × Idx n)) where norm _ := 0
+noncomputable instance : Inner Float (StridedGpuTensor Float (Idx m × Idx n)) where inner _ _ := 0
+
+noncomputable instance : NormedAddCommGroup (StridedGpuTensor Float (Idx m × Idx n)) where
+  dist := fun a b => ‖a - b‖
+  dist_self := sorry_proof
+  dist_comm := sorry_proof
+  dist_triangle := sorry_proof
+  edist := fun a b => ENNReal.ofReal ‖a - b‖
+  edist_dist := sorry_proof
+  eq_of_dist_eq_zero := sorry_proof
+
+noncomputable instance : NormedSpace Float (StridedGpuTensor Float (Idx m × Idx n)) where
+  norm_smul_le := sorry_proof
+
+noncomputable instance : AdjointSpace Float (StridedGpuTensor Float (Idx m × Idx n)) where
+  inner_top_equiv_norm := ⟨1, 1, by norm_num, by norm_num, sorry_proof⟩
+  conj_symm := sorry_proof
+  add_left := sorry_proof
+  smul_left := sorry_proof
+
+-- ### Strided GEMM Backward Function -/
+
+/-- Strided GEMM backward pass using O(1) transpose views.
+    For C = A @ B where A:(m,k), B:(k,n), C:(m,n):
+    - dA = dC @ B^T  (B^T is O(1) view, just swap strides)
+    - dB = A^T @ dC  (A^T is O(1) view, just swap strides)
+    No data copies for transposes - strided GEMM dispatches to gemmTN/gemmNT. -/
+def StridedGpuTensor.gemmBackward
+    (A : StridedGpuTensor Float (Idx m × Idx k))
+    (B : StridedGpuTensor Float (Idx k × Idx n))
+    (dC : StridedGpuTensor Float (Idx m × Idx n)) :
+    IO (StridedGpuTensor Float (Idx m × Idx k) × StridedGpuTensor Float (Idx k × Idx n)) := do
+  -- O(1) transpose views - just swap strides, no GPU data movement!
+  let B_T := B.transpose  -- (k,n) -> (n,k) view
+  let A_T := A.transpose  -- (m,k) -> (k,m) view
+  -- Strided GEMM handles transposed layouts via gemmTN/gemmNT dispatch
+  let dA ← StridedGpuTensor.gemm dC B_T   -- (m,n) @ (n,k) = (m,k)
+  let dB ← StridedGpuTensor.gemm A_T dC   -- (k,m) @ (m,n) = (k,n)
+  return (dA, dB)
+
+-- ### data_synth Rules for StridedGpuTensor GEMM -/
+
+/-- Strided GEMM: HasRevFDerivM rule using O(1) transpose views -/
+@[data_synth]
+theorem StridedGpuTensor.gemm.arg_AB.HasRevFDerivM_rule :
+    HasRevFDerivM Float
+      (fun (AB : StridedGpuTensor Float (Idx m × Idx k) × StridedGpuTensor Float (Idx k × Idx n)) =>
+        StridedGpuTensor.gemm AB.1 AB.2)
+      (fun AB => do
+        let C ← StridedGpuTensor.gemm AB.1 AB.2
+        pure (C, fun dC => do
+          let (dA, dB) ← StridedGpuTensor.gemmBackward AB.1 AB.2 dC
+          pure (dA, dB))) := by
   trivial
 
 end SciLean
