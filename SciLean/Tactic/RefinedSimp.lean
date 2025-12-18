@@ -19,39 +19,39 @@ inductive ArgGuard where
   | notId
   /-- Argument can't be constant function -/
   | notConst
-  /-- Argument can't be application of `name` -/
+  /-- Argument can't be application of {given}`name` -/
   | notAppOf (name : Name)
   deriving Inhabited, BEq, Repr
 
 
-/-- Same as SimpTheorem but works with RefinedDiscrTree rather than with normal DescrTree.
+/-- Same as {name}`SimpTheorem` but works with {name}`RefinedDiscrTree` rather than with normal {lit}`DiscrTree`.
 
 It has one additional feature and that is argument guard. For example, you can say that do not apply
-this theorem if theorem argument `f` unifies to identity function.
+this theorem if theorem argument {given}`f` unifies to identity function.
 -/
 structure RefinedSimpTheorem where
   keys        : List (RefinedDiscrTree.Key × RefinedDiscrTree.LazyEntry) := []
   /--
     It stores universe parameter names for universe polymorphic proofs.
     Recall that it is non-empty only when we elaborate an expression provided by the user.
-    When `proof` is just a constant, we can use the universe parameter names stored in the declaration.
+    When {given}`proof` is just a constant, we can use the universe parameter names stored in the declaration.
    -/
   levelParams : Array Name := #[]
   proof       : Expr
   priority    : Nat  := eval_prio default
   post        : Bool := true
-  /-- `perm` is true if lhs and rhs are identical modulo permutation of variables. -/
+  /-- {given}`perm` is true if lhs and rhs are identical modulo permutation of variables. -/
   perm        : Bool := false
   /--
-    `origin` is mainly relevant for producing trace messages.
-    It is also viewed an `id` used to "erase" `simp` theorems from `SimpTheorems`.
+    {given}`origin` is mainly relevant for producing trace messages.
+    It is also viewed as an {lit}`id` used to "erase" {lit}`simp` theorems from {name}`SimpTheorems`.
   -/
   origin      : Origin
-  /-- `rfl` is true if `proof` is by `Eq.refl` or `rfl`. -/
+  /-- {given}`rfl` is true if {given}`proof` is by {name}`Eq.refl` or {lit}`rfl`. -/
   rfl         : Bool
-  /-- Array of `(theorem argument id, argument guard)` specifying additional constraints on when
-  to apply this theorem. For example, if the theorem has arugument `(f : X → X)` with index `3` then
-  `guards := #[(3,.notId)]` will stop applying this theorem if `f` unifies to identity function. -/
+  /-- Array of {lit}`(theorem argument id, argument guard)` specifying additional constraints on when
+  to apply this theorem. For example, if the theorem has argument {lit}`(f : X → X)` with index {lit}`3` then
+  {lit}`guards := #[(3,.notId)]` will stop applying this theorem if {given}`f` unifies to identity function. -/
   guards      : Array (Nat × ArgGuard) := #[]
   deriving Inhabited
 
