@@ -66,8 +66,14 @@ SciLean uses dependent types (`Float^[784]`, `Float^[128, 784]`) wrapping comput
 - Clear distinction between forward and reverse mode differentiation in naming
 - Add existing imports as comments when disabling them
 
-## TODO (for future sessions)
-- Reenable doc.verso
+## Verso Documentation
+The project uses `doc.verso` for documentation. When writing doc comments:
+- Use `{name}` role for declared names that can be resolved
+- Use `{lean}` role for Lean expressions/syntax
+- Use `{given}` role to declare variables in scope (e.g., `{given}`\`n\` then use `{lean}`\`n\`)
+- Use `{lit}` role only for literal text that shouldn't be resolved
+
+Build docs: `cd verso-docs && lake build && .lake/build/bin/generate-docs`
 
 ## Lean 4 Tips
 - **Float infinity**: Lean 4 stdlib doesn't have `Float.inf`. Define as:

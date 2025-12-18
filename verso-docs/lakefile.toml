@@ -5,7 +5,7 @@ defaultTargets = ["SciLeanDocs", "generate-docs"]
 [[require]]
 name = "verso"
 git = "https://github.com/leanprover/verso"
-rev = "main"
+rev = "v4.26.0-rc2"
 
 # The content of the documentation is in this Lean library
 [[lean_lib]]
