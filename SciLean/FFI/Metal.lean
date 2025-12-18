@@ -77,6 +77,10 @@ namespace GpuBuffer
 @[extern "scilean_gpu_alloc_f32"]
 opaque alloc (numFloats : USize) : IO GpuBuffer
 
+/-- Allocate and fill GPU buffer with constant value (stays on GPU) -/
+@[extern "scilean_gpu_fill_f32"]
+opaque fill (numFloats : USize) (value : Float) : IO GpuBuffer
+
 /-- Upload ByteArray (Float32 data) to GPU (low-level, prefer `CpuBuffer.upload` for type safety) -/
 @[extern "scilean_gpu_upload_f32"]
 opaque fromByteArray (data : @& ByteArray) : IO GpuBuffer
@@ -116,6 +120,32 @@ opaque copyStrided (src : @& GpuBuffer) (shape strides : @& Array USize) (offset
     Both inputs and output stay on GPU. -/
 @[extern "scilean_gpu_gemm_f32"]
 opaque gemm (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
+
+/-! ### AMX (Accelerate) Operations
+
+AMX is Apple Silicon's matrix coprocessor, accessed via Accelerate framework.
+Uses same GPU buffers (unified memory) - no copy needed!
+Better for small matrices where GPU launch overhead dominates.
+-/
+
+/-- GEMM using AMX via Accelerate cblas.
+    Faster than MPS for small matrices (< 256 on any dimension).
+    Uses same GPU buffers - unified memory, no copy! -/
+@[extern "scilean_amx_gemm_f32"]
+opaque gemmAMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
+
+/-- GEMM with A transposed using AMX: C = A^T @ B -/
+@[extern "scilean_amx_gemm_tn_f32"]
+opaque gemmTN_AMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
+
+/-- GEMM with B transposed using AMX: C = A @ B^T -/
+@[extern "scilean_amx_gemm_nt_f32"]
+opaque gemmNT_AMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
+
+/-- Auto-dispatch GEMM: uses AMX for small matrices, MPS for large.
+    Heuristic: AMX when min dimension < 256 or < 1M FLOPs. -/
+@[extern "scilean_auto_gemm_f32"]
+opaque gemmAuto (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
 /-- Element-wise add: `C = A + B`. -/
 @[extern "scilean_gpu_add_f32"]

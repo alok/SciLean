@@ -367,3 +367,7 @@ lean_exe GpuBatchingBenchmark where
 lean_exe GpuMNIST where
   root := `examples.GpuMNIST
   moreLinkArgs := metalLinkArgs
+
+lean_exe AMXBenchmark where
+  root := `examples.AMXBenchmark
+  moreLinkArgs := metalLinkArgs

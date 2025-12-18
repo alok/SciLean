@@ -354,6 +354,29 @@ LEAN_EXPORT lean_obj_res scilean_gpu_alloc_f32(size_t num_floats, lean_obj_arg /
     return lean_io_result_mk_ok(gpu_buf);
 }
 
+// Allocate and fill GPU buffer with constant value
+LEAN_EXPORT lean_obj_res scilean_gpu_fill_f32(size_t num_floats, double value, lean_obj_arg /* world */) {
+    if (!ensure_metal_initialized()) {
+        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
+    }
+
+    size_t size_bytes = num_floats * sizeof(float);
+    id<MTLBuffer> buffer = get_pooled_buffer(size_bytes);
+    if (!buffer) {
+        buffer = [device newBufferWithLength:size_bytes options:MTLResourceStorageModeShared];
+    }
+
+    // Fill using CPU (unified memory, no copy needed)
+    float* ptr = (float*)[buffer contents];
+    float val = (float)value;
+    for (size_t i = 0; i < num_floats; i++) {
+        ptr[i] = val;
+    }
+
+    lean_obj_res gpu_buf = wrap_gpu_buffer(buffer, size_bytes);
+    return lean_io_result_mk_ok(gpu_buf);
+}
+
 // Upload ByteArray to GPU
 LEAN_EXPORT lean_obj_res scilean_gpu_upload_f32(b_lean_obj_arg data, lean_obj_arg /* world */) {
     if (!ensure_metal_initialized()) {
@@ -531,6 +554,152 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_f32(
 
         lean_obj_res result = wrap_gpu_buffer(C, output_size);
         return lean_io_result_mk_ok(result);
+    }
+}
+
+// GEMM using AMX (via Accelerate cblas_sgemm)
+// Uses same GPU buffer (unified memory) - no copy needed!
+// Better for small matrices where GPU launch overhead dominates.
+// C = A @ B where A is [m, k], B is [k, n], C is [m, n]
+LEAN_EXPORT lean_obj_res scilean_amx_gemm_f32(
+    b_lean_obj_arg A_buf,
+    b_lean_obj_arg B_buf,
+    size_t m, size_t k, size_t n,
+    lean_obj_arg /* world */
+) {
+    id<MTLBuffer> A = get_mtl_buffer(A_buf);
+    id<MTLBuffer> B = get_mtl_buffer(B_buf);
+    if (!A || !B) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
+    }
+
+    @autoreleasepool {
+        size_t output_size = m * n * sizeof(float);
+        id<MTLBuffer> C = get_pooled_buffer(output_size);
+        if (!C) {
+            C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
+        }
+
+        // Get raw pointers - unified memory, no copy!
+        float* a_ptr = (float*)[A contents];
+        float* b_ptr = (float*)[B contents];
+        float* c_ptr = (float*)[C contents];
+
+        // cblas_sgemm: C = alpha * A @ B + beta * C
+        // Uses AMX on Apple Silicon automatically
+        cblas_sgemm(CblasRowMajor,    // Row-major layout
+                    CblasNoTrans,      // A not transposed
+                    CblasNoTrans,      // B not transposed
+                    (int)m, (int)n, (int)k,  // Dimensions
+                    1.0f,              // alpha
+                    a_ptr, (int)k,     // A and leading dimension
+                    b_ptr, (int)n,     // B and leading dimension
+                    0.0f,              // beta
+                    c_ptr, (int)n);    // C and leading dimension
+
+        return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
+    }
+}
+
+// GEMM with A transposed using AMX: C = A^T @ B
+LEAN_EXPORT lean_obj_res scilean_amx_gemm_tn_f32(
+    b_lean_obj_arg A_buf,
+    b_lean_obj_arg B_buf,
+    size_t m, size_t k, size_t n,
+    lean_obj_arg /* world */
+) {
+    id<MTLBuffer> A = get_mtl_buffer(A_buf);
+    id<MTLBuffer> B = get_mtl_buffer(B_buf);
+    if (!A || !B) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
+    }
+
+    @autoreleasepool {
+        size_t output_size = m * n * sizeof(float);
+        id<MTLBuffer> C = get_pooled_buffer(output_size);
+        if (!C) {
+            C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
+        }
+
+        float* a_ptr = (float*)[A contents];
+        float* b_ptr = (float*)[B contents];
+        float* c_ptr = (float*)[C contents];
+
+        // A is stored as [k, m], transposed to [m, k]
+        cblas_sgemm(CblasRowMajor,
+                    CblasTrans,        // A transposed
+                    CblasNoTrans,
+                    (int)m, (int)n, (int)k,
+                    1.0f,
+                    a_ptr, (int)m,     // lda = m for transposed
+                    b_ptr, (int)n,
+                    0.0f,
+                    c_ptr, (int)n);
+
+        return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
+    }
+}
+
+// GEMM with B transposed using AMX: C = A @ B^T
+LEAN_EXPORT lean_obj_res scilean_amx_gemm_nt_f32(
+    b_lean_obj_arg A_buf,
+    b_lean_obj_arg B_buf,
+    size_t m, size_t k, size_t n,
+    lean_obj_arg /* world */
+) {
+    id<MTLBuffer> A = get_mtl_buffer(A_buf);
+    id<MTLBuffer> B = get_mtl_buffer(B_buf);
+    if (!A || !B) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
+    }
+
+    @autoreleasepool {
+        size_t output_size = m * n * sizeof(float);
+        id<MTLBuffer> C = get_pooled_buffer(output_size);
+        if (!C) {
+            C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
+        }
+
+        float* a_ptr = (float*)[A contents];
+        float* b_ptr = (float*)[B contents];
+        float* c_ptr = (float*)[C contents];
+
+        // B is stored as [n, k], transposed to [k, n]
+        cblas_sgemm(CblasRowMajor,
+                    CblasNoTrans,
+                    CblasTrans,        // B transposed
+                    (int)m, (int)n, (int)k,
+                    1.0f,
+                    a_ptr, (int)k,
+                    b_ptr, (int)k,     // ldb = k for transposed
+                    0.0f,
+                    c_ptr, (int)n);
+
+        return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
+    }
+}
+
+// Auto-dispatch GEMM: uses AMX for small matrices, MPS for large
+// Threshold based on typical GPU launch overhead (~10-50μs)
+LEAN_EXPORT lean_obj_res scilean_auto_gemm_f32(
+    b_lean_obj_arg A_buf,
+    b_lean_obj_arg B_buf,
+    size_t m, size_t k, size_t n,
+    lean_obj_arg world
+) {
+    // Heuristic: use AMX for matrices < 256 elements on any dimension
+    // GPU overhead dominates at this size
+    size_t min_dim = (m < k) ? ((m < n) ? m : n) : ((k < n) ? k : n);
+    size_t total_flops = 2 * m * k * n;
+
+    // Use AMX for small matrices or when already in batch mode
+    // (batch mode means GPU is busy, AMX can run in parallel)
+    bool use_amx = (min_dim < 256) || (total_flops < 1000000);
+
+    if (use_amx) {
+        return scilean_amx_gemm_f32(A_buf, B_buf, m, k, n, world);
+    } else {
+        return scilean_gpu_gemm_f32(A_buf, B_buf, m, k, n, world);
     }
 }
 
