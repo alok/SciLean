@@ -32,11 +32,29 @@ static id<MTLComputeCommandEncoder> g_batch_encoder = nil;
 static NSMutableArray<id<MTLBuffer>>* g_batch_outputs = nil;  // Track outputs for lifetime
 
 static bool is_batch_mode() {
-    return g_batch_mode && g_batch_encoder != nil;
+    // Check if we're in batch mode. Note: g_batch_encoder may be nil if:
+    // - Last op was MPS (paused encoder, will resume on next compute op)
+    // - Last op was AMX (synced batch, will restart on next GPU op)
+    // In both cases, we're still logically in batch mode if g_batch_mode is true.
+    return g_batch_mode;
 }
 
+// Ensure batch command buffer exists (for MPS ops or when encoder is nil)
+static void ensure_batch_command_buffer() {
+    if (g_batch_mode && g_batch_command_buffer == nil) {
+        g_batch_command_buffer = [commandQueue commandBuffer];
+    }
+}
+
+// Get compute encoder, creating batch infrastructure if needed
 static id<MTLComputeCommandEncoder> get_encoder_for_op() {
     if (is_batch_mode()) {
+        // Ensure command buffer exists
+        ensure_batch_command_buffer();
+        // Create encoder if needed
+        if (g_batch_encoder == nil) {
+            g_batch_encoder = [g_batch_command_buffer computeCommandEncoder];
+        }
         return g_batch_encoder;
     }
     // Non-batched: create new command buffer and encoder
@@ -60,6 +78,31 @@ static bool pause_batch_encoder_for_mps() {
 // Call this after MPS encoding to restore compute encoder for subsequent ops.
 static void resume_batch_encoder() {
     if (g_batch_mode && g_batch_encoder == nil && g_batch_command_buffer != nil) {
+        g_batch_encoder = [g_batch_command_buffer computeCommandEncoder];
+    }
+}
+
+// Sync batch for CPU operations (AMX).
+// Commits and waits for pending GPU work, then resets batch state.
+// The batch will be restarted on next GPU operation.
+static void sync_batch_for_cpu() {
+    if (g_batch_mode && g_batch_command_buffer != nil) {
+        if (g_batch_encoder != nil) {
+            [g_batch_encoder endEncoding];
+            g_batch_encoder = nil;
+        }
+        [g_batch_command_buffer commit];
+        [g_batch_command_buffer waitUntilCompleted];
+        g_batch_command_buffer = nil;
+        // Note: g_batch_mode stays true, but command buffer is nil
+        // Next batch operation will create a new command buffer
+    }
+}
+
+// Restart batch after CPU operation if we're still in batch mode.
+static void restart_batch_after_cpu() {
+    if (g_batch_mode && g_batch_command_buffer == nil) {
+        g_batch_command_buffer = [commandQueue commandBuffer];
         g_batch_encoder = [g_batch_command_buffer computeCommandEncoder];
     }
 }
@@ -573,6 +616,9 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_f32(
         return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
     }
 
+    // Sync pending GPU work before CPU reads
+    sync_batch_for_cpu();
+
     @autoreleasepool {
         size_t output_size = m * n * sizeof(float);
         id<MTLBuffer> C = get_pooled_buffer(output_size);
@@ -597,6 +643,9 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_f32(
                     0.0f,              // beta
                     c_ptr, (int)n);    // C and leading dimension
 
+        // Note: batch will be restarted automatically by get_encoder_for_op()
+        // when next GPU op runs
+
         return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
     }
 }
@@ -613,6 +662,9 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_tn_f32(
     if (!A || !B) {
         return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
     }
+
+    // Sync pending GPU work before CPU reads
+    sync_batch_for_cpu();
 
     @autoreleasepool {
         size_t output_size = m * n * sizeof(float);
@@ -652,6 +704,9 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_nt_f32(
     if (!A || !B) {
         return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
     }
+
+    // Sync pending GPU work before CPU reads
+    sync_batch_for_cpu();
 
     @autoreleasepool {
         size_t output_size = m * n * sizeof(float);
@@ -743,8 +798,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_bias_relu_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:A offset:0 atIndex:0];
@@ -811,8 +870,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_add_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:A offset:0 atIndex:0];
@@ -869,8 +932,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_mul_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:A offset:0 atIndex:0];
@@ -925,8 +992,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_relu_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:X offset:0 atIndex:0];
@@ -983,8 +1054,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_softmax_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:X offset:0 atIndex:0];
@@ -1066,8 +1141,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_conv2d_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:input offset:0 atIndex:0];
@@ -1182,8 +1261,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_maxpool2d_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:input offset:0 atIndex:0];
@@ -1251,8 +1334,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_bias_relu_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:X offset:0 atIndex:0];
@@ -1321,8 +1408,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_layer_norm_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:X offset:0 atIndex:0];
@@ -1397,8 +1488,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_bias_gelu_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:X offset:0 atIndex:0];
@@ -1461,8 +1556,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_bias_add_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:X offset:0 atIndex:0];
@@ -1538,8 +1637,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_avgpool2d_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:X offset:0 atIndex:0];
@@ -1616,8 +1719,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_flash_attention_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:Q offset:0 atIndex:0];
@@ -1688,8 +1795,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_flash_attention_causal_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:Q offset:0 atIndex:0];
@@ -1771,8 +1882,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_batchnorm2d_f32(
 
         // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:input offset:0 atIndex:0];
@@ -1841,8 +1956,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_relu_backward_f32(
         }
 
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:input offset:0 atIndex:0];
@@ -1898,8 +2017,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_mul_backward_f32(
         if (!grad_b) grad_b = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
 
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:a offset:0 atIndex:0];
@@ -1961,8 +2084,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gelu_backward_f32(
         }
 
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:input offset:0 atIndex:0];
@@ -2020,8 +2147,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_softmax_backward_f32(
         uint32_t cols32 = (uint32_t)row_size;
 
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:softmax_output offset:0 atIndex:0];
@@ -5071,8 +5202,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_axpy_f32(
         uint32_t n32 = (uint32_t)n;
 
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:x offset:0 atIndex:0];
@@ -5129,8 +5264,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_scale_f32(
         uint32_t n32 = (uint32_t)n;
 
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:x offset:0 atIndex:0];
@@ -5186,8 +5325,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_sub_f32(
         uint32_t n32 = (uint32_t)n;
 
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:x offset:0 atIndex:0];
@@ -5725,8 +5868,12 @@ LEAN_EXPORT lean_obj_res scilean_gpu_row_sum_f32(
         uint32_t cols32 = (uint32_t)cols;
 
         bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
 
         [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:x offset:0 atIndex:0];

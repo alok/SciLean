@@ -371,3 +371,7 @@ lean_exe GpuMNIST where
 lean_exe AMXBenchmark where
   root := `examples.AMXBenchmark
   moreLinkArgs := metalLinkArgs
+
+lean_exe AMXTest where
+  root := `examples.AMXTest
+  moreLinkArgs := metalLinkArgs

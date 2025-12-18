@@ -135,6 +135,8 @@ def forwardBatchInternal (weights : GpuWeights) (x : GpuBuffer)
 
   -- First layer: h_pre = x @ W1^T, result is [batchSize, 128]
   -- x[batch, 784] @ W1^T[784, 128] = h_pre[batch, 128]
+  -- Note: AMX works but has batch state issues when mixed with MPS ops over many iterations
+  -- Using MPS for stability; AMX available via gemmNT_AMX for future optimization
   let h_pre ← GpuBuffer.gemmNT x weights.w1 batchSize 784 128
 
   -- Fused bias + gelu: h = gelu(h_pre + b1)
