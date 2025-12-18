@@ -6,27 +6,27 @@ import SciLean.Util.SorryProof
 namespace SciLean
 
 
-/-- Abbreviation for `GetElem coll idx elem (fun _ _ => True)` -/
+/-- Abbreviation for {lit}`GetElem coll idx elem (fun _ _ => True)` -/
 abbrev GetElem' (coll : Type*) (idx : Type*) (elem : outParam Type*) :=
   GetElem coll idx elem (fun _ _ => True)
 
 open Function
-/-- Type `coll` is fully determined by all its elements accesible with index notation `x[i]`.
+/-- Type {given}`coll` is fully determined by all its elements accesible with index notation {lit}`x[i]`.
 
-This gives us extensionality property `(∀ i, x[i] = y[i]) → x = y` which is accessible with
-`ext` tactic if also `coll` defines default index type with `DefaultIndex`
+This gives us extensionality property {lit}`(∀ i, x[i] = y[i]) → x = y` which is accessible with
+{lit}`ext` tactic if also {given}`coll` defines default index type with {lit}`DefaultIndex`
 -/
 class InjectiveGetElem (coll : Type*) (idx : Type*) {elem : outParam Type*}
     [GetElem coll idx elem (fun _ _ => True)] : Prop where
   getElem_injective : Injective ((getElem · · .intro) : coll → idx → elem)
 
-/-- Default index type of `coll` is `idx`. This class is used when elaborating `x[i]` where `i`
-has  unknown type. -/
+/-- Default index type of {given}`coll` is {given}`idx`. This class is used when elaborating {lit}`x[i]` where {given}`i`
+has unknown type. -/
 class DefaultIndex (coll : Type*) (idx : outParam Type*) where
 
 class DefaultIndexOfRank (coll : Type*) (r : Nat) (idx : outParam Type*) where
 
-/-- Index under which we can access `coll` and get elements of type `elem`. -/
+/-- Index under which we can access {given}`coll` and get elements of type {given}`elem`. -/
 class ValueIndex (coll elem : Type*) (idx : outParam Type*) where
 
 export InjectiveGetElem (getElem_injective)
@@ -44,7 +44,7 @@ class SetElem (coll : Type u) (idx : Type v) (elem : outParam (Type w))
   setElem_valid {xs : coll} {i j : idx} {v : elem} {hi : valid xs i} :
     valid xs j ↔ valid (setElem xs i v hi) j
 
-/-- Abbreviation for `SetElem coll idx elem (fun _ _ => True)` -/
+/-- Abbreviation for {lit}`SetElem coll idx elem (fun _ _ => True)` -/
 abbrev SetElem' (coll : Type*) (idx : Type*) (elem : outParam Type*) :=
   SetElem coll idx elem (fun _ _ => True)
 
@@ -93,9 +93,9 @@ export LawfulOfFn (getElem_ofFn)
 
 attribute [simp, simp_core] getElem_ofFn
 
-/-- This class indicates that `ofFn f` for `f : idx → elem` should create somethig of type `coll`.
+/-- This class indicates that {lit}`ofFn f` for {lit}`f : idx → elem` should create something of type {given}`coll`.
 
-This class is use to infer the default type of `⊞ i => f i` notation. -/
+This class is used to infer the default type of {lit}`⊞ i => f i` notation. -/
 class DefaultCollection (coll : outParam Type*) (idx : Type*) (elem : Type*) where
 
 theorem ofFn_rightInverse
@@ -134,7 +134,7 @@ theorem getElem_surjective (coll : Type u) (idx : Type v) {elem : outParam (Type
 -- (Un)curry element access ------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 
-/-- Compatibilty class saying `x[i,j] = x[i][j]`. -/
+/-- Compatibility class saying {lit}`x[i,j] = x[i][j]`. -/
 class IsGetElemCurry (X : Type*) {Y Z : Type*} (I J : Type*)
     [GetElem' X I Y] [GetElem' X (I×J) Z] [GetElem' Y J Z] : Prop where
   getElem_curry : ∀ (x : X) (ij : I×J), x[ij] = x[ij.1][ij.2]
@@ -234,13 +234,13 @@ theorem getElem_prod_inr [GetElem' α ι γ] [GetElem' β κ γ]
 open Lean Meta Expr
 /-- Simproc for zetaDelta reduction in very specific case:
 
-Consider that we create and array and then immediatelly take an element of it.
+Consider that we create an array and then immediately take an element of it.
 ```
 let xs := ⊞ i => f i
 xs[i]
 ```
-we want this to reduce to `f i`. This simproc does that witout the need of turing on
- `zeta`/`zeteDelta` option of `simp`.
+we want this to reduce to `f i`. This simproc does that without the need of turning on
+`zeta`/`zetaDelta` option of `simp`.
 
  -/
 simproc_decl getElem_ofFn_zetaDelta (getElem _ _ _) := fun e => do

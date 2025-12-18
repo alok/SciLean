@@ -17,11 +17,11 @@ structure DefineFunPropConfig where
   defineIfSimilarExists := true
 
 /--
-Given `statement` like `q(Continuous fun x : R => c * x)`, its proof `prf` and context like
-`#[q(R), q((_: RealScalar R)), q(c)]`, create a new `fun_prop` theorem stating it.
+Given {given}`statement` like {lit}`q(Continuous fun x : R => c * x)`, its proof {given}`prf` and context like
+{lit}`#[q(R), q((_: RealScalar R)), q(c)]`, create a new {lit}`fun_prop` theorem stating it.
 
-You can prevent the theorem to be defined if already similar theorems exists by passing option
-`cfg := { defineIfSimilarExists := false }`
+You can prevent the theorem from being defined if similar theorems already exist by passing option
+{lit}`cfg := { defineIfSimilarExists := false }`
 
 TODO: We should iterate over transition theorems from the simplest to the most complicated.
  -/
@@ -119,7 +119,7 @@ partial def _root_.Lean.Meta.RefinedDiscrTree.forValuesM {α} {m} [Monad m]
 
 
 /--
-Given a proof of function property `proof` like `q(by fun_prop : Differentiable Real.sin)`
+Given a proof of function property {given}`proof` like {lit}`q(by fun_prop : Differentiable Real.sin)`
 generate theorems for all the function properties that follow from this. -/
 partial def defineTransitiveFunProp (proof : Expr) (ctx : Array Expr)
     (suffix : Option Name := none) (recursive := false) : MetaM Unit := do
@@ -162,8 +162,8 @@ partial def defineTransitiveFunProp (proof : Expr) (ctx : Array Expr)
 
 
 open Mathlib.Meta
-/-- Command `def_fun_prop (c : ℝ) : Continuous (fun x => foo c x) by unfold foo; fun_prop`
-will define a new `fun_prop` theorem for function `foo` about continuity in `x`.
+/-- Command {lit}`def_fun_prop (c : ℝ) : Continuous (fun x => foo c x) by unfold foo; fun_prop`
+will define a new {lit}`fun_prop` theorem for function {lit}`foo` about continuity in {given}`x`.
 -/
 elab  "def_fun_prop" doTrans:("with_transitive")? suffix:(ident)? bs:bracketedBinder* ":" e:term "by" t:tacticSeq  : command => do
 
@@ -305,7 +305,7 @@ def foo (x y z : ℝ) := x*x+y*z
 
 def_fun_prop foo in x y z : Continuous
 ```
-Proves continuity of `foo` in `x`, `y` and `z` as theorem `foo.arg_xyz.Continuous_rule`.
+Proves continuity of {lit}`foo` in {lit}`x`, {lit}`y` and {lit}`z` as theorem {lit}`foo.arg_xyz.Continuous_rule`.
 
 You can add additional assumptions, custom tactic to prove the property as demonstrated by the
 following example:
@@ -316,13 +316,13 @@ def_fun_prop bar in x y
   (xy : R×R) (h : xy.2 ≠ 0) : (DifferentiableAt R · xy) by unfold bar; fun_prop (disch:=assumption)
 ```
 where
-- `add_suffix _simple` adds `_simple` to the end of the generated theorems
-- `with_transitive` also generates all theorems that can be infered from the current theorem.
-  For example, `DifferentiableAt` implies `ContinuousAt`. All `fun_prop` transition theorems
+- {lit}`add_suffix _simple` adds {lit}`_simple` to the end of the generated theorems
+- {lit}`with_transitive` also generates all theorems that can be inferred from the current theorem.
+  For example, {lit}`DifferentiableAt` implies {lit}`ContinuousAt`. All {lit}`fun_prop` transition theorems
   are tried to infer additional function properties.
-- `(xy : R×R) (h : xy.2 ≠ 0)` are additional assumptions added to the theorem. These assumptions
-  are stated in the context of the function so for example here we can use `R` without introducing it.
-- `by unfold bar; fun_prop ...` you can specify custom tactic to prove the function property.
+- {lit}`(xy : R×R) (h : xy.2 ≠ 0)` are additional assumptions added to the theorem. These assumptions
+  are stated in the context of the function so for example here we can use {given}`R` without introducing it.
+- {lit}`by unfold bar; fun_prop ...` you can specify custom tactic to prove the function property.
 -/
 elab "def_fun_prop " f:ident "in" args:ident* ppLine
      cfg:Parser.config*

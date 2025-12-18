@@ -6,7 +6,7 @@ import SciLean.Lean.Array
 
 namespace Lean
 
-/-- Does free variable `x` uses free variable `y` in its type or value?
+/-- Does free variable {given}`x` use free variable {given}`y` in its type or value?
 -/
 def FVarId.usesFVar (x y : FVarId) : MetaM Bool := do
   if (← x.getType).containsFVar y then
@@ -58,14 +58,14 @@ def getConstArgId (thmName argName : Name) : MetaM Nat := do
 
 /-- Returns name of the head function of an expression
 
-TODO: See through FunLike.coe
+TODO: See through {lit}`DFunLike.coe`
 
 Example:
-  `getFunHeadConst? q(fun x => x + x) = HAdd.hAdd`
-  `getFunHeadConst? q(fun x y => x + y) = HAdd.hAdd`
-  `getFunHeadConst? q(HAdd.hAdd 1) = HAdd.hAdd`
-  `getFunHeadConst? q(fun xy : X×Y => xy.2) = Prod.snd`
-  `getFunHeadConst? q(fun f x => f x) = none`
+  {lit}`getFunHeadConst? q(fun x => x + x) = HAdd.hAdd`
+  {lit}`getFunHeadConst? q(fun x y => x + y) = HAdd.hAdd`
+  {lit}`getFunHeadConst? q(HAdd.hAdd 1) = HAdd.hAdd`
+  {lit}`getFunHeadConst? q(fun xy : X×Y => xy.2) = Prod.snd`
+  {lit}`getFunHeadConst? q(fun f x => f x) = none`
 -/
 def getFunHeadConst? (e : Expr) : MetaM (Option Name) :=
   match e.consumeMData with
@@ -81,7 +81,7 @@ def getFunHeadConst? (e : Expr) : MetaM (Option Name) :=
 
 /-- Changes structure projection back to function application. Left unchanged if not a projection.
 
-For example, `proj Prod 0 xy` is changed to `mkApp Prod.fst #[xy]`.
+For example, {lit}`proj Prod 0 xy` is changed to {lit}`mkApp Prod.fst #[xy]`.
 -/
 def revertStructureProj (e : Expr) : MetaM Expr :=
   match e with
@@ -93,9 +93,9 @@ def revertStructureProj (e : Expr) : MetaM Expr :=
     mkAppM projFn #[struct]
   | _ => return e
 
-/-- Is `e` in the form `foo x₀ .. xₙ` where `foo` is some constant
+/-- Is {given}`e` in the form {lit}`foo x₀ .. xₙ` where {given}`foo` is some constant
 
-  It returns only explicit arguments and the original expression should be recoverable by `mkAppM foo #[x₀, .., xₙ]`
+  It returns only explicit arguments and the original expression should be recoverable by {lit}`mkAppM foo #[x₀, .., xₙ]`
   -/
 def getExplicitArgs (e : Expr) : MetaM (Option (Name×Array Expr)) := do
   let .some (funName, _) := e.getAppFn.const?
@@ -112,7 +112,7 @@ def getExplicitArgs (e : Expr) : MetaM (Option (Name×Array Expr)) := do
   return (funName, explicitArgs)
 
 
-/-- Eta expansion, but adds at most `n` binders
+/-- Eta expansion, but adds at most {given}`n` binders
 -/
 def etaExpandN (e : Expr) (n : Nat) : MetaM Expr :=
   withDefault do forallTelescopeReducing (← inferType e) fun xs _ => mkLambdaFVars xs[0:n] (mkAppN e xs[0:n])
@@ -132,9 +132,9 @@ def ensureEtaExpanded (e : Expr) : MetaM Expr := do
 
 
 /--
-  Same as `mkAppM` but does not leave trailing implicit arguments.
+  Same as {name}`mkAppM` but does not leave trailing implicit arguments.
 
-  For example for `foo : (X : Type) → [OfNat 0 X] → X` the ``mkAppNoTrailingM `foo #[X]`` produces `foo X : X` instead of `@foo X : [OfNat 0 X] → X`
+  For example for {lit}`foo : (X : Type) → [OfNat 0 X] → X` the {lit}``mkAppNoTrailingM `foo #[X]`` produces {lit}`foo X : X` instead of {lit}`@foo X : [OfNat 0 X] → X`
 -/
 def mkAppNoTrailingM (constName : Name) (xs : Array Expr) : MetaM Expr := do
 
@@ -171,7 +171,7 @@ def mkAppFoldlM (const : Name) (xs : Array Expr) : MetaM Expr := do
         mkAppM const #[p,x]
 
 /--
-For `#[x₁, .., xₙ]` create `(x₁, .., xₙ)`.
+For {lit}`#[x₁, .., xₙ]` create {lit}`(x₁, .., xₙ)`.
 -/
 def mkProdElem (xs : Array Expr) (mk := ``Prod.mk) : MetaM Expr := mkAppFoldrM mk xs
 
@@ -179,13 +179,13 @@ def mkProdFst (x : Expr) : MetaM Expr := mkAppM ``Prod.fst #[x]
 def mkProdSnd (x : Expr) : MetaM Expr := mkAppM ``Prod.snd #[x]
 
 /--
-For `(x₀, .., xₙ₋₁)` return `xᵢ` but as a product projection.
+For {lit}`(x₀, .., xₙ₋₁)` return {given}`xᵢ` but as a product projection.
 
 We need to know the total size of the product to be considered.
 
-For example for `xyz : X × Y × Z`
-  - `mkProdProj xyz 1 3` returns `xyz.snd.fst`.
-  - `mkProdProj xyz 1 2` returns `xyz.snd`.
+For example for {lit}`xyz : X × Y × Z`
+  - {lit}`mkProdProj xyz 1 3` returns {lit}`xyz.snd.fst`.
+  - {lit}`mkProdProj xyz 1 2` returns {lit}`xyz.snd`.
 -/
 def mkProdProj (x : Expr) (i : Nat) (n : Nat) (fst := ``Prod.fst) (snd := ``Prod.snd) : MetaM Expr := do
   -- let X ← inferType x
@@ -222,14 +222,14 @@ def mkUncurryFun (n : Nat) (f : Expr) (mk := ``Prod.mk) (fst := ``Prod.fst) (snd
       mkLambdaFVars #[xProd] (← mkAppM' f xs').headBeta
 
 
-/-- Takes lambda function `fun x => b` and splits it into composition of two functions.
+/-- Takes lambda function {lit}`fun x => b` and splits it into composition of two functions.
 
   Example:
-    fun x => f (g x)      ==>   f ∘ g
-    fun x => f x + c      ==>   (fun y => y + c) ∘ f
-    fun x => f x + g x    ==>   (fun (y₁,y₂) => y₁ + y₂) ∘ (fun x => (f x, g x))
-    fun x i => f (g₁ x i) (g₂ x i) i  ==>   (fun (y₁,y₂) i => f y₁ y₂ i) ∘' (fun x i => (g₁ x i, g₂ x i))
-    fun x i => x i        ==>   (fun x i => x i) ∘' (fun x i => x)
+    {lit}`fun x => f (g x)      ==>   f ∘ g`
+    {lit}`fun x => f x + c      ==>   (fun y => y + c) ∘ f`
+    {lit}`fun x => f x + g x    ==>   (fun (y₁,y₂) => y₁ + y₂) ∘ (fun x => (f x, g x))`
+    {lit}`fun x i => f (g₁ x i) (g₂ x i) i  ==>   (fun (y₁,y₂) i => f y₁ y₂ i) ∘' (fun x i => (g₁ x i, g₂ x i))`
+    {lit}`fun x i => x i        ==>   (fun x i => x i) ∘' (fun x i => x)`
  -/
 def splitLambdaToComp (e : Expr) (mk := ``Prod.mk) (fst := ``Prod.fst) (snd := ``Prod.snd) : MetaM (Expr × Expr) := do
   match e with
