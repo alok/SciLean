@@ -112,6 +112,52 @@ def gemm (A : StridedGpuTensor Float (Idx m × Idx k))
       Metal.GpuBuffer.gemmNT aContig.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
   return ⟨StridedGpuBuffer.fromContiguous result #[m, p]⟩
 
+-- Batched GEMM for multi-head attention
+
+variable {batch : ℕ}
+
+/-- Batched matrix multiply with strided inputs.
+    Each batch computes an independent matrix multiplication.
+    A is (batch, m, k), B is (batch, k, p), returns C (batch, m, p).
+    Automatically dispatches based on transpose state of last two dims. -/
+def batchedGemm (A : StridedGpuTensor Float (Idx batch × Idx m × Idx k))
+                (B : StridedGpuTensor Float (Idx batch × Idx k × Idx p)) :
+    IO (StridedGpuTensor Float (Idx batch × Idx m × Idx p)) := do
+  let aTransposed := A.isTransposed
+  let bTransposed := B.isTransposed
+  let result ←
+    match aTransposed, bTransposed with
+    | false, false =>
+      Metal.GpuBuffer.gemmBatched A.data.buffer B.data.buffer batch.toUSize m.toUSize k.toUSize p.toUSize
+    | true, false =>
+      Metal.GpuBuffer.gemmBatchedTN A.data.buffer B.data.buffer batch.toUSize m.toUSize k.toUSize p.toUSize
+    | false, true =>
+      Metal.GpuBuffer.gemmBatchedNT A.data.buffer B.data.buffer batch.toUSize m.toUSize k.toUSize p.toUSize
+    | true, true =>
+      -- Both transposed: make A contiguous and use batchedNT
+      let aContig ← A.contiguous
+      Metal.GpuBuffer.gemmBatchedNT aContig.data.buffer B.data.buffer batch.toUSize m.toUSize k.toUSize p.toUSize
+  return ⟨StridedGpuBuffer.fromContiguous result #[batch, m, p]⟩
+
+/-- Batched GEMM backward using O(1) transpose views.
+    For each batch b: C\_b = A\_b @ B\_b, so:
+    - dA\_b = dC\_b @ B\_b^T
+    - dB\_b = A\_b^T @ dC\_b
+    Transposes are O(1) metadata swaps! -/
+def batchedGemmBackward
+    (A : StridedGpuTensor Float (Idx batch × Idx m × Idx k))
+    (B : StridedGpuTensor Float (Idx batch × Idx k × Idx p))
+    (dC : StridedGpuTensor Float (Idx batch × Idx m × Idx p)) :
+    IO (StridedGpuTensor Float (Idx batch × Idx m × Idx k) ×
+        StridedGpuTensor Float (Idx batch × Idx k × Idx p)) := do
+  -- O(1) transpose views
+  let B_T := B.batchTranspose  -- (batch, k, p) -> (batch, p, k)
+  let A_T := A.batchTranspose  -- (batch, m, k) -> (batch, k, m)
+  -- Batched GEMM handles transposed layouts via dispatch
+  let dA ← batchedGemm dC B_T   -- (batch, m, p) @ (batch, p, k) = (batch, m, k)
+  let dB ← batchedGemm A_T dC   -- (batch, k, m) @ (batch, m, p) = (batch, k, p)
+  return (dA, dB)
+
 end StridedGpuTensor
 
 -- Attention operations for strided tensors

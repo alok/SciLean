@@ -273,6 +273,23 @@ opaque gemmTN (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 @[extern "scilean_gpu_gemm_nt_f32"]
 opaque gemmNT (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
+/-- Batched GEMM: `C[b] = A[b] @ B[b]` for each batch.
+    A is (batch, m, k), B is (batch, k, n), returns C (batch, m, n).
+    Each batch computes an independent matrix multiplication.
+    Essential for multi-head attention. -/
+@[extern "scilean_gpu_gemm_batched_f32"]
+opaque gemmBatched (A B : @& GpuBuffer) (batch m k n : USize) : IO GpuBuffer
+
+/-- Batched GEMM with A transposed: `C[b] = A[b]^T @ B[b]`.
+    A is stored as (batch, k, m), B is (batch, k, n), returns C (batch, m, n). -/
+@[extern "scilean_gpu_gemm_batched_tn_f32"]
+opaque gemmBatchedTN (A B : @& GpuBuffer) (batch m k n : USize) : IO GpuBuffer
+
+/-- Batched GEMM with B transposed: `C[b] = A[b] @ B[b]^T`.
+    A is (batch, m, k), B is stored as (batch, n, k), returns C (batch, m, n). -/
+@[extern "scilean_gpu_gemm_batched_nt_f32"]
+opaque gemmBatchedNT (A B : @& GpuBuffer) (batch m k n : USize) : IO GpuBuffer
+
 /-- Sum all elements in buffer
     Supports batching. -/
 @[extern "scilean_gpu_sum_f32"]

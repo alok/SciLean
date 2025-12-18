@@ -5184,6 +5184,262 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_nt_f32(
     }
 }
 
+// ============================================================
+// Batched GEMM - for multi-head attention
+// ============================================================
+
+// Batched GEMM: C[b] = A[b] @ B[b] for each batch
+// A is [batch, m, k], B is [batch, k, n], C is [batch, m, n]
+LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_f32(
+    b_lean_obj_arg A_buf,
+    b_lean_obj_arg B_buf,
+    size_t batch,
+    size_t m,
+    size_t k,
+    size_t n,
+    lean_obj_arg /* world */
+) {
+    if (!ensure_metal_initialized()) {
+        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
+    }
+
+    id<MTLBuffer> A = get_mtl_buffer(A_buf);
+    id<MTLBuffer> B = get_mtl_buffer(B_buf);
+    if (!A || !B) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
+    }
+
+    @autoreleasepool {
+        size_t output_size = batch * m * n * sizeof(float);
+        id<MTLBuffer> C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
+
+        // Strides for each batch
+        size_t a_batch_stride = m * k * sizeof(float);
+        size_t b_batch_stride = k * n * sizeof(float);
+        size_t c_batch_stride = m * n * sizeof(float);
+
+        // Process each batch with MPS
+        bool batched = is_batch_mode();
+        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
+
+        for (size_t b = 0; b < batch; b++) {
+            MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
+                matrixDescriptorWithRows:m
+                columns:k
+                rowBytes:k * sizeof(float)
+                dataType:MPSDataTypeFloat32];
+
+            MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
+                matrixDescriptorWithRows:k
+                columns:n
+                rowBytes:n * sizeof(float)
+                dataType:MPSDataTypeFloat32];
+
+            MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
+                matrixDescriptorWithRows:m
+                columns:n
+                rowBytes:n * sizeof(float)
+                dataType:MPSDataTypeFloat32];
+
+            MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A offset:b * a_batch_stride descriptor:descA];
+            MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B offset:b * b_batch_stride descriptor:descB];
+            MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C offset:b * c_batch_stride descriptor:descC];
+
+            MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
+                initWithDevice:device
+                transposeLeft:false
+                transposeRight:false
+                resultRows:m
+                resultColumns:n
+                interiorColumns:k
+                alpha:1.0
+                beta:0.0];
+
+            [matMul encodeToCommandBuffer:commandBuffer
+                               leftMatrix:matA
+                              rightMatrix:matB
+                             resultMatrix:matC];
+        }
+
+        if (!batched) {
+            [commandBuffer commit];
+            [commandBuffer waitUntilCompleted];
+        } else {
+            [g_batch_outputs addObject:C];
+        }
+
+        return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
+    }
+}
+
+// Batched GEMM with A transposed: C[b] = A[b]^T @ B[b]
+// A is stored as [batch, k, m], B is [batch, k, n], C is [batch, m, n]
+LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_tn_f32(
+    b_lean_obj_arg A_buf,
+    b_lean_obj_arg B_buf,
+    size_t batch,
+    size_t m,
+    size_t k,
+    size_t n,
+    lean_obj_arg /* world */
+) {
+    if (!ensure_metal_initialized()) {
+        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
+    }
+
+    id<MTLBuffer> A = get_mtl_buffer(A_buf);
+    id<MTLBuffer> B = get_mtl_buffer(B_buf);
+    if (!A || !B) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
+    }
+
+    @autoreleasepool {
+        size_t output_size = batch * m * n * sizeof(float);
+        id<MTLBuffer> C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
+
+        // A is stored as [batch, k, m] (transposed)
+        size_t a_batch_stride = k * m * sizeof(float);
+        size_t b_batch_stride = k * n * sizeof(float);
+        size_t c_batch_stride = m * n * sizeof(float);
+
+        bool batched = is_batch_mode();
+        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
+
+        for (size_t b = 0; b < batch; b++) {
+            // A stored as [k, m], will be transposed to [m, k]
+            MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
+                matrixDescriptorWithRows:k
+                columns:m
+                rowBytes:m * sizeof(float)
+                dataType:MPSDataTypeFloat32];
+
+            MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
+                matrixDescriptorWithRows:k
+                columns:n
+                rowBytes:n * sizeof(float)
+                dataType:MPSDataTypeFloat32];
+
+            MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
+                matrixDescriptorWithRows:m
+                columns:n
+                rowBytes:n * sizeof(float)
+                dataType:MPSDataTypeFloat32];
+
+            MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A offset:b * a_batch_stride descriptor:descA];
+            MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B offset:b * b_batch_stride descriptor:descB];
+            MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C offset:b * c_batch_stride descriptor:descC];
+
+            MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
+                initWithDevice:device
+                transposeLeft:true  // Transpose A!
+                transposeRight:false
+                resultRows:m
+                resultColumns:n
+                interiorColumns:k
+                alpha:1.0
+                beta:0.0];
+
+            [matMul encodeToCommandBuffer:commandBuffer
+                               leftMatrix:matA
+                              rightMatrix:matB
+                             resultMatrix:matC];
+        }
+
+        if (!batched) {
+            [commandBuffer commit];
+            [commandBuffer waitUntilCompleted];
+        } else {
+            [g_batch_outputs addObject:C];
+        }
+
+        return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
+    }
+}
+
+// Batched GEMM with B transposed: C[b] = A[b] @ B[b]^T
+// A is [batch, m, k], B is stored as [batch, n, k], C is [batch, m, n]
+LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_nt_f32(
+    b_lean_obj_arg A_buf,
+    b_lean_obj_arg B_buf,
+    size_t batch,
+    size_t m,
+    size_t k,
+    size_t n,
+    lean_obj_arg /* world */
+) {
+    if (!ensure_metal_initialized()) {
+        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
+    }
+
+    id<MTLBuffer> A = get_mtl_buffer(A_buf);
+    id<MTLBuffer> B = get_mtl_buffer(B_buf);
+    if (!A || !B) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
+    }
+
+    @autoreleasepool {
+        size_t output_size = batch * m * n * sizeof(float);
+        id<MTLBuffer> C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
+
+        size_t a_batch_stride = m * k * sizeof(float);
+        // B is stored as [batch, n, k] (transposed)
+        size_t b_batch_stride = n * k * sizeof(float);
+        size_t c_batch_stride = m * n * sizeof(float);
+
+        bool batched = is_batch_mode();
+        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
+
+        for (size_t b = 0; b < batch; b++) {
+            MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
+                matrixDescriptorWithRows:m
+                columns:k
+                rowBytes:k * sizeof(float)
+                dataType:MPSDataTypeFloat32];
+
+            // B stored as [n, k], will be transposed to [k, n]
+            MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
+                matrixDescriptorWithRows:n
+                columns:k
+                rowBytes:k * sizeof(float)
+                dataType:MPSDataTypeFloat32];
+
+            MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
+                matrixDescriptorWithRows:m
+                columns:n
+                rowBytes:n * sizeof(float)
+                dataType:MPSDataTypeFloat32];
+
+            MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A offset:b * a_batch_stride descriptor:descA];
+            MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B offset:b * b_batch_stride descriptor:descB];
+            MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C offset:b * c_batch_stride descriptor:descC];
+
+            MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
+                initWithDevice:device
+                transposeLeft:false
+                transposeRight:true   // Transpose B!
+                resultRows:m
+                resultColumns:n
+                interiorColumns:k
+                alpha:1.0
+                beta:0.0];
+
+            [matMul encodeToCommandBuffer:commandBuffer
+                               leftMatrix:matA
+                              rightMatrix:matB
+                             resultMatrix:matC];
+        }
+
+        if (!batched) {
+            [commandBuffer commit];
+            [commandBuffer waitUntilCompleted];
+        } else {
+            [g_batch_outputs addObject:C];
+        }
+
+        return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
+    }
+}
+
 // Sum reduction on GpuBuffer
 LEAN_EXPORT lean_obj_res scilean_gpu_sum_f32(
     b_lean_obj_arg x_buf,

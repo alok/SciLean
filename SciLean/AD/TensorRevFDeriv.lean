@@ -776,4 +776,8 @@ theorem StridedGpuTensor.gemm.arg_AB.HasRevFDerivM_rule :
           pure (dA, dB))) := by
   trivial
 
+-- Batched GEMM autodiff rule requires NormedAddCommGroup instances for 3D tensors.
+-- The batchedGemm and batchedGemmBackward functions are available for direct use.
+-- Autodiff rule will be added when 3D tensor instances are properly defined.
+
 end SciLean
