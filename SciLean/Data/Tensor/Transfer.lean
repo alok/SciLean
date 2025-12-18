@@ -13,13 +13,7 @@ namespace SciLean
 Type-safe transfers between CPU and GPU tensors. The device is tracked in the type,
 so transfers are explicit and visible in function signatures.
 
-Example:
-```lean
-def forward (weights : GpuTensor Float (Idx 128, Idx 784)) (input : CpuTensor Float (Idx 784)) : IO (CpuTensor Float (Idx 128)) := do
-  let gpuInput ← input.toGpu
-  let output ← TensorOps.gemm weights gpuInput  -- GPU computation
-  output.toCpu
-```
+Usage: Call `input.toGpu` to upload, do GPU computation, then `output.toCpu` to download.
 -/
 
 variable {α : Type*} [PlainDataType α]

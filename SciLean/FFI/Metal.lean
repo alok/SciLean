@@ -32,15 +32,9 @@ def withGPU [Inhabited α] (gpuFn cpuFn : Unit → α) : α :=
 When performing multiple GPU operations, each op normally creates its own command buffer
 and waits for completion. This adds 10-50μs overhead per operation.
 
-Batching allows multiple operations to queue into a single command buffer:
-```
-Metal.withBatch do
-  let h1 ← GpuBuffer.gemm A B m k n
-  let h2 ← GpuBuffer.relu h1 n
-  let h3 ← GpuBuffer.add h2 bias n
-  return h3
-```
-All three operations execute in one GPU submission, eliminating per-op sync overhead.
+Batching via `Metal.withBatch` queues multiple operations into a single command buffer.
+Use: `Metal.withBatch do let h1 ← op1; let h2 ← op2; ...`
+All operations execute in one GPU submission, eliminating per-op sync overhead.
 -/
 
 /-- Begin a batch of GPU operations. Subsequent ops queue into shared command buffer. -/
@@ -99,7 +93,7 @@ opaque sizeBytes (buf : @& GpuBuffer) : USize
 @[extern "scilean_gpu_free"]
 opaque free (buf : GpuBuffer) : IO Unit
 
-/-- Slice a GPU buffer: returns new buffer with elements [offset, offset + count).
+/-- Slice a GPU buffer: returns new buffer with elements from offset to offset+count.
     This is a GPU-to-GPU copy (not a view) for safe memory management.
     Offset and count are in number of Float32 elements. -/
 @[extern "scilean_gpu_slice_f32"]
@@ -107,17 +101,17 @@ opaque slice (src : @& GpuBuffer) (offsetFloats countFloats : USize) : IO GpuBuf
 
 /-! ### GPU-to-GPU Operations (no CPU copies!) -/
 
-/-- Matrix multiply on GPU: C = A * B
-    A is [m, k], B is [k, n], returns C [m, n]
-    Both inputs and output stay on GPU -/
+/-- Matrix multiply on GPU: `C = A * B`.
+    A is (m, k), B is (k, n), returns C (m, n).
+    Both inputs and output stay on GPU. -/
 @[extern "scilean_gpu_gemm_f32"]
 opaque gemm (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
-/-- Element-wise add: C = A + B -/
+/-- Element-wise add: `C = A + B`. -/
 @[extern "scilean_gpu_add_f32"]
 opaque add (A B : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
-/-- Element-wise multiply: C = A * B -/
+/-- Element-wise multiply: `C = A * B`. -/
 @[extern "scilean_gpu_mul_f32"]
 opaque mul (A B : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
@@ -129,11 +123,11 @@ opaque relu (x : @& GpuBuffer) (n : USize) : IO GpuBuffer
 @[extern "scilean_gpu_softmax_f32"]
 opaque softmax (x : @& GpuBuffer) (numRows rowSize : USize) : IO GpuBuffer
 
-/-- Conv2D on GPU-resident buffers
-    Input: [batch, inChannels, height, width] in NCHW format
-    Kernel: [outChannels, inChannels, kH, kW]
-    Bias: [outChannels]
-    Returns output on GPU -/
+/-- Conv2D on GPU-resident buffers.
+    Input: (batch, inChannels, height, width) in NCHW format.
+    Kernel: (outChannels, inChannels, kH, kW).
+    Bias: (outChannels).
+    Returns output on GPU. -/
 @[extern "scilean_gpu_conv2d_f32"]
 opaque conv2d (input kernel bias : @& GpuBuffer)
     (batchSize inChannels outChannels : USize)
@@ -155,22 +149,22 @@ opaque maxPool2d (input : @& GpuBuffer)
 @[extern "scilean_gpu_bias_relu_f32"]
 opaque biasRelu (x bias : @& GpuBuffer) (n stride : USize) : IO GpuBuffer
 
-/-- Fused GEMM + Bias + ReLU: C = max(0, A @ B + bias)
-    A is [m, k], B is [k, n], bias is [n], returns C [m, n]
-    bias is broadcasted along rows.
-    More efficient than separate gemm → bias → relu operations. -/
+/-- Fused GEMM + Bias + ReLU: `C = max(0, A @ B + bias)`.
+    A is (m, k), B is (k, n), bias is (n), returns C (m, n).
+    Bias is broadcasted along rows.
+    More efficient than separate gemm, bias, relu operations. -/
 @[extern "scilean_gpu_gemm_bias_relu_f32"]
 opaque gemmBiasRelu (A B bias : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
-/-- Layer normalization: y = gamma * (x - mean) / sqrt(var + eps) + beta
-    x is [n] total elements, hiddenSize is the normalization dimension.
+/-- Layer normalization: `y = gamma * (x - mean) / sqrt(var + eps) + beta`.
+    x is (n) total elements, hiddenSize is the normalization dimension.
     Supports batching. -/
 @[extern "scilean_gpu_layer_norm_f32"]
 opaque layerNorm (x gamma beta : @& GpuBuffer) (n hiddenSize : USize) : IO GpuBuffer
 
-/-- Bias + GELU fused operation: y = gelu(x + bias)
-    x is [n] elements, bias has [stride] elements broadcasted.
-    GELU ≈ 0.5*x*(1+tanh(sqrt(2/π)*(x+0.044715*x³)))
+/-- Bias + GELU fused operation: `y = gelu(x + bias)`.
+    x is (n) elements, bias has (stride) elements broadcasted.
+    GELU uses tanh approximation.
     Supports batching. -/
 @[extern "scilean_gpu_bias_gelu_f32"]
 opaque biasGelu (x bias : @& GpuBuffer) (n stride : USize) : IO GpuBuffer
@@ -188,24 +182,24 @@ opaque biasAdd (x bias : @& GpuBuffer) (n stride : USize) : IO GpuBuffer
 opaque avgpool2d (x : @& GpuBuffer) (batchSize channels inHeight inWidth : USize)
     (poolH poolW : USize) (strideH strideW : USize) : IO GpuBuffer
 
-/-- Flash Attention: output = softmax(Q @ K^T / sqrt(head_dim)) @ V
-    Q, K, V are [seq_len, head_dim] matrices.
+/-- Flash Attention: `output = softmax(Q @ K^T / sqrt(head_dim)) @ V`.
+    Q, K, V are (seq_len, head_dim) matrices.
     Supports batching. -/
 @[extern "scilean_gpu_flash_attention_f32"]
 opaque flashAttention (Q K V : @& GpuBuffer) (seqLen headDim : USize) : IO GpuBuffer
 
-/-- Flash Attention with causal mask
-    Position i can only attend to positions <= i (for autoregressive models).
-    Q, K, V are [seq_len, head_dim] matrices.
+/-- Flash Attention with causal mask.
+    Position i can only attend to positions at most i (for autoregressive models).
+    Q, K, V are (seq_len, head_dim) matrices.
     Supports batching. -/
 @[extern "scilean_gpu_flash_attention_causal_f32"]
 opaque flashAttentionCausal (Q K V : @& GpuBuffer) (seqLen headDim : USize) : IO GpuBuffer
 
-/-- Batch normalization 2D (inference mode)
-    Input: [batch, channels, height, width] in NCHW format
-    gamma (scale), beta (bias), mean, var: [channels] each
-    eps: small constant for numerical stability (typically 1e-5)
-    applyRelu: if 1, applies ReLU after normalization (fused op)
+/-- Batch normalization 2D (inference mode).
+    Input: (batch, channels, height, width) in NCHW format.
+    gamma (scale), beta (bias), mean, var: (channels) each.
+    eps: small constant for numerical stability (typically 1e-5).
+    applyRelu: if 1, applies ReLU after normalization (fused op).
     Returns normalized output on GPU.
     Supports batching. -/
 @[extern "scilean_gpu_batchnorm2d_f32"]
@@ -215,13 +209,13 @@ opaque batchNorm2d (input gamma beta mean var : @& GpuBuffer)
 
 /-! ### Backward Pass Operations (for autodiff) -/
 
-/-- ReLU backward: grad_input = grad_output * (input > 0 ? 1 : 0)
+/-- ReLU backward: `grad_input = grad_output * (input > 0)`.
     Supports batching. -/
 @[extern "scilean_gpu_relu_backward_f32"]
 opaque reluBackward (input gradOutput : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
-/-- Element-wise multiply backward
-    For c = a * b: grad_a = grad_c * b, grad_b = grad_c * a
+/-- Element-wise multiply backward.
+    For `c = a * b`: `grad_a = grad_c * b`, `grad_b = grad_c * a`.
     Returns (grad_a, grad_b) pair.
     Supports batching. -/
 @[extern "scilean_gpu_mul_backward_f32"]
@@ -232,8 +226,8 @@ opaque mulBackward (a b gradOutput : @& GpuBuffer) (n : USize) : IO (GpuBuffer �
 @[extern "scilean_gpu_gelu_backward_f32"]
 opaque geluBackward (input gradOutput : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
-/-- Softmax backward (batched)
-    For y = softmax(x): grad_x = y * (grad_y - sum(grad_y * y))
+/-- Softmax backward (batched).
+    For `y = softmax(x)`: `grad_x = y * (grad_y - sum(grad_y * y))`.
     Takes the softmax output (not input) for efficiency.
     Supports batching. -/
 @[extern "scilean_gpu_softmax_backward_f32"]
@@ -242,29 +236,29 @@ opaque softmaxBackward (softmaxOutput gradOutput : @& GpuBuffer)
 
 /-! ### Additional Training Operations -/
 
-/-- AXPY: result = alpha * x + y (for SGD updates)
+/-- AXPY: `result = alpha * x + y` (for SGD updates).
     Supports batching. -/
 @[extern "scilean_gpu_axpy_f32"]
 opaque axpy (n : USize) (alpha : Float) (x y : @& GpuBuffer) : IO GpuBuffer
 
-/-- Scale: result = alpha * x (scalar multiplication)
+/-- Scale: `result = alpha * x` (scalar multiplication).
     Supports batching. -/
 @[extern "scilean_gpu_scale_f32"]
 opaque scale (n : USize) (alpha : Float) (x : @& GpuBuffer) : IO GpuBuffer
 
-/-- Subtraction: result = x - y
+/-- Subtraction: `result = x - y`.
     Supports batching. -/
 @[extern "scilean_gpu_sub_f32"]
 opaque sub (x y : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
-/-- GEMM with first matrix transposed: C = A^T @ B
-    A is stored as [k, m], computes A^T[m, k] @ B[k, n] = C[m, n]
+/-- GEMM with first matrix transposed: `C = A^T @ B`.
+    A is stored as (k, m), computes A^T(m, k) @ B(k, n) = C(m, n).
     Supports batching. -/
 @[extern "scilean_gpu_gemm_tn_f32"]
 opaque gemmTN (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
-/-- GEMM with second matrix transposed: C = A @ B^T
-    A is [m, k], B is stored as [n, k], computes A @ B^T[k, n] = C[m, n]
+/-- GEMM with second matrix transposed: `C = A @ B^T`.
+    A is (m, k), B is stored as (n, k), computes A @ B^T(k, n) = C(m, n).
     Supports batching. -/
 @[extern "scilean_gpu_gemm_nt_f32"]
 opaque gemmNT (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
@@ -274,8 +268,8 @@ opaque gemmNT (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 @[extern "scilean_gpu_sum_f32"]
 opaque sum (x : @& GpuBuffer) (n : USize) : IO Float
 
-/-- Column-wise sum: for matrix [rows, cols], sum over rows for each column.
-    Returns buffer of size [cols] (one sum per column).
+/-- Column-wise sum: for matrix (rows, cols), sum over rows for each column.
+    Returns buffer of size (cols) (one sum per column).
     Used for gradient accumulation: sum gradients over batch dimension.
     Supports batching. -/
 @[extern "scilean_gpu_row_sum_f32"]
@@ -288,34 +282,18 @@ end GpuBuffer
 Data transfer between CPU and GPU is a major performance bottleneck. This type system
 makes transfers **explicit** at the type level - no implicit coercions allowed!
 
-- `CpuBuffer` - CPU-resident data (wrapper around ByteArray)
-- `GpuBuffer` - GPU-resident data (opaque Metal buffer handle)
+- CpuBuffer: CPU-resident data (wrapper around ByteArray)
+- GpuBuffer: GPU-resident data (opaque Metal buffer handle)
 
 To transfer data, you MUST use explicit functions:
-- `CpuBuffer.upload : CpuBuffer → IO GpuBuffer` (CPU → GPU)
-- `GpuBuffer.download : GpuBuffer → IO CpuBuffer` (GPU → CPU)
+- CpuBuffer.upload: CPU → GPU
+- GpuBuffer.download: GPU → CPU
 
 This prevents accidental data transfers that kill performance. GPU operations only
-accept `GpuBuffer`, CPU operations only accept `CpuBuffer`.
+accept GpuBuffer, CPU operations only accept CpuBuffer.
 
-Usage pattern:
-```lean
--- Load data on CPU
-let cpuWeights : CpuBuffer := ⟨weightData⟩
-let cpuInput : CpuBuffer := ⟨inputData⟩
-
--- Explicit upload to GPU
-let gpuWeights ← cpuWeights.upload
-let gpuInput ← cpuInput.upload
-
--- Chain operations on GPU (no copies! type system enforces this)
-let h1 ← GpuBuffer.gemm gpuWeights gpuInput m k n
-let h2 ← GpuBuffer.relu h1
-
--- Explicit download when needed
-let cpuOutput ← h2.download
-let outputBytes := cpuOutput.data  -- access underlying ByteArray
-```
+Usage: Load on CPU with `CpuBuffer`, call `.upload` to get `GpuBuffer`,
+chain GPU operations, then `.download` when results are needed on CPU.
 -/
 
 /-- CPU-resident buffer. Wrapper around ByteArray that prevents implicit conversion to GpuBuffer.

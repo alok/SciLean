@@ -65,12 +65,51 @@ def relu (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
   let result ← Metal.GpuBuffer.relu a.data.buffer n.toUSize
   return ⟨⟨result⟩⟩
 
-/-- Fused GEMM + Bias + ReLU: C = max(0, A @ B + bias)
-    A: [m, k], B: [k, n], bias: [n], returns C: [m, n] -/
+/-- Fused GEMM + Bias + ReLU: `C = max(0, A @ B + bias)`.
+    A: (m, k), B: (k, n), bias: (n), returns C: (m, n). -/
 def gemmBiasRelu (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx k × Idx n))
     (bias : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx m × Idx n)) := do
   let result ← Metal.GpuBuffer.gemmBiasRelu A.data.buffer B.data.buffer bias.data.buffer
     m.toUSize k.toUSize n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- Softmax activation on GPU (applied row-wise).
+    For tensor of shape (m, n), softmax is applied to each row independently.
+    Returns normalized probabilities where each row sums to 1. -/
+def softmax (a : GpuTensor Float (Idx m × Idx n)) : IO (GpuTensor Float (Idx m × Idx n)) := do
+  let result ← Metal.GpuBuffer.softmax a.data.buffer m.toUSize n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- GELU activation on GPU using fused bias+gelu with zero bias.
+    GELU(x) ≈ 0.5*x*(1+tanh(sqrt(2/π)*(x+0.044715*x³)))
+    Note: For performance, prefer `biasGelu` when adding bias anyway. -/
+def gelu (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+  -- Use biasGelu with zero bias - the kernel handles this efficiently
+  let zeroBias ← Metal.CpuBuffer.zeros n |>.upload
+  let result ← Metal.GpuBuffer.biasGelu a.data.buffer zeroBias n.toUSize n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- Matrix multiply on GPU: `C = A @ B`.
+    A: (m, k), B: (k, n), returns C: (m, n). -/
+def gemm (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx k × Idx n)) :
+    IO (GpuTensor Float (Idx m × Idx n)) := do
+  let result ← Metal.GpuBuffer.gemm A.data.buffer B.data.buffer m.toUSize k.toUSize n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- GEMM with A transposed: `C = A^T @ B`.
+    A is stored as (k, m), computes A^T(m, k) @ B(k, n) = C(m, n).
+    Used in backward pass: `grad_B = A^T @ grad_C`. -/
+def gemmTN (A : GpuTensor Float (Idx k × Idx m)) (B : GpuTensor Float (Idx k × Idx n)) :
+    IO (GpuTensor Float (Idx m × Idx n)) := do
+  let result ← Metal.GpuBuffer.gemmTN A.data.buffer B.data.buffer m.toUSize k.toUSize n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- GEMM with B transposed: `C = A @ B^T`.
+    A is (m, k), B is stored as (n, k), computes A @ B^T(k, n) = C(m, n).
+    Used in backward pass: `grad_A = grad_C @ B^T`. -/
+def gemmNT (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx n × Idx k)) :
+    IO (GpuTensor Float (Idx m × Idx n)) := do
+  let result ← Metal.GpuBuffer.gemmNT A.data.buffer B.data.buffer m.toUSize k.toUSize n.toUSize
   return ⟨⟨result⟩⟩
 
 end GpuTensor
