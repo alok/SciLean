@@ -44,6 +44,26 @@ static id<MTLComputeCommandEncoder> get_encoder_for_op() {
     return [cb computeCommandEncoder];
 }
 
+// Pause batch compute encoder to allow MPS operations.
+// MPS encodes directly to command buffer and can't coexist with compute encoders.
+// Returns true if encoder was paused (needs resume after MPS encoding).
+static bool pause_batch_encoder_for_mps() {
+    if (g_batch_mode && g_batch_encoder != nil) {
+        [g_batch_encoder endEncoding];
+        g_batch_encoder = nil;
+        return true;
+    }
+    return false;
+}
+
+// Resume batch compute encoder after MPS operations.
+// Call this after MPS encoding to restore compute encoder for subsequent ops.
+static void resume_batch_encoder() {
+    if (g_batch_mode && g_batch_encoder == nil && g_batch_command_buffer != nil) {
+        g_batch_encoder = [g_batch_command_buffer computeCommandEncoder];
+    }
+}
+
 static size_t get_buffer_bucket(size_t size) {
     for (size_t i = 0; i < NUM_BUFFER_BUCKETS; i++) {
         if (size <= BUFFER_BUCKET_SIZES[i]) return i;
@@ -271,12 +291,15 @@ LEAN_EXPORT lean_obj_res scilean_gpu_batch_begin(lean_obj_arg /* world */) {
 
 // Execute all batched GPU operations and wait for completion
 LEAN_EXPORT lean_obj_res scilean_gpu_batch_execute(lean_obj_arg /* world */) {
-    if (!g_batch_mode || !g_batch_encoder) {
+    if (!g_batch_mode || !g_batch_command_buffer) {
         return lean_io_result_mk_error(lean_mk_string("Not in batch mode"));
     }
 
     @autoreleasepool {
-        [g_batch_encoder endEncoding];
+        // Encoder might be nil if last operation was MPS (which encodes directly)
+        if (g_batch_encoder != nil) {
+            [g_batch_encoder endEncoding];
+        }
         [g_batch_command_buffer commit];
         [g_batch_command_buffer waitUntilCompleted];
 
@@ -485,8 +508,11 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_f32(
             alpha:1.0
             beta:0.0];
 
-        bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
+        bool in_batch = g_batch_mode;
+        // MPS can't encode while compute encoder is active - pause it
+        pause_batch_encoder_for_mps();
+
+        id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
 
         // MPS encodes directly to command buffer (no compute encoder needed)
         [matMul encodeToCommandBuffer:commandBuffer
@@ -494,11 +520,13 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_f32(
                           rightMatrix:matB
                          resultMatrix:matC];
 
-        if (!batched) {
+        if (!in_batch) {
             [commandBuffer commit];
             [commandBuffer waitUntilCompleted];
         } else {
             [g_batch_outputs addObject:C];
+            // Resume compute encoder for subsequent compute ops
+            resume_batch_encoder();
         }
 
         lean_obj_res result = wrap_gpu_buffer(C, output_size);
@@ -5079,8 +5107,11 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_tn_f32(
             alpha:1.0
             beta:0.0];
 
-        bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
+        bool in_batch = g_batch_mode;
+        // MPS can't encode while compute encoder is active - pause it
+        pause_batch_encoder_for_mps();
+
+        id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
 
         // MPS encodes directly to command buffer (no compute encoder needed)
         [matMul encodeToCommandBuffer:commandBuffer
@@ -5088,11 +5119,13 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_tn_f32(
                           rightMatrix:matB
                          resultMatrix:matC];
 
-        if (!batched) {
+        if (!in_batch) {
             [commandBuffer commit];
             [commandBuffer waitUntilCompleted];
         } else {
             [g_batch_outputs addObject:C];
+            // Resume compute encoder for subsequent compute ops
+            resume_batch_encoder();
         }
 
         return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
@@ -5164,8 +5197,11 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_nt_f32(
             alpha:1.0
             beta:0.0];
 
-        bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
+        bool in_batch = g_batch_mode;
+        // MPS can't encode while compute encoder is active - pause it
+        pause_batch_encoder_for_mps();
+
+        id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
 
         // MPS encodes directly to command buffer (no compute encoder needed)
         [matMul encodeToCommandBuffer:commandBuffer
@@ -5173,11 +5209,13 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_nt_f32(
                           rightMatrix:matB
                          resultMatrix:matC];
 
-        if (!batched) {
+        if (!in_batch) {
             [commandBuffer commit];
             [commandBuffer waitUntilCompleted];
         } else {
             [g_batch_outputs addObject:C];
+            // Resume compute encoder for subsequent compute ops
+            resume_batch_encoder();
         }
 
         return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
@@ -5219,8 +5257,11 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_f32(
         size_t c_batch_stride = m * n * sizeof(float);
 
         // Process each batch with MPS
-        bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
+        bool in_batch = g_batch_mode;
+        // MPS can't encode while compute encoder is active - pause it
+        pause_batch_encoder_for_mps();
+
+        id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
 
         for (size_t b = 0; b < batch; b++) {
             MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
@@ -5261,11 +5302,13 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_f32(
                              resultMatrix:matC];
         }
 
-        if (!batched) {
+        if (!in_batch) {
             [commandBuffer commit];
             [commandBuffer waitUntilCompleted];
         } else {
             [g_batch_outputs addObject:C];
+            // Resume compute encoder for subsequent compute ops
+            resume_batch_encoder();
         }
 
         return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
@@ -5302,8 +5345,11 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_tn_f32(
         size_t b_batch_stride = k * n * sizeof(float);
         size_t c_batch_stride = m * n * sizeof(float);
 
-        bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
+        bool in_batch = g_batch_mode;
+        // MPS can't encode while compute encoder is active - pause it
+        pause_batch_encoder_for_mps();
+
+        id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
 
         for (size_t b = 0; b < batch; b++) {
             // A stored as [k, m], will be transposed to [m, k]
@@ -5345,11 +5391,13 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_tn_f32(
                              resultMatrix:matC];
         }
 
-        if (!batched) {
+        if (!in_batch) {
             [commandBuffer commit];
             [commandBuffer waitUntilCompleted];
         } else {
             [g_batch_outputs addObject:C];
+            // Resume compute encoder for subsequent compute ops
+            resume_batch_encoder();
         }
 
         return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
@@ -5386,8 +5434,11 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_nt_f32(
         size_t b_batch_stride = n * k * sizeof(float);
         size_t c_batch_stride = m * n * sizeof(float);
 
-        bool batched = is_batch_mode();
-        id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
+        bool in_batch = g_batch_mode;
+        // MPS can't encode while compute encoder is active - pause it
+        pause_batch_encoder_for_mps();
+
+        id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
 
         for (size_t b = 0; b < batch; b++) {
             MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
@@ -5429,11 +5480,13 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_nt_f32(
                              resultMatrix:matC];
         }
 
-        if (!batched) {
+        if (!in_batch) {
             [commandBuffer commit];
             [commandBuffer waitUntilCompleted];
         } else {
             [g_batch_outputs addObject:C];
+            // Resume compute encoder for subsequent compute ops
+            resume_batch_encoder();
         }
 
         return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));

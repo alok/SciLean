@@ -25,3 +25,4 @@ __pycache__/
 data/npy_test/
 data/mnist_weights/
 data/MNIST/
+examples/data/
