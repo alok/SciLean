@@ -32,7 +32,7 @@ alternatives
   by native_decide
 ```
 
-This is a term equal to {lit}`8` or {lit}`2^3`, each form might be usefull in different scenarios.
+This is a term equal to {lit}`8` or {lit}`2^3`, each form might be useful in different scenarios.
 -/
 macro " alternatives " linebreak " fst: " a:term linebreak " snd: " b:term  linebreak " by " proof:tacticSeq : term =>
   `(Alternatives.choose $a $b (Alternatives.mk (by $proof)))

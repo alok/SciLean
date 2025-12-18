@@ -178,7 +178,7 @@ by
   -- We know that `x t = S (x t₀)`, where S is the evolution operator we want to find adjoint of.
   -- Thus `y t₀ = S† x₀'`
   --
-  -- We can show that `y` satisfies diffrential equation `ⅆ y t = -(f t)† (y t)`
+  -- We can show that `y` satisfies differential equation `ⅆ y t = -(f t)† (y t)`
   -- by differentiating `⟪x s, y s⟫` w.r.t. to `s`
   --
   -- Therefore we can express `y t₀` using `odeSolve`

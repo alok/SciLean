@@ -10,7 +10,7 @@ namespace SciLean.Tactic.DataSynth
 
 open Lean Meta
 
-/-- Tracing node that does not do any pretty printing so it is usefull for profiling. -/
+/-- Tracing node that does not do any pretty printing so it is useful for profiling. -/
 private def withProfileTrace (msg : String) (x : DataSynthM α) : DataSynthM α :=
   withTraceNode `Meta.Tactic.data_synth.profile (fun _ => return msg) x
 

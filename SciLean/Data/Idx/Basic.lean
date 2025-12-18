@@ -21,7 +21,7 @@ Warning: This type is sometimes used in inconsistent way! It is treated identica
          would be too cumbersome. At some point we will attempt to recover formal consistency by
          adding `n < USize.size` assumption everywhere where necessary and in applications panicking
          if not satisfied. Note that not satisfying `n < USize.size` will mean running out of memory
-         and at that point programs has very limited cabability of recovering anyway.
+         and at that point programs have very limited capability of recovering anyway.
 
          Another way to deal with this problem is to make this type completely opaque, add an
          axiom that it is isomorphic to `Fin n` and panic at runtime on overflow. This would

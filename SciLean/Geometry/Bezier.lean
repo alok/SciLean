@@ -56,7 +56,7 @@ def split [Vec X] {n} (points : Points n) (t : ℝ) : Points n × Points n :=
   let fₙ :  (n' : Nat) → Points (n - n') × Points n' × Points n'
                        → Points (n - (n' + 1)) × Points (n' + 1) × Points (n' + 1) :=
       λ n' (pts, startPts, endPts) =>
-        -- This is effectivelly asking if `0 < n - n'` but in a form that is usefully for typecasting
+        -- This is effectively asking if `0 < n - n'` but in a form that is useful for typecasting
         if h : n - n' = (n - (n' + 1) + 1) then
           -- In this case pts should have at least one element
           let first := pts[⟨0, sorry_proof⟩]
