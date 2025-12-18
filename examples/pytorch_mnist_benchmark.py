@@ -98,10 +98,10 @@ def main():
     print(f"Learning rate: {LR:.6f}")
     print(f"Epochs: {EPOCHS}")
 
-    # Data loading
+    # Data loading (no normalization to match SciLean/MLX)
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
+        # No normalization - raw pixels like SciLean/MLX
     ])
 
     train_dataset = datasets.MNIST('./data', train=True, download=True, transform=transform)
