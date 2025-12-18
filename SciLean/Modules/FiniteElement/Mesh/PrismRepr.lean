@@ -799,7 +799,7 @@ def FaceRepr.index_numberOfFaces (f : FaceRepr)
   : f.index < f.ofPrism.faceCount f.dim
   := sorry_proof
 
-/-- Face is uniquelly determined by its parent prism, dimension and index -/
+/-- Face is uniquely determined by its parent prism, dimension and index -/
 def FaceRepr.index_ext (f g : FaceRepr)
   : f.ofPrism = g.ofPrism → f.dim = g.dim → f.index = g.index → f = g
   := sorry_proof

@@ -51,7 +51,7 @@ def fromKn (X : Type*) {I K : Type*} {nI} [IndexType I nI] [PlainDataType K] [Da
 /--
 Converts `X` to `R^[I]`
 
-Similar to `toKn` but can infere `R` and `I` automatically.
+Similar to `toKn` but can infer `R` and `I` automatically.
 -/
 @[macro_inline]
 def toRn {X I R : Type*} [RealScalar R] [PlainDataType R] {nI} [IndexType I nI] [HasRnEquiv X I R]
@@ -60,7 +60,7 @@ def toRn {X I R : Type*} [RealScalar R] [PlainDataType R] {nI} [IndexType I nI] 
 /--
 Converts `R^[I]` to `X`
 
-Similar to `fromKn` can infere `R` and `I` automatically.
+Similar to `fromKn` can infer `R` and `I` automatically.
 -/
 @[macro_inline]
 def fromRn {X I R : Type*} [RealScalar R] [PlainDataType R] {nI} [IndexType I nI] [HasRnEquiv X I R]
