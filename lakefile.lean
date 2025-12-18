@@ -354,6 +354,11 @@ lean_exe GpuStridedTensorTest where
   root := `test.gpu_strided_tensor
   moreLinkArgs := metalLinkArgs
 
+lean_exe StridedGemmBenchmark where
+  buildType := .release
+  root := `examples.StridedGemmBenchmark
+  moreLinkArgs := metalLinkArgs
+
 lean_exe GpuBatchingBenchmark where
   buildType := .release
   root := `examples.GpuBatchingBenchmark
