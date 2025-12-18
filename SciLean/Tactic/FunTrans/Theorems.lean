@@ -13,7 +13,9 @@ import SciLean.Lean.Array
 
 
 /-!
-## `fun_trans` enviroment extensions storing thorems for `fun_trans`
+# funTrans Theorems
+
+Environment extensions storing theorems for funTrans.
 -/
 
 namespace Mathlib
@@ -238,7 +240,7 @@ def FunctionTheorem.ord (t s : FunctionTheorem) : Ordering :=
   tl.lexOrd sl
 
 /-- -/
-def getTheoremsForFunction (funName : Name) (funTransName : Name) (nargs : Option Nat) (mainArgs : Option (Array ℕ)) :
+def getTheoremsForFunction (funName : Name) (funTransName : Name) (nargs : Option Nat) (mainArgs : Option (Array Nat)) :
     CoreM (Array FunctionTheorem) := do
 
   let thms := (functionTheoremsExt.getState (← getEnv)).theorems.findD funName {}
@@ -264,10 +266,10 @@ structure GeneralTheorem where
   /-- theorem name -/
   thmName     : Name
   /-- discriminatory tree keys used to index this theorem -/
-  keys        : List RefinedDiscrTree.DTExpr
+  keys        : List (RefinedDiscrTree.Key × RefinedDiscrTree.LazyEntry)
   /-- priority -/
   priority    : Nat  := eval_prio default
-  deriving Inhabited, BEq
+  deriving Inhabited
 
 /-- Get proof of a theorem. -/
 def GeneralTheorem.getProof (thm : GeneralTheorem) : MetaM Expr := do
@@ -288,7 +290,8 @@ initialize morTheoremsExt : GeneralTheoremsExt ←
     name     := by exact decl_name%
     initial  := {}
     addEntry := fun d e =>
-      {d with theorems := e.keys.foldl (RefinedDiscrTree.insertDTExpr · · e) d.theorems}
+      {d with theorems := e.keys.foldl (fun thms (key, entry) =>
+        RefinedDiscrTree.insert thms key (entry, e)) d.theorems}
   }
 
 
@@ -298,7 +301,8 @@ initialize fvarTheoremsExt : GeneralTheoremsExt ←
     name     := by exact decl_name%
     initial  := {}
     addEntry := fun d e =>
-      {d with theorems := e.keys.foldl (RefinedDiscrTree.insertDTExpr · · e) d.theorems}
+      {d with theorems := e.keys.foldl (fun thms (key, entry) =>
+        RefinedDiscrTree.insert thms key (entry, e)) d.theorems}
   }
 
 
@@ -324,7 +328,7 @@ Examples:
   theorem Continuous_add (hf : Continuous f) (hg : Continuous g) :
       Continuous (fun x => (f x) + (g x))
 ```
-- mor - the head of function body has to be ``DFunLike.code
+- mor - the head of function body has to be `DFunLike.code`
 ```
   theorem ContDiff.clm_apply {f : E → F →L[𝕜] G} {g : E → F}
       (hf : ContDiff 𝕜 n f) (hg : ContDiff 𝕜 n g) :
@@ -391,7 +395,7 @@ def getTheoremFromConst (declName : Name) (prio : Nat := eval_prio default) : Me
       }
     | .fvar .. =>
       let (_,_,b') ← forallMetaTelescope info.type
-      let keys := ← RefinedDiscrTree.mkDTExprs (b'.getArg! 1) false
+      let keys ← RefinedDiscrTree.initializeLazyEntryWithEta (b'.getArg! 1)
       let thm : GeneralTheorem := {
         funTransName := funTransName
         thmName := declName

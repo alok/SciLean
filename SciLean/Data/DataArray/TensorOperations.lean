@@ -112,9 +112,12 @@ TODO: call BLAS
 -/
 def contractLeftAddR (a : R) (x : R^[I]) (y : R^[I,J]) (b : R) (z : R^[J]) : R^[J] := Id.run do
   let mut z := z
+  -- First apply b*z, then accumulate a*x^T*y
+  for j in fullRange J do
+    z[j] := b * z[j]
   for i in fullRange I do
     for j in fullRange J do
-      z[j] := b * z[j] + a * x[i] * y[i,j]
+      z[j] := z[j] + a * x[i] * y[i,j]
   z
 
 /--
@@ -124,15 +127,18 @@ TODO: call BLAS
 -/
 def contractRightAddR (a : R) (x : R^[I,J]) (y : R^[J]) (b : R) (z : R^[I]) : R^[I] := Id.run do
   let mut z := z
+  -- First apply b*z, then accumulate a*x*y
+  for i in fullRange I do
+    z[i] := b * z[i]
   for i in fullRange I do
     for j in fullRange J do
-      z[i] := b * z[i] + a * x[i,j] * y[j]
+      z[i] := z[i] + a * x[i,j] * y[j]
   z
 
 /--
 Matrix-matrix multiplication (naive fallback)
 
-Computes: z := a*x*y + b*z
+Computes: `z := a * x * y + b * z`
 -/
 def contractMiddleAddRNaive (a : R) (x : R^[I,J]) (y : R^[J,K]) (b : R) (z : R^[I,K]) : R^[I,K] := Id.run do
   let mut z := z
@@ -161,7 +167,7 @@ def fromFloatArray {ι : Type} {n} [IndexType ι n] (x : FloatArray) : Float^[ι
 /--
 Matrix-matrix multiplication using BLAS dgemm (Float only).
 
-Computes: z := a*x*y + b*z
+Computes: `z := a * x * y + b * z`
 
 This is significantly faster than naive loops for large matrices.
 -/
@@ -180,10 +186,23 @@ def contractMiddleAddRFloat
 /--
 Matrix-matrix multiplication
 
-Uses BLAS gemm for Float, naive loops otherwise.
+Uses `BLAS.LevelThreeData.gemm` (row-major).
+
+For a pure Lean fallback, see `contractMiddleAddRNaive`.
 -/
 def contractMiddleAddR (a : R) (x : R^[I,J]) (y : R^[J,K]) (b : R) (z : R^[I,K]) : R^[I,K] :=
-  contractMiddleAddRNaive a x y b z
+  let data :=
+    BLAS.LevelThreeData.gemm .RowMajor .NoTrans .NoTrans
+      nI nK nJ a x.data 0 nJ y.data 0 nK b z.data 0 nK
+  ⟨data, sorry_proof⟩
+
+----------------------------------------------------------------------------------------------------
+-- Numpy-style wrappers ----------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+
+/-- Matrix multiplication (Numpy: `@`). -/
+abbrev matmul (A : R^[I,J]) (B : R^[J,K]) : R^[I,K] :=
+  contractMiddleAddR 1 A B 0 (0 : R^[I,K])
 
 
 
@@ -347,3 +366,58 @@ def logsumexpSoftmax [Fold ι] [Fold I] (x : X^[I]) : (R × X^[I]) :=
   let w := ∑ᴵ i, exp (x[i] - m)
   let x := x.rmap (fun xi => w⁻¹ * exp (xi - m))
   (log w + m, fromRn x)
+
+
+----------------------------------------------------------------------------------------------------
+-- Mean, Argmax, Argmin, LogSoftmax, ReLU  ---------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+
+/-- Mean (average) of all elements in the array. -/
+abbrev mean (x : R^[I]) : R :=
+  let xr := toRn x
+  (∑ᴵ i, xr[i]) / nI
+
+/-- Index of the maximum element. Returns the first index if there are ties. -/
+def argmax [Inhabited I] (x : R^[I]) : I := Id.run do
+  have : Bot R := ⟨(-1:R)/(0:R)⟩
+  let mut maxIdx : I := default
+  let mut maxVal : R := ⊥
+  for i in fullRange I do
+    if x[i] > maxVal then
+      maxVal := x[i]
+      maxIdx := i
+  return maxIdx
+
+/-- Index of the minimum element. Returns the first index if there are ties. -/
+def argmin [Inhabited I] (x : R^[I]) : I := Id.run do
+  have : Top R := ⟨(1:R)/(0:R)⟩
+  let mut minIdx : I := default
+  let mut minVal : R := ⊤
+  for i in fullRange I do
+    if x[i] < minVal then
+      minVal := x[i]
+      minIdx := i
+  return minIdx
+
+open Scalar in
+/-- Log-softmax. Numerically stable implementation. -/
+def logSoftmax [Fold ι] [Fold I] (x : X^[I]) : X^[I] :=
+  let xr := toRn x
+  let m := xr.rmax
+  let lse := log (∑ᴵ i, exp (xr[i] - m)) + m
+  let yr := xr.rmap (fun xi => xi - lse)
+  fromRn yr
+
+/-- ReLU activation element-wise. -/
+def relu (x : R^[I]) : R^[I] :=
+  let xr := toRn x
+  let yr := xr.rmap (fun xi => max 0 xi)
+  fromRn yr
+
+/-- Leaky ReLU activation element-wise. -/
+def leakyRelu (α : R) (x : R^[I]) : R^[I] :=
+  let xr := toRn x
+  let yr := xr.rmap (fun xi => if xi > 0 then xi else α * xi)
+  fromRn yr
+
+end SciLean.DataArrayN

@@ -56,7 +56,8 @@ variable
 ----------------------------------------------------------------------------------------------------
 
 attribute [vector_optimize] smul_smul smul_neg one_mul neg_mul
-attribute [vector_optimize ←] neg_smul pow_succ pow_succ'
+-- Note: ← modifier applied via standard simp, vector_optimize gets normal direction
+attribute [simp ←, vector_optimize] neg_smul pow_succ pow_succ'
 
 
 ----------------------------------------------------------------------------------------------------
@@ -140,7 +141,7 @@ theorem tmulAdd_smul_y (a b : R) (y : Y) (x : X) (A : YX) :
 @[simp, simp_core, vector_optimize]
 theorem tmulAdd_smul_x (a b : R) (y : Y) (x : X) (A : YX) :
     tmulAdd a y (b•x) A = tmulAdd (a*b) y x A := by
-  simp [axpby_spec,tmulAdd_spec]
+  simp [tmulAdd_spec]
   sorry_proof
 
 

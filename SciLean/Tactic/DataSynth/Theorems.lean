@@ -64,7 +64,8 @@ inductive LambdaTheoremData where
   The theorem should have roughly the following form
   ```
   (y : Y) → P (fun x => y) c'
-  `` -/
+  ```
+  -/
   | const
   /-- Projection theorem
 
@@ -161,10 +162,10 @@ def getLambdaTheorems (dataSynthName : Name) (thmType : LambdaTheoremType) :
 /-- Generalized transformation theorem -/
 structure GeneralTheorem extends Theorem where
   /-- discrimination tree keys used to index this theorem -/
-  keys        : List RefinedDiscrTree.DTExpr
+  keys        : List (RefinedDiscrTree.Key × RefinedDiscrTree.LazyEntry)
   /-- priority -/
   priority    : Nat  := eval_prio default
-  deriving Inhabited, BEq
+  deriving Inhabited
 
 
 
@@ -173,7 +174,6 @@ def DataSynthTheorem.getProof (thm : GeneralTheorem) : MetaM Expr := do
   mkConstWithFreshMVarLevels thm.thmName
 
 
-open Mathlib.Meta.FunProp in
 /-- -/
 structure DataSynthTheorems where
   /-- -/
@@ -183,15 +183,14 @@ structure DataSynthTheorems where
 /-- -/
 abbrev DataSynthTheoremsExt := SimpleScopedEnvExtension GeneralTheorem DataSynthTheorems
 
-
-open Mathlib.Meta.FunProp in
 /-- -/
 initialize dataSynthTheoremsExt : DataSynthTheoremsExt ←
   registerSimpleScopedEnvExtension {
     name     := by exact decl_name%
     initial  := {}
     addEntry := fun d e =>
-      {d with theorems := e.keys.foldl (RefinedDiscrTree.insertDTExpr · · e) d.theorems}
+      {d with theorems := e.keys.foldl (fun thms (key, entry) =>
+        RefinedDiscrTree.insert thms key (entry, e)) d.theorems}
   }
 
 
@@ -214,7 +213,7 @@ def getTheoremFromConst (declName : Name) (prio : Nat := eval_prio default) : Me
     args := args.set! i (← mkFreshExprMVar X)
 
   let b := fn.beta args
-  let keys ← RefinedDiscrTree.mkDTExprs b false
+  let keys ← RefinedDiscrTree.initializeLazyEntryWithEta b
 
   trace[Meta.Tactic.data_synth]
     "dataSynth: {dataSynthDecl.name}\

@@ -4,11 +4,11 @@ import SciLean.Numerics.Optimization.Optimjl.LinerSearches.BackTracking
 import SciLean.Data.DataArray.Algebra
 import SciLean.Data.DataArray.TensorProduct
 
-/-! Port of Optim.jl, file src/multivariate/solvers/first_order/bfgs.jl
+/-! Port of Optim.jl
 
-github link:
-https://github.com/JuliaNLSolvers/Optim.jl/blob/711dfec61acf5dbed677e1af15f2a3347d5a88ad/src/multivariate/solvers/first_order/bfgs.jl
+Ported from `src/multivariate/solvers/first_order/bfgs.jl`.
 
+See <https://github.com/JuliaNLSolvers/Optim.jl>
 -/
 
 namespace SciLean.Optimjl
@@ -111,15 +111,28 @@ def perform_linesearch (method : BFGS R) (state : State R n) (d : ObjectiveFunct
   state.f_x_previous := φ₀
   state.x_previous   := state.x
 
-  let φ := fun α => d.f (state.x + α • state.s)
+  let φ : R → R := fun α => d.f (state.x + α • state.s)
 
-  -- WARNING! Here we run IO code in pure code, the last `()` is `IO.RealWorld`
-  --          This hould be fixed, eiter remove LineSearch.call from IO or make this function in IO
-  match method.lineSearch.call φ φ₀ dφ₀ state.alpha () () with
-  | .ok (αφα,_) _ =>
-    return .ok αφα
-  | .error e _ =>
-    return .error e
+  -- NOTE:
+  -- `LineSearch0Obj.call` runs in `EIO`, so we cannot execute it in this pure
+  -- function. Until the line search API is refactored, use a small pure Armijo
+  -- backtracking line search.
+  let c₁ := method.lineSearch.inst.c₁ method.lineSearch.m
+  let ρ : R := 0.5
+  let maxIter : Nat := 50
+
+  let mut α := state.alpha
+  let mut φα := φ α
+  let mut iter : Nat := 0
+
+  while φα > φ₀ + c₁ * α * dφ₀ do
+    iter := iter + 1
+    if iter > maxIter then
+      return .error .maxIterationn
+    α := ρ * α
+    φα := φ α
+
+  return .ok (α, φα)
 
 
 def updateState (method : BFGS R) (state : State R n) (d : ObjectiveFunction R (R^[n])) :

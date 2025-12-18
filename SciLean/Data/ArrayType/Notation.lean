@@ -4,7 +4,7 @@ import SciLean.Data.ArrayLike
 import SciLean.Lean.Meta.Basic
 import Batteries.Lean.Expr
 
-import Mathlib.Data.Matrix.Notation
+import Mathlib.LinearAlgebra.Matrix.Notation
 
 import Qq
 
@@ -217,12 +217,12 @@ def ofFnExplicitElab : TermElab := fun stx expectedType? =>
 
     if rows.size = 1 then
       let fn ←
-        elabTerm (←`(⊞ (i : Idx $n) => ![$elems,*] i)) expectedType?
+        elabTerm (←`(⊞ (i : Idx $n) => ![$elems,*] i.toFin)) expectedType?
 
       return fn
     else
       let fn ←
-        elabTerm (←`(⊞ (i : Idx $m) (j : Idx $n) => !![$[$[$rows],*];*] i j))
+        elabTerm (←`(⊞ (i : Idx $m) (j : Idx $n) => !![$[$[$rows],*];*] i.toFin j.toFin))
           expectedType?
 
       return fn

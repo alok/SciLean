@@ -46,7 +46,7 @@ def isProjectionOfFVar (e : Expr) : MetaM Bool := do
 
 Two main normalizations are:
 
-1. nested let bindings`
+1. nested let bindings:
 ```
 let x :=
   let y := a + b
@@ -144,7 +144,7 @@ partial def letNormalize (e : Expr) (config : LetNormalizeConfig) : MetaM Expr :
             let name := xName.appendAfter s!"_{info.fieldNames[i]!}"
             let val  := args[ctor.numParams + i]!
             let type ← inferType val
-            lctx := lctx.mkLetDecl fvarId name type val (nonDep := false) default
+            lctx := lctx.mkLetDecl fvarId name type val default (nondep := false)
             fvars := fvars.push (.fvar fvarId)
 
           let e' ← withLCtx lctx insts do

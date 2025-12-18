@@ -109,7 +109,7 @@ import SciLean.Analysis.Scalar.Basic
 import SciLean.Analysis.Scalar.FloatAsReal
 import SciLean.Analysis.Scalar.FloatRealEquiv
 import SciLean.Analysis.Scalar.Notation
-import SciLean.Analysis.Sorry
+-- import SciLean.Analysis.Sorry  -- disabled: needs mathlib API update for MulAction
 import SciLean.Analysis.SpecialFunctions.GaborWavelet
 import SciLean.Analysis.SpecialFunctions.Gaussian
 import SciLean.Analysis.SpecialFunctions.Inner
@@ -320,6 +320,7 @@ import SciLean.Analysis.SpecialFunctions.Trigonometric
 -- import SciLean.Core_old.old.VariationalCalculus
 -- import SciLean.Core_old.old.VariationalCalculus.Examples
 -- import SciLean.Core_old.old.Vec
+import SciLean.Compiler.LazyTensor
 import SciLean.Data.ArrayLike
 import SciLean.Data.ArrayOperations.Algebra
 import SciLean.Data.ArrayOperations.Basic
@@ -351,6 +352,7 @@ import SciLean.Data.DataArray.Operations.Col
 import SciLean.Data.DataArray.Operations.Curry
 import SciLean.Data.DataArray.Operations.Row
 import SciLean.Data.DataArray.Operations.Uncurry
+import SciLean.Data.DataArray.Random
 -- import SciLean.Data.DataArray.Operations_old
 -- import SciLean.Data.DataArray.Operations_old.AntiSymmPart
 -- import SciLean.Data.DataArray.Operations_old.Cross
@@ -383,34 +385,25 @@ import SciLean.Data.DataArray.PlainDataType
 import SciLean.Data.DataArray.RnEquiv
 import SciLean.Data.DataArray.TensorOperations
 import SciLean.Data.DataArray.TensorProduct
+import SciLean.Data.TensorBackend
+-- import SciLean.Data.TensorBackendMetal  -- Metal backend (requires Metal.lean FFI)
 import SciLean.Data.FinProd
 import SciLean.Data.Float
 import SciLean.Data.FloatArray
-import SciLean.Data.FloatExtern
 import SciLean.Data.Function
 import SciLean.Data.Idx
 import SciLean.Data.Idx.Basic
 import SciLean.Data.Idx.GetElemIdx
 import SciLean.Data.IndexType
-import SciLean.Data.IndexType.Basic
-import SciLean.Data.IndexType.DeriveIndexType
-import SciLean.Data.IndexType.Fold
-import SciLean.Data.IndexType.IndexEquiv
-import SciLean.Data.IndexType.Init
-import SciLean.Data.IndexType.Operations
-import SciLean.Data.IndexType.Range
-import SciLean.Data.IndexType.RangeNotation
-import SciLean.Data.IndexType.SumProduct
-import SciLean.Data.IndexType.TensorIndex
 import SciLean.Data.Instances.Sigma
 import SciLean.Data.Int64
 import SciLean.Data.ListN
 import SciLean.Data.Nat
 import SciLean.Data.Prod
 import SciLean.Data.Random
-import SciLean.Data.SparseMatrix.Basic
+-- import SciLean.Data.SparseMatrix.Basic  -- disabled: needs mathlib API update for List.Sorted
 import SciLean.Data.StructType
-import SciLean.Data.StructType.Algebra
+-- import SciLean.Data.StructType.Algebra  -- disabled: file moved to Algebra.lean.disabled
 import SciLean.Data.StructType.Basic
 import SciLean.Data.Vector
 import SciLean.Data.VectorType.Base
@@ -460,7 +453,7 @@ import SciLean.Geometry.FrontierSpeed
 -- import SciLean.Geometry.Shape.Shape
 -- import SciLean.Geometry.Shape.Simplex
 -- import SciLean.Geometry.Shape.Sphere
--- import SciLean.Geometry.Shape.TransfromedShape
+-- import SciLean.Geometry.Shape.TransformedShape
 -- import SciLean.Geometry.Shape.Triangle
 import SciLean.Geometry.SurfaceParametrization
 import SciLean.Lean.Array
@@ -505,6 +498,7 @@ import SciLean.Meta.GenerateFunProp
 import SciLean.Meta.GenerateFunTrans
 import SciLean.Meta.GenerateLinearMapSimp
 import SciLean.Meta.Notation.Do
+import SciLean.Meta.Notation.Einsum
 import SciLean.Meta.Notation.Let'
 import SciLean.Meta.SetSynthOrder
 import SciLean.Meta.SimpAttr
@@ -514,7 +508,7 @@ import SciLean.Modules.DDG.Trace
 -- import SciLean.Modules.FiniteElement.Mesh.Circle
 -- import SciLean.Modules.FiniteElement.Mesh.Line
 -- import SciLean.Modules.FiniteElement.Mesh.Prism
--- import SciLean.Modules.FiniteElement.Mesh.PrismClosetsPoint
+-- import SciLean.Modules.FiniteElement.Mesh.PrismClosestPoint
 -- import SciLean.Modules.FiniteElement.Mesh.PrismFiniteElement
 -- import SciLean.Modules.FiniteElement.Mesh.PrismRepr
 -- import SciLean.Modules.FiniteElement.Mesh.PrismTest
@@ -530,7 +524,7 @@ import SciLean.Modules.DDG.Trace
 -- import SciLean.Modules.Geometry.Shape.Shape
 -- import SciLean.Modules.Geometry.Shape.Simplex
 -- import SciLean.Modules.Geometry.Shape.Sphere
--- import SciLean.Modules.Geometry.Shape.TransfromedShape
+-- import SciLean.Modules.Geometry.Shape.TransformedShape
 -- import SciLean.Modules.Geometry.Shape.Triangle
 -- import SciLean.Modules.Interpolation.Interpolate
 -- import SciLean.Modules.ML
@@ -585,7 +579,6 @@ import SciLean.Modules.DDG.Trace
 -- import SciLean.Modules.Prob.Rand2
 -- import SciLean.Modules.Prob.RandDeriv
 -- import SciLean.Modules.Prob.RandFwdDeriv
--- import SciLean.Modules.Prob.SimpAttr
 -- import SciLean.Modules.Prob.Simps
 -- import SciLean.Modules.Prob.Tactic
 -- import SciLean.Modules.Prob.Test
@@ -616,6 +609,7 @@ import SciLean.Numerics.ODE.BackwardEuler
 import SciLean.Numerics.ODE.Basic
 import SciLean.Numerics.ODE.ForwardEuler
 import SciLean.Numerics.ODE.Solvers
+import SciLean.Numerics.ODE.RungeKutta
 import SciLean.Numerics.Optimization.ArgMin
 import SciLean.Numerics.Optimization.Optimjl
 import SciLean.Numerics.Optimization.Optimjl.LinerSearches.BackTracking
@@ -632,6 +626,7 @@ import SciLean.Probability.IsAffineRandMap
 import SciLean.Probability.PullMean
 import SciLean.Probability.PushPullExpectation
 import SciLean.Probability.Rand
+import SciLean.Probability.RandT
 import SciLean.Probability.RandWithTrace
 import SciLean.Probability.SimpAttr
 import SciLean.Probability.Tactic
@@ -659,7 +654,6 @@ import SciLean.Tactic.DFunLikeCoeZetaDelta
 import SciLean.Tactic.DataSynth.Attr
 import SciLean.Tactic.DataSynth.Decl
 import SciLean.Tactic.DataSynth.DefDataSynth
-import SciLean.Tactic.DataSynth.DefRevDeriv
 import SciLean.Tactic.DataSynth.Elab
 import SciLean.Tactic.DataSynth.Main
 import SciLean.Tactic.DataSynth.Simproc
