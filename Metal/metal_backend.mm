@@ -422,8 +422,9 @@ LEAN_EXPORT lean_obj_res scilean_gpu_slice_f32(
 // GPU-to-GPU Operations (No CPU Copies!)
 // ============================================================================
 
-// GEMM on GPU buffers: C = A * B
+// GEMM on GPU buffers: C = A * B (using MPS)
 // Supports batching: when in batch mode, queues to shared command buffer
+// Uses Metal Performance Shaders for Apple-optimized GEMM
 LEAN_EXPORT lean_obj_res scilean_gpu_gemm_f32(
     b_lean_obj_arg A_buf,
     b_lean_obj_arg B_buf,
@@ -441,67 +442,61 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_f32(
     }
 
     @autoreleasepool {
-        // Use optimized double-buffered kernel for better performance
-        id<MTLComputePipelineState> pipeline = get_pipeline(@"gemm_simd_opt");
-        bool use_opt = (pipeline != nil);
-
-        if (!use_opt) {
-            // Fall back to safe kernel
-            pipeline = get_pipeline(@"gemm_simd_safe");
-            if (!pipeline) {
-                return lean_io_result_mk_error(lean_mk_string("Failed to get GEMM pipeline"));
-            }
-        }
-
         size_t output_size = m * n * sizeof(float);
         id<MTLBuffer> C = get_pooled_buffer(output_size);
         if (!C) {
             C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
         }
 
-        uint32_t m32 = (uint32_t)m;
-        uint32_t k32 = (uint32_t)k;
-        uint32_t n32 = (uint32_t)n;
+        // MPS matrix descriptors
+        MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:m
+            columns:k
+            rowBytes:k * sizeof(float)
+            dataType:MPSDataTypeFloat32];
 
-        // Use batch encoder if in batch mode, otherwise create new command buffer
+        MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:k
+            columns:n
+            rowBytes:n * sizeof(float)
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:m
+            columns:n
+            rowBytes:n * sizeof(float)
+            dataType:MPSDataTypeFloat32];
+
+        // Create MPS matrices
+        MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A descriptor:descA];
+        MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B descriptor:descB];
+        MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C descriptor:descC];
+
+        // Create matrix multiplication kernel
+        // C = A @ B (no transpose)
+        MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
+            initWithDevice:device
+            transposeLeft:false
+            transposeRight:false
+            resultRows:m
+            resultColumns:n
+            interiorColumns:k
+            alpha:1.0
+            beta:0.0];
+
         bool batched = is_batch_mode();
         id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
 
-        [encoder setComputePipelineState:pipeline];
-        [encoder setBuffer:A offset:0 atIndex:0];
-        [encoder setBuffer:B offset:0 atIndex:1];
-        [encoder setBuffer:C offset:0 atIndex:2];
-        [encoder setBytes:&m32 length:sizeof(m32) atIndex:3];
-        [encoder setBytes:&k32 length:sizeof(k32) atIndex:4];
-        [encoder setBytes:&n32 length:sizeof(n32) atIndex:5];
+        // MPS encodes directly to command buffer (no compute encoder needed)
+        [matMul encodeToCommandBuffer:commandBuffer
+                           leftMatrix:matA
+                          rightMatrix:matB
+                         resultMatrix:matC];
 
-        if (use_opt) {
-            // Optimized kernel: 64x64 output tiles, 256 threads (8 simdgroups)
-            // Threadgroup memory: As[2][64][32] + Bs[2][32][64] = 8192 floats = 32KB
-            size_t tg_mem_size = 8192 * sizeof(float);
-            [encoder setThreadgroupMemoryLength:tg_mem_size atIndex:0];
-
-            MTLSize gridSize = MTLSizeMake((n + 63) / 64, (m + 63) / 64, 1);
-            MTLSize tgSize = MTLSizeMake(256, 1, 1);  // 8 simdgroups × 32 threads
-            [encoder dispatchThreadgroups:gridSize threadsPerThreadgroup:tgSize];
-        } else {
-            // Safe kernel: 32x32 output tiles, 128 threads (4 simdgroups)
-            size_t tg_mem_size = 1024 * sizeof(float);
-            [encoder setThreadgroupMemoryLength:tg_mem_size atIndex:0];
-
-            MTLSize gridSize = MTLSizeMake((n + 31) / 32, (m + 31) / 32, 1);
-            MTLSize tgSize = MTLSizeMake(128, 1, 1);
-            [encoder dispatchThreadgroups:gridSize threadsPerThreadgroup:tgSize];
-        }
-
-        // Only commit if not in batch mode
         if (!batched) {
-            [encoder endEncoding];
             [commandBuffer commit];
             [commandBuffer waitUntilCompleted];
         } else {
-            // Track output buffer for lifetime in batch mode
             [g_batch_outputs addObject:C];
         }
 
@@ -5018,8 +5013,9 @@ LEAN_EXPORT lean_obj_res scilean_gpu_sub_f32(
     }
 }
 
-// GEMM with first matrix transposed: C = A^T @ B
+// GEMM with first matrix transposed: C = A^T @ B (using MPS)
 // A is [k, m], treated as A^T [m, k], B is [k, n], result C is [m, n]
+// Uses Metal Performance Shaders for Apple-optimized transpose GEMM
 LEAN_EXPORT lean_obj_res scilean_gpu_gemm_tn_f32(
     b_lean_obj_arg A_buf,
     b_lean_obj_arg B_buf,
@@ -5039,43 +5035,59 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_tn_f32(
     }
 
     @autoreleasepool {
-        id<MTLComputePipelineState> pipeline = get_pipeline(@"gemm_tn");
-        if (!pipeline) {
-            return lean_io_result_mk_error(lean_mk_string("Failed to get gemm_tn pipeline"));
-        }
-
         size_t output_size = m * n * sizeof(float);
         id<MTLBuffer> C = get_pooled_buffer(output_size);
         if (!C) {
             C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
         }
 
-        uint32_t m32 = (uint32_t)m;
-        uint32_t k32 = (uint32_t)k;
-        uint32_t n32 = (uint32_t)n;
+        // MPS matrix descriptors
+        // A is stored as [k, m], will be transposed to [m, k]
+        MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:k
+            columns:m
+            rowBytes:m * sizeof(float)
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:k
+            columns:n
+            rowBytes:n * sizeof(float)
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:m
+            columns:n
+            rowBytes:n * sizeof(float)
+            dataType:MPSDataTypeFloat32];
+
+        // Create MPS matrices
+        MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A descriptor:descA];
+        MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B descriptor:descB];
+        MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C descriptor:descC];
+
+        // Create matrix multiplication with A transposed
+        // C = A^T @ B where A^T is [m, k] and B is [k, n]
+        MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
+            initWithDevice:device
+            transposeLeft:true    // Transpose A!
+            transposeRight:false
+            resultRows:m
+            resultColumns:n
+            interiorColumns:k
+            alpha:1.0
+            beta:0.0];
 
         bool batched = is_batch_mode();
         id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
 
-        [encoder setComputePipelineState:pipeline];
-        [encoder setBuffer:A offset:0 atIndex:0];
-        [encoder setBuffer:B offset:0 atIndex:1];
-        [encoder setBuffer:C offset:0 atIndex:2];
-        [encoder setBytes:&m32 length:sizeof(m32) atIndex:3];
-        [encoder setBytes:&k32 length:sizeof(k32) atIndex:4];
-        [encoder setBytes:&n32 length:sizeof(n32) atIndex:5];
-
-        // Tiled kernel: 32x32 tiles, threadgroup memory for As and Bs
-        size_t tg_mem_size = 2048 * sizeof(float);  // As[32][32] + Bs[32][32]
-        [encoder setThreadgroupMemoryLength:tg_mem_size atIndex:0];
-
-        MTLSize gridSize = MTLSizeMake((n + 31) / 32, (m + 31) / 32, 1);
-        MTLSize tgSize = MTLSizeMake(32, 32, 1);
-        [encoder dispatchThreadgroups:gridSize threadsPerThreadgroup:tgSize];
+        // MPS encodes directly to command buffer (no compute encoder needed)
+        [matMul encodeToCommandBuffer:commandBuffer
+                           leftMatrix:matA
+                          rightMatrix:matB
+                         resultMatrix:matC];
 
         if (!batched) {
-            [encoder endEncoding];
             [commandBuffer commit];
             [commandBuffer waitUntilCompleted];
         } else {
@@ -5086,8 +5098,9 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_tn_f32(
     }
 }
 
-// GEMM with second matrix transposed: C = A @ B^T
+// GEMM with second matrix transposed: C = A @ B^T (using MPS)
 // A is [m, k], B is [n, k], treated as B^T [k, n], result C is [m, n]
+// Uses Metal Performance Shaders for Apple-optimized transpose GEMM
 LEAN_EXPORT lean_obj_res scilean_gpu_gemm_nt_f32(
     b_lean_obj_arg A_buf,
     b_lean_obj_arg B_buf,
@@ -5107,43 +5120,59 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_nt_f32(
     }
 
     @autoreleasepool {
-        id<MTLComputePipelineState> pipeline = get_pipeline(@"gemm_nt");
-        if (!pipeline) {
-            return lean_io_result_mk_error(lean_mk_string("Failed to get gemm_nt pipeline"));
-        }
-
         size_t output_size = m * n * sizeof(float);
         id<MTLBuffer> C = get_pooled_buffer(output_size);
         if (!C) {
             C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
         }
 
-        uint32_t m32 = (uint32_t)m;
-        uint32_t k32 = (uint32_t)k;
-        uint32_t n32 = (uint32_t)n;
+        // MPS matrix descriptors
+        // A is [m, k], B is stored as [n, k] and will be transposed to [k, n]
+        MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:m
+            columns:k
+            rowBytes:k * sizeof(float)
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:n
+            columns:k
+            rowBytes:k * sizeof(float)
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:m
+            columns:n
+            rowBytes:n * sizeof(float)
+            dataType:MPSDataTypeFloat32];
+
+        // Create MPS matrices
+        MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A descriptor:descA];
+        MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B descriptor:descB];
+        MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C descriptor:descC];
+
+        // Create matrix multiplication with B transposed
+        // C = A @ B^T where A is [m, k] and B^T is [k, n]
+        MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
+            initWithDevice:device
+            transposeLeft:false
+            transposeRight:true   // Transpose B!
+            resultRows:m
+            resultColumns:n
+            interiorColumns:k
+            alpha:1.0
+            beta:0.0];
 
         bool batched = is_batch_mode();
         id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
 
-        [encoder setComputePipelineState:pipeline];
-        [encoder setBuffer:A offset:0 atIndex:0];
-        [encoder setBuffer:B offset:0 atIndex:1];
-        [encoder setBuffer:C offset:0 atIndex:2];
-        [encoder setBytes:&m32 length:sizeof(m32) atIndex:3];
-        [encoder setBytes:&k32 length:sizeof(k32) atIndex:4];
-        [encoder setBytes:&n32 length:sizeof(n32) atIndex:5];
-
-        // Tiled kernel: 32x32 tiles, threadgroup memory for As and Bs
-        size_t tg_mem_size = 2048 * sizeof(float);  // As[32][32] + Bs[32][32]
-        [encoder setThreadgroupMemoryLength:tg_mem_size atIndex:0];
-
-        MTLSize gridSize = MTLSizeMake((n + 31) / 32, (m + 31) / 32, 1);
-        MTLSize tgSize = MTLSizeMake(32, 32, 1);
-        [encoder dispatchThreadgroups:gridSize threadsPerThreadgroup:tgSize];
+        // MPS encodes directly to command buffer (no compute encoder needed)
+        [matMul encodeToCommandBuffer:commandBuffer
+                           leftMatrix:matA
+                          rightMatrix:matB
+                         resultMatrix:matC];
 
         if (!batched) {
-            [encoder endEncoding];
             [commandBuffer commit];
             [commandBuffer waitUntilCompleted];
         } else {
