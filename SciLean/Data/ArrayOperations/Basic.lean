@@ -11,7 +11,7 @@ abbrev GetElem' (coll : Type*) (idx : Type*) (elem : outParam Type*) :=
   GetElem coll idx elem (fun _ _ => True)
 
 open Function
-/-- Type {given}`coll` is fully determined by all its elements accesible with index notation {lit}`x[i]`.
+/-- Type {given}`coll` is fully determined by all its elements accessible with index notation {lit}`x[i]`.
 
 This gives us extensionality property {lit}`(∀ i, x[i] = y[i]) → x = y` which is accessible with
 {lit}`ext` tactic if also {given}`coll` defines default index type with {lit}`DefaultIndex`

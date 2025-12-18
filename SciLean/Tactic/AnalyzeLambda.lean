@@ -52,7 +52,7 @@ inductive MainArgCase where
   (fun (a'₁, ..., a'ₖ) y₀ ... yₙ₋₁ => f a₀ ... aₘ₋₁) ∘ (fun x => (a'₁, ..., a'ₖ))
   ```
   where the function {given}`f'` is in {name}`MainArgCase.trivialUncurried` case -/
-  | nonTrivailNoTrailing
+  | nonTrivialNoTrailing
   /-- Main arguments depend on {given}`x` and {given}`yⱼ` -/
   | nonTrivialWithTrailing
 deriving DecidableEq, Repr
@@ -174,15 +174,15 @@ partial def analyzeLambda (e : Expr) : MetaM LambdaInfo := do
         as'' := as''.push arg
 
 
-    -- determina main arg case
+    -- determine main arg case
     let a' ← mkProdElem as'
     if as'.size ≠ 0 && mainCase ≠ .nonTrivialWithTrailing then
       if (← isDefEq x a') then
         mainCase := .trivialUncurried
       else
-        mainCase := .nonTrivailNoTrailing
+        mainCase := .nonTrivialNoTrailing
 
-    -- determina trailing arg case
+    -- determine trailing arg case
     if as''.size ≠ 0 then
       trailingCase := .nonTrivial
 

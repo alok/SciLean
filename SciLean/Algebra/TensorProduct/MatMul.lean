@@ -3,7 +3,7 @@ import SciLean.Algebra.TensorProduct.Basic
 namespace SciLean
 
 
-/-- Class providing matrix-matrix multiplcation
+/-- Class providing matrix-matrix multiplication
 
 This takes `A : Z ⊗ Y` and `B : Y ⊗ X` and produces `A*B : Z ⊗ X`
  -/

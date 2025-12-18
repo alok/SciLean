@@ -4,11 +4,11 @@ namespace SciLean
 
 
 /--
-Class providing matrix-matrix multiplcation
+Class providing matrix-matrix multiplication
 
 This takes `A : Z ⊗ Y` and `B : Y ⊗ X` and produces `A*B : Z ⊗ X`
  -/
-class TensorProductTranpose
+class TensorProductTranspose
   (R Y X YX XY : Type*) [RCLike R]
   [NormedAddCommGroup Z] [AdjointSpace R Z] [NormedAddCommGroup Y] [AdjointSpace R Y] [NormedAddCommGroup X] [AdjointSpace R X]
   [AddCommGroup YX] [Module R YX] [AddCommGroup XY] [Module R XY]
