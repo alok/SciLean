@@ -112,6 +112,168 @@ def gemmNT (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx n ×
   let result ← Metal.GpuBuffer.gemmNT A.data.buffer B.data.buffer m.toUSize k.toUSize n.toUSize
   return ⟨⟨result⟩⟩
 
+/-! ### Element-wise Operations -/
+
+/-- Element-wise subtraction on GPU -/
+def sub (a b : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+  let result ← Metal.GpuBuffer.sub a.data.buffer b.data.buffer n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- Scalar multiplication on GPU: `y = alpha * x` -/
+def scale (alpha : Float) (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+  let result ← Metal.GpuBuffer.scale n.toUSize alpha a.data.buffer
+  return ⟨⟨result⟩⟩
+
+/-- Negation on GPU: `y = -x` (implemented as scale by -1) -/
+def neg (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) :=
+  scale (-1.0) a
+
+/-- AXPY on GPU: `y = alpha * x + y` -/
+def axpy (alpha : Float) (x y : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+  let result ← Metal.GpuBuffer.axpy n.toUSize alpha x.data.buffer y.data.buffer
+  return ⟨⟨result⟩⟩
+
+/-! ### Reduction Operations -/
+
+/-- Sum all elements on GPU -/
+def sum (a : GpuTensor Float (Idx n)) : IO Float :=
+  Metal.GpuBuffer.sum a.data.buffer n.toUSize
+
+/-- Column-wise sum on GPU: for matrix `(rows, cols)`, sum over rows for each column.
+    Returns `(cols)` sums. Used for gradient accumulation over batch dimension. -/
+def colSum (a : GpuTensor Float (Idx m × Idx n)) : IO (GpuTensor Float (Idx n)) := do
+  let result ← Metal.GpuBuffer.colSum a.data.buffer m.toUSize n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-! ### Normalization Operations -/
+
+/-- Layer normalization on GPU: `y = gamma * (x - mean) / sqrt(var + eps) + beta`.
+    Input `x` has shape `(batch, hiddenSize)`, `gamma` and `beta` have shape `(hiddenSize)`. -/
+def layerNorm (x : GpuTensor Float (Idx m × Idx n))
+    (gamma beta : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx m × Idx n)) := do
+  let totalElements := m * n
+  let result ← Metal.GpuBuffer.layerNorm x.data.buffer gamma.data.buffer beta.data.buffer
+      totalElements.toUSize n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- Batch normalization 2D (inference mode) on GPU.
+    Input: `(batch, channels, height, width)` in NCHW format.
+    `gamma`, `beta`, `mean`, `var` have shape `(channels)`. -/
+def batchNorm2d {batch channels height width : ℕ}
+    (x : GpuTensor Float (Idx batch × Idx channels × Idx height × Idx width))
+    (gamma beta mean var : GpuTensor Float (Idx channels))
+    (eps : Float) (applyRelu : Bool := false) :
+    IO (GpuTensor Float (Idx batch × Idx channels × Idx height × Idx width)) := do
+  let result ← Metal.GpuBuffer.batchNorm2d x.data.buffer gamma.data.buffer beta.data.buffer
+      mean.data.buffer var.data.buffer
+      batch.toUSize channels.toUSize height.toUSize width.toUSize
+      eps (if applyRelu then 1 else 0)
+  return ⟨⟨result⟩⟩
+
+/-! ### Activation Operations -/
+
+/-- Fused bias + ReLU on GPU: `y = max(0, x + bias)`.
+    Input `x` has shape `(batch, features)`, `bias` has shape `(features)`. -/
+def biasRelu (x : GpuTensor Float (Idx m × Idx n)) (bias : GpuTensor Float (Idx n)) :
+    IO (GpuTensor Float (Idx m × Idx n)) := do
+  let totalElements := m * n
+  let result ← Metal.GpuBuffer.biasRelu x.data.buffer bias.data.buffer
+      totalElements.toUSize n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- Fused bias + GELU on GPU: `y = GELU(x + bias)`.
+    Input `x` has shape `(batch, features)`, `bias` has shape `(features)`. -/
+def biasGelu (x : GpuTensor Float (Idx m × Idx n)) (bias : GpuTensor Float (Idx n)) :
+    IO (GpuTensor Float (Idx m × Idx n)) := do
+  let totalElements := m * n
+  let result ← Metal.GpuBuffer.biasGelu x.data.buffer bias.data.buffer
+      totalElements.toUSize n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- Bias add (no activation) on GPU: `y = x + bias`.
+    Input `x` has shape `(batch, features)`, `bias` has shape `(features)`. -/
+def biasAdd (x : GpuTensor Float (Idx m × Idx n)) (bias : GpuTensor Float (Idx n)) :
+    IO (GpuTensor Float (Idx m × Idx n)) := do
+  let totalElements := m * n
+  let result ← Metal.GpuBuffer.biasAdd x.data.buffer bias.data.buffer
+      totalElements.toUSize n.toUSize
+  return ⟨⟨result⟩⟩
+
+/-! ### Pooling Operations -/
+
+/-- Max pooling 2D on GPU.
+    Input: `(batch, channels, height, width)` in NCHW format.
+    Returns: `(batch, channels, outHeight, outWidth)`. -/
+def maxPool2d {batch channels inH inW poolH poolW strideH strideW : ℕ}
+    (x : GpuTensor Float (Idx batch × Idx channels × Idx inH × Idx inW)) :
+    IO (GpuTensor Float (Idx batch × Idx channels × Idx ((inH - poolH) / strideH + 1) × Idx ((inW - poolW) / strideW + 1))) := do
+  let result ← Metal.GpuBuffer.maxPool2d x.data.buffer
+      batch.toUSize channels.toUSize inH.toUSize inW.toUSize
+      poolH.toUSize poolW.toUSize strideH.toUSize strideW.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- Average pooling 2D on GPU.
+    Input: `(batch, channels, height, width)` in NCHW format.
+    Returns: `(batch, channels, outHeight, outWidth)`. -/
+def avgPool2d {batch channels inH inW poolH poolW strideH strideW : ℕ}
+    (x : GpuTensor Float (Idx batch × Idx channels × Idx inH × Idx inW)) :
+    IO (GpuTensor Float (Idx batch × Idx channels × Idx ((inH - poolH) / strideH + 1) × Idx ((inW - poolW) / strideW + 1))) := do
+  let result ← Metal.GpuBuffer.avgpool2d x.data.buffer
+      batch.toUSize channels.toUSize inH.toUSize inW.toUSize
+      poolH.toUSize poolW.toUSize strideH.toUSize strideW.toUSize
+  return ⟨⟨result⟩⟩
+
+/-! ### Convolution Operations -/
+
+/-- Conv2D on GPU with optional fused ReLU.
+    Input: `(batch, inChannels, height, width)` in NCHW format.
+    Kernel: `(outChannels, inChannels, kernelH, kernelW)`.
+    Bias: `(outChannels)`.
+    Returns: `(batch, outChannels, outHeight, outWidth)`. -/
+def conv2d {batch inCh outCh inH inW kH kW strideH strideW padH padW : ℕ}
+    (x : GpuTensor Float (Idx batch × Idx inCh × Idx inH × Idx inW))
+    (kernel : GpuTensor Float (Idx outCh × Idx inCh × Idx kH × Idx kW))
+    (bias : GpuTensor Float (Idx outCh))
+    (useRelu : Bool := false) :
+    IO (GpuTensor Float (Idx batch × Idx outCh × Idx ((inH + 2*padH - kH) / strideH + 1) × Idx ((inW + 2*padW - kW) / strideW + 1))) := do
+  let result ← Metal.GpuBuffer.conv2d x.data.buffer kernel.data.buffer bias.data.buffer
+      batch.toUSize inCh.toUSize outCh.toUSize
+      inH.toUSize inW.toUSize
+      kH.toUSize kW.toUSize
+      strideH.toUSize strideW.toUSize
+      padH.toUSize padW.toUSize
+      (if useRelu then 1 else 0)
+  return ⟨⟨result⟩⟩
+
+/-! ### Attention Operations -/
+
+/-- Flash Attention on GPU: `output = softmax(Q @ K^T / sqrt(headDim)) @ V`.
+    Q, K, V have shape `(seqLen, headDim)`.
+    Returns `(seqLen, headDim)`. -/
+def flashAttention (Q K V : GpuTensor Float (Idx seqLen × Idx headDim)) :
+    IO (GpuTensor Float (Idx seqLen × Idx headDim)) := do
+  let result ← Metal.GpuBuffer.flashAttention Q.data.buffer K.data.buffer V.data.buffer
+      seqLen.toUSize headDim.toUSize
+  return ⟨⟨result⟩⟩
+
+/-- Flash Attention with causal mask on GPU.
+    Position i can only attend to positions at most i (for autoregressive models).
+    Q, K, V have shape `(seqLen, headDim)`.
+    Returns `(seqLen, headDim)`. -/
+def flashAttentionCausal (Q K V : GpuTensor Float (Idx seqLen × Idx headDim)) :
+    IO (GpuTensor Float (Idx seqLen × Idx headDim)) := do
+  let result ← Metal.GpuBuffer.flashAttentionCausal Q.data.buffer K.data.buffer V.data.buffer
+      seqLen.toUSize headDim.toUSize
+  return ⟨⟨result⟩⟩
+
+/-! ### Buffer Operations -/
+
+/-- Slice a GPU tensor: returns new tensor with elements from offset.
+    This is a GPU-to-GPU copy (not a view). -/
+def slice (a : GpuTensor Float (Idx n)) (offset count : ℕ) : IO (GpuTensor Float (Idx count)) := do
+  let result ← Metal.GpuBuffer.slice a.data.buffer offset.toUSize count.toUSize
+  return ⟨⟨result⟩⟩
+
 end GpuTensor
 
 /-! ## TensorOps Typeclass -/
