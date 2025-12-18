@@ -146,19 +146,13 @@ initialize lambdaTheoremsExt : LambdaTheoremsExt ←
 Theorems are filtered and sorted based on the optional argument {given}`nargs`. It specifies the number of
 arguments of the expression we want to transform.
 
-For example when transforming
-```lean
-deriv (fun x => x * sin x)
-```
-we do not want to use composition theorem stating {lit}`deriv (fun x' => f (g x')) x` because our
-expression does not have the concrete point where we differentiate.
+For example when transforming {lit}`deriv (fun x => x * sin x)` we do not want to use composition
+theorem stating {lit}`deriv (fun x' => f (g x')) x` because our expression does not have the
+concrete point where we differentiate.
 
-On the other hand when transforming
-```lean
-deriv (fun x' => 1/(1-x')) x
-```
-we prefer the version {lit}`deriv (fun x' => f (g x')) x` over {lit}`deriv (fun x' => f (g x'))` as the former
-uses {name}`DifferentiableAt` insed of {name}`Differentiable` as preconditions. -/
+On the other hand when transforming {lit}`deriv (fun x' => 1/(1-x')) x` we prefer the version
+{lit}`deriv (fun x' => f (g x')) x` over {lit}`deriv (fun x' => f (g x'))` as the former uses
+{lit}`DifferentiableAt` instead of {lit}`Differentiable` as preconditions. -/
 def getLambdaTheorems (funTransName : Name) (type : LambdaTheoremType) (nargs : Option Nat):
     CoreM (Array LambdaTheorem) := do
   let .some thms := (lambdaTheoremsExt.getState (← getEnv)).theorems[(funTransName,type)]?
