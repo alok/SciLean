@@ -39,7 +39,7 @@ simproc_decl if_pull (_) := fun e => do
         | return .continue
 
       let arg := args[i]!
-      -- todo: introduce let bindings for other arguments (probaly only for non-type arguments)
+      -- todo: introduce let bindings for other arguments (probably only for non-type arguments)
       thn := mkAppN fn (args.set! i (arg.getArg! 3))
       els := mkAppN fn (args.set! i (arg.getArg! 4))
       cond := arg.getArg! 1

@@ -956,12 +956,12 @@ private def BasisIndex.evalImpl (idx : BasisIndex) (deg : Nat) (x : idx.ofPrism.
   | .prod p q, (x, y) => (p.evalImpl deg x) * (q.evalImpl deg y)
 
 
--- Lagrangian basis function correspoinding to the index `idx`
+-- Lagrangian basis function corresponding to the index `idx`
 def BasisIndex.eval (idx : BasisIndex) (x : idx.ofPrism.Space) : ℝ :=
   idx.evalImpl idx.degree x
 
 
--- Lagrangian node correspoinding to the index `idx`
+-- Lagrangian node corresponding to the index `idx`
 def BasisIndex.node (idx : BasisIndex) : idx.ofPrism.Space :=
   match idx with
   | .point _ => ()

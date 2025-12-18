@@ -136,7 +136,7 @@ instance (data : TriangularSet.CofaceData) : (TriangularSet data.toFaceData).Cof
       let e : Fin data.edgeCount := reduce_type_of e
       Fin data.edgeTriangles[e].size
 
-    -- triagnle neighbours
+    -- triangle neighbours
     | ⟨.cone (.cone .point), _⟩, ⟨.cone (.cone .point), _⟩ => Unit
 
     | _, _ => Empty

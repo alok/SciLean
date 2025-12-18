@@ -72,8 +72,8 @@ def congr (r : Result) (rs : Array Simp.Result) : MetaM Result := do
           | none => mkCongrFun g x)
   let xs := rs.map (·.expr)
 
-  -- cast proof of the orignal result to a proof of the new goal
-  -- note: originaly we used `mkAppOptM` but replacing it with the following made
+  -- cast proof of the original result to a proof of the new goal
+  -- note: originally we used `mkAppOptM` but replacing it with the following made
   --       `data_synth` four times faster on one test
   let .sort u ← inferType r.getSolvedGoal | throwError "bug"
   let proof := mkAppN (.const ``Eq.mp [u]) #[r.getSolvedGoal, goal.beta xs, hgoal, r.proof]
@@ -180,7 +180,7 @@ fun (x₁,...,xₙ) => b
 ```
 where `leadingLets := #[y₁,...,yₘ]`, `xs := #[x₁,...,xₙ]` and `body := b`
 
-`body` is and expresion of containing free/let variables `y₁,...,yₘ,x₁,...,xₙ` which are well
+`body` is an expression containing free/let variables `y₁,...,yₘ,x₁,...,xₙ` which are well
 defined in the local context `lctx` and `insts`.
 -/
 structure FunData where

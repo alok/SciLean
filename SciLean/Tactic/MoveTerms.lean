@@ -40,7 +40,7 @@ private def splitAddOfTypeImpl (e E : Expr) (negate : Bool) : MetaM (Array Expr)
 
 
 
-/-- Take and expresion of the form `a₁ + ... + aₙ` and return array `#[a₁, ..., aₙ]`. It ensures that all `aᵢ` have the type `E`, this is to prevent splitting unexpected heterogenous addition.
+/-- Take an expression of the form `a₁ + ... + aₙ` and return array `#[a₁, ..., aₙ]`. It ensures that all `aᵢ` have the type `E`, this is to prevent splitting unexpected heterogenous addition.
 
 The term `e` can also contain negation, subtraction and arbitrary bracketing.
 

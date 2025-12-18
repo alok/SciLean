@@ -73,7 +73,7 @@ macro " let_unfold1 " id:ident n:(num)? : tactic => `(tactic| conv => let_unfold
 
 /-- Moves let binding upwards, maximum by `n?` positions. Returns none if there is no such let binding.
 
-For example for the following expresion
+For example for the following expression
 ```
   let x := ..
   let y := ..
@@ -174,7 +174,7 @@ macro " let_move_up " id:ident n:(num)? : tactic => `(tactic| conv => let_move_u
 
 -- /-- Moves let binding down, maximum by `n?` positions. Returns none if there is no such let binding.
 
--- For example for the following expresion
+-- For example for the following expression
 -- ```
 --   let x := ..
 --   let y := ..

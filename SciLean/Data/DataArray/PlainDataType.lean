@@ -251,9 +251,9 @@ def Prod.byteTypeProd {α β} (ta : ByteType α) (tb : ByteType β) : ByteType (
 
 /-- Product of `PlainDataType` is `PlainDataType`
 
-**Instance diamond:** This instance is currently prefered over `instPlainDataTypeEnumtype`.
+**Instance diamond:** This instance is currently preferred over `instPlainDataTypeEnumtype`.
 
-This instance makes a diamond together with `instPlainDataTypeEnumtype`  when `α` and `β` are `Enumtype`. Using this instance is less computationally intensive when writting and reading from `DataArra` but it consumes more memory. The `instPlainDataTypeEnumtype` is doing the exact opposite.
+This instance makes a diamond together with `instPlainDataTypeEnumtype`  when `α` and `β` are `Enumtype`. Using this instance is less computationally intensive when writing and reading from `DataArray` but it consumes more memory. The `instPlainDataTypeEnumtype` is doing the exact opposite.
 
 Example: `Fin (2^4+1) × Fin (2^4-1)`
 
@@ -380,9 +380,9 @@ def Sigma.byteTypeSigma {α β} (ta : ByteType α) (tb : ByteType β) : ByteType
 
 /-- Sigma of `PlainDataType` is `PlainDataType`
 
-**Instance diamond:** This instance is currently prefered over `instPlainDataTypeEnumtype`.
+**Instance diamond:** This instance is currently preferred over `instPlainDataTypeEnumtype`.
 
-This instance makes a diamond together with `instPlainDataTypeEnumtype`  when `α` and `β` are `Enumtype`. Using this instance is less computationally intensive when writting and reading from `DataArra` but it consumes more memory. The `instPlainDataTypeEnumtype` is doing the exact opposite.
+This instance makes a diamond together with `instPlainDataTypeEnumtype`  when `α` and `β` are `Enumtype`. Using this instance is less computationally intensive when writing and reading from `DataArray` but it consumes more memory. The `instPlainDataTypeEnumtype` is doing the exact opposite.
 
 Example: `Fin (2^4+1) × Fin (2^4-1)`
 
@@ -685,9 +685,9 @@ instance (n) : PlainDataType (Fin n) where
 
 -- /-- Index is `PlainDataType` via conversion from/to `Idx n`
 
--- **Instance diamond** This instance `instPlainDataTypeProd` is prefered over this one.
+-- **Instance diamond** This instance `instPlainDataTypeProd` is preferred over this one.
 
--- This instance makes a diamond together with `instPlainDataTypeProd`. Using this instance is more computationally intensive when writting and reading from `DataArra` but it consumes less memory. The `instPlainDataTypeProd` is doing the exact opposite.
+-- This instance makes a diamond together with `instPlainDataTypeProd`. Using this instance is more computationally intensive when writing and reading from `DataArray` but it consumes less memory. The `instPlainDataTypeProd` is doing the exact opposite.
 
 -- Example: `Idx (2^4+1) × Idx (2^4-1)`
 

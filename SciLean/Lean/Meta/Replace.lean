@@ -136,7 +136,7 @@ def instantiate1AndPost (e : Expr) (val : Expr) (post : Expr → MetaM ReplacePo
 
 
 /--
-Replaces all subexpresions in `e` that satisfy `f` with a free variables.
+Replaces all subexpressions in `e` that satisfy `f` with free variables.
 
 This function replaces only subexpressions that have no bound variables. -/
 def replaceWithFVarsNoBVars (e : Expr) (f : Expr → MetaM Bool)

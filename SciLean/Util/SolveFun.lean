@@ -103,7 +103,7 @@ namespace SolveFun
 
 open Lean Meta
 
-/-- Take and expresion of the form {lit}`P₁ ∧ ... ∧ Pₙ` and return array {lit}`#[P₁, ..., Pₙ]`
+/-- Take an expression of the form {lit}`P₁ ∧ ... ∧ Pₙ` and return array {lit}`#[P₁, ..., Pₙ]`
 
 It ignores bracketing, so both {lit}`(P₁ ∧ P₂) ∧ P₃` and {lit}`P₁ ∧ (P₂ ∧ P₃)` produce {lit}`#[P₁, P₂, P₃]`-/
 def splitAnd? (e : Expr) : MetaM (Array Expr) := do

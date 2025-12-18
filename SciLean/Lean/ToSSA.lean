@@ -6,7 +6,7 @@ open Lean Meta
 
 namespace Lean.Expr
 
-/-- Turns expression `e` into single-static-assigment w.r.t. to free variables `fvars` and all bound variables
+/-- Turns expression `e` into single-static-assignment w.r.t. to free variables `fvars` and all bound variables
 
 Returns expression, newly introduced let bindings
 -/
@@ -58,7 +58,7 @@ where
         return (mkAppN fn args, lets)
 
 
-/-- Converts an expression to single static assigment form w.r.t. bound variables and free variables `fvars`
+/-- Converts an expression to single static assignment form w.r.t. bound variables and free variables `fvars`
 
 Examples:
 - `x*x + x ==> let a := x*x; a + x`
@@ -74,7 +74,7 @@ def toSSA (e : Expr) (fvars : Array Expr) : MetaM Expr := do
 
 open Parser.Tactic in
 -- todo: add option that ssa form should be done w.r.t. to particular variables
-/-- `to_ssa` converts expression to single static assigment form -/
+/-- `to_ssa` converts expression to single static assignment form -/
 syntax (name:=to_ssa_conv) "to_ssa" : conv
 
 open Lean Meta Elab Tactic

@@ -118,7 +118,7 @@ structure LambdaTheorem where
 
 /-- -/
 structure LambdaTheorems where
-  /-- map: function transfromation name × theorem type → lambda theorem -/
+  /-- map: function transformation name × theorem type → lambda theorem -/
   theorems : Std.HashMap (Name × LambdaTheoremType) (Array LambdaTheorem) := {}
   deriving Inhabited
 
@@ -423,7 +423,7 @@ def addTheorem (declName : Name) (attrKind : AttributeKind := .global)
   | .lam thm =>
     trace[Meta.Tactic.fun_trans.attr] "\
 lambda theorem: {thm.thmName}
-function transfromations: {thm.funTransName}
+function transformations: {thm.funTransName}
 type: {repr thm.thmArgs.type}"
     lambdaTheoremsExt.add thm attrKind
   | .function thm =>

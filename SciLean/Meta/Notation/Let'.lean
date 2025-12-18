@@ -166,7 +166,7 @@ elab_rules (kind:=let_struct_syntax) : term
   elabTerm stx none
 
 
-/-- Structure field assigment, allows for {lit}`s.x := x'` notation in {lit}`do` block.
+/-- Structure field assignment, allows for {lit}`s.x := x'` notation in {lit}`do` block.
 
 {lit}`s.x := x'` expands into {lit}`s := {s with x := x'}` -/
 macro_rules
