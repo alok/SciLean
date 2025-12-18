@@ -72,15 +72,21 @@ def fromContiguous (buffer : Metal.GpuBuffer) (shape : Array Nat) : StridedGpuBu
   ⟨buffer, TensorLayout.contiguous shape⟩
 
 /-- Create contiguous copy if not already contiguous.
-    Returns same buffer if already contiguous, otherwise copies data. -/
+    Returns same buffer if already contiguous, otherwise copies data.
+    Uses GPU strided copy kernel for efficient data movement. -/
 def contiguous (buf : StridedGpuBuffer α) : IO (StridedGpuBuffer α) := do
   if buf.isContiguous then
     return buf
   else
-    -- TODO: Implement strided copy kernel
-    -- For now, this is a placeholder that just returns the buffer
-    -- Real implementation needs Metal kernel to copy with strides
-    return buf
+    -- Convert Nat arrays to USize arrays for FFI
+    let shapeU : Array USize := buf.layout.shape.map (·.toUSize)
+    let stridesU : Array USize := buf.layout.strides.map (·.toUSize)
+    let offsetU : USize := buf.layout.offset.toUSize
+    -- Call Metal strided copy kernel
+    let newBuffer ← Metal.GpuBuffer.copyStrided buf.buffer shapeU stridesU offsetU
+    -- Return with contiguous layout
+    let newLayout := TensorLayout.contiguous buf.layout.shape
+    return ⟨newBuffer, newLayout⟩
 
 /-- Get dimension at index -/
 def dim (buf : StridedGpuBuffer α) (i : Nat) : Nat :=

@@ -3,6 +3,7 @@
 #import <MetalPerformanceShaders/MetalPerformanceShaders.h>
 #import <Accelerate/Accelerate.h>
 #include <lean/lean.h>
+#include <vector>
 
 // Global Metal state
 static id<MTLDevice> device = nil;
@@ -5275,6 +5276,155 @@ LEAN_EXPORT lean_obj_res scilean_gpu_row_sum_f32(
             [commandBuffer waitUntilCompleted];
         } else {
             [g_batch_outputs addObject:output];
+        }
+
+        return lean_io_result_mk_ok(wrap_gpu_buffer(output, output_size));
+    }
+}
+
+// ============================================================
+// Strided Copy - materialize strided view into contiguous buffer
+// ============================================================
+
+// Copy strided data to contiguous buffer.
+// This is used by StridedGpuBuffer.contiguous() to materialize transposed views.
+// Input: src buffer, shape array, strides array, offset
+// Output: new contiguous buffer in row-major order
+LEAN_EXPORT lean_obj_res scilean_gpu_copy_strided_f32(
+    b_lean_obj_arg src_buf,
+    b_lean_obj_arg shape_arr,    // Array USize
+    b_lean_obj_arg strides_arr,  // Array USize
+    size_t offset,
+    lean_obj_arg /* world */
+) {
+    if (!ensure_metal_initialized()) {
+        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
+    }
+
+    id<MTLBuffer> src = get_mtl_buffer(src_buf);
+    if (!src) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
+    }
+
+    // Extract shape and strides from Lean arrays
+    size_t rank = lean_array_size(shape_arr);
+    if (rank == 0) {
+        return lean_io_result_mk_error(lean_mk_string("Empty shape array"));
+    }
+    if (lean_array_size(strides_arr) != rank) {
+        return lean_io_result_mk_error(lean_mk_string("Shape and strides must have same length"));
+    }
+
+    // Get the raw data pointers from scalar arrays
+    // For Array USize, elements are stored inline as size_t values
+    size_t* shape = (size_t*)lean_array_cptr(shape_arr);
+    size_t* strides = (size_t*)lean_array_cptr(strides_arr);
+
+    // Compute total number of elements (numel = product of shape)
+    size_t numel = 1;
+    for (size_t i = 0; i < rank; i++) {
+        numel *= shape[i];
+    }
+
+    if (numel == 0) {
+        return lean_io_result_mk_error(lean_mk_string("Empty tensor (numel=0)"));
+    }
+
+    @autoreleasepool {
+        // Allocate contiguous output buffer
+        size_t output_size = numel * sizeof(float);
+        id<MTLBuffer> output = [device newBufferWithLength:output_size
+                                                   options:MTLResourceStorageModeShared];
+        if (!output) {
+            return lean_io_result_mk_error(lean_mk_string("Failed to allocate output buffer"));
+        }
+
+        // For 2D transpose (the most common case), use optimized path
+        if (rank == 2) {
+            // 2D copy with strides
+            size_t rows = shape[0];
+            size_t cols = shape[1];
+            size_t stride0 = strides[0];  // stride along rows
+            size_t stride1 = strides[1];  // stride along cols
+
+            float* src_data = (float*)[src contents];
+            float* dst_data = (float*)[output contents];
+
+            // Dispatch to GPU or CPU based on size
+            if (numel > CPU_THRESHOLD_ELEMENTS) {
+                // Use Metal shader for large tensors
+                id<MTLComputePipelineState> pipeline = get_pipeline(@"strided_copy_2d");
+                if (pipeline) {
+                    uint32_t params[5] = {
+                        (uint32_t)rows, (uint32_t)cols,
+                        (uint32_t)stride0, (uint32_t)stride1,
+                        (uint32_t)offset
+                    };
+
+                    bool batched = is_batch_mode();
+                    id<MTLCommandBuffer> commandBuffer = batched ? g_batch_command_buffer : [commandQueue commandBuffer];
+                    id<MTLComputeCommandEncoder> encoder = batched ? g_batch_encoder : [commandBuffer computeCommandEncoder];
+
+                    [encoder setComputePipelineState:pipeline];
+                    [encoder setBuffer:src offset:0 atIndex:0];
+                    [encoder setBuffer:output offset:0 atIndex:1];
+                    [encoder setBytes:params length:sizeof(params) atIndex:2];
+
+                    // Dispatch 2D grid
+                    MTLSize gridSize = MTLSizeMake(cols, rows, 1);
+                    NSUInteger tgWidth = MIN(pipeline.maxTotalThreadsPerThreadgroup, 256);
+                    NSUInteger w = MIN(tgWidth, cols);
+                    NSUInteger h = MIN(tgWidth / w, rows);
+                    MTLSize tgSize = MTLSizeMake(w, h > 0 ? h : 1, 1);
+
+                    [encoder dispatchThreads:gridSize threadsPerThreadgroup:tgSize];
+
+                    if (!batched) {
+                        [encoder endEncoding];
+                        [commandBuffer commit];
+                        [commandBuffer waitUntilCompleted];
+                    } else {
+                        [g_batch_outputs addObject:output];
+                    }
+
+                    return lean_io_result_mk_ok(wrap_gpu_buffer(output, output_size));
+                }
+            }
+
+            // CPU fallback (or no shader): direct strided copy
+            for (size_t i = 0; i < rows; i++) {
+                for (size_t j = 0; j < cols; j++) {
+                    size_t src_idx = offset + i * stride0 + j * stride1;
+                    size_t dst_idx = i * cols + j;
+                    dst_data[dst_idx] = src_data[src_idx];
+                }
+            }
+            return lean_io_result_mk_ok(wrap_gpu_buffer(output, output_size));
+        }
+
+        // General N-D case: use nested loop with index computation
+        // This is CPU-based but handles arbitrary dimensions
+        float* src_data = (float*)[src contents];
+        float* dst_data = (float*)[output contents];
+
+        // Iterate through all elements using multi-dimensional indices
+        std::vector<size_t> indices(rank, 0);
+        for (size_t flat_idx = 0; flat_idx < numel; flat_idx++) {
+            // Compute strided source index
+            size_t src_idx = offset;
+            for (size_t d = 0; d < rank; d++) {
+                src_idx += indices[d] * strides[d];
+            }
+
+            // Copy element
+            dst_data[flat_idx] = src_data[src_idx];
+
+            // Increment multi-dimensional index (row-major order)
+            for (size_t d = rank; d > 0; d--) {
+                indices[d - 1]++;
+                if (indices[d - 1] < shape[d - 1]) break;
+                indices[d - 1] = 0;
+            }
         }
 
         return lean_io_result_mk_ok(wrap_gpu_buffer(output, output_size));

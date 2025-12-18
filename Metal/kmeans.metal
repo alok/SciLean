@@ -3016,3 +3016,31 @@ kernel void gemm_nt(
         C[row * n + col] = sum;
     }
 }
+
+// ============================================================
+// Strided Copy - materialize 2D strided view to contiguous
+// ============================================================
+
+// Copy 2D strided data to contiguous row-major buffer
+// params[0] = rows, params[1] = cols, params[2] = stride0, params[3] = stride1, params[4] = offset
+kernel void strided_copy_2d(
+    device const float* src [[buffer(0)]],
+    device float* dst [[buffer(1)]],
+    constant uint* params [[buffer(2)]],
+    uint2 gid [[thread_position_in_grid]]
+) {
+    uint rows = params[0];
+    uint cols = params[1];
+    uint stride0 = params[2];
+    uint stride1 = params[3];
+    uint offset = params[4];
+
+    uint col = gid.x;
+    uint row = gid.y;
+
+    if (row < rows && col < cols) {
+        uint src_idx = offset + row * stride0 + col * stride1;
+        uint dst_idx = row * cols + col;
+        dst[dst_idx] = src[src_idx];
+    }
+}
