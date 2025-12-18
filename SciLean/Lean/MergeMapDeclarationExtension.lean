@@ -14,7 +14,7 @@ structure MergeMapDeclarationExtension.Merge (α) where
 
 open MergeMapDeclarationExtension in
 /--
-Similar to `MapDeclarationExtension` but it allows you have insert declarations that were not declared in the same file.
+Similar to {name}`MapDeclarationExtension` but it allows you have insert declarations that were not declared in the same file.
 However, you have to provide how to merge the values and to guarantee consistency i.e. merging should be associative and commutative.
 -/
 def MergeMapDeclarationExtension (α)

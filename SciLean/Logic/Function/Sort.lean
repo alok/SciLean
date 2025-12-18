@@ -7,7 +7,7 @@ import SciLean.Util.SorryProof
 namespace SciLean
 
 open Classical in
-/-- Returns permutation of indices `I` under which `x : I → X` is sorted.
+/-- Returns permutation of indices {given}`I` under which {given}`x : I → X` is sorted.
 
 --TODO: note implementations of this function
 -/

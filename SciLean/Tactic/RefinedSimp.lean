@@ -130,7 +130,7 @@ def addTheorem (declName : Name) (attrKind : AttributeKind := .global)
   refinedSimpTheoremsExt.add thm attrKind
 
 
-/-- Check if `thm` can be applied to `e` and if the theorem argument `A : W → Set X` is not
+/-- Check if {given}`thm` can be applied to {given}`e` and if the theorem argument {lit}`A : W → Set X` is not
 a constant function. -/
 def theoremGuard (e : Expr) (thm : RefinedSimpTheorem) : MetaM Bool := do
   if thm.guards.size = 0 then return true
@@ -237,7 +237,7 @@ unsafe def elabGuards (declName : Name) (guardStx : Syntax) : TermElabM (Array (
   | _ =>
     throwUnsupportedSyntax
 
-/-- Initialization of `funProp` attribute -/
+/-- Initialization of {lit}`rsimp` attribute -/
 unsafe initialize funPropAttr : Unit ←
   registerBuiltinAttribute {
     name  := `rsimp
