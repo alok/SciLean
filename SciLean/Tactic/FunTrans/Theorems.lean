@@ -35,12 +35,12 @@ inductive LambdaTheoremArgs
   | apply
   /-- Composition theorem e.g. `fderiv ℝ fun x => f (g x) = ...`
 
-  The numbers `fArgId` and `gArgId` store the argument index for `f` and `g` in the composition
+  The numbers {given}`fArgId` and {given}`gArgId` store the argument index for {given}`f` and {given}`g` in the composition
   theorem. -/
   | comp (fArgId gArgId : Nat)
   /-- Let composition theorem e.g. `fderiv ℝ fun x => let y := g x; f x y = ...`
 
-  The numbers `fArgId` and `gArgId` store the argument index for `f` and `g` in the composition
+  The numbers {given}`fArgId` and {given}`gArgId` store the argument index for {given}`f` and {given}`g` in the composition
   theorem. -/
   | letE (fArgId gArgId : Nat)
 
@@ -64,7 +64,7 @@ inductive LambdaTheoremType
   | pi
   deriving Inhabited, BEq, Repr, Hashable
 
-/-- Convert `LambdaTheoremArgs` to `LambdaTheoremType`. -/
+/-- Convert {name}`LambdaTheoremArgs` to {name}`LambdaTheoremType`. -/
 def LambdaTheoremArgs.type (t : LambdaTheoremArgs) : LambdaTheoremType :=
   match t with
   | .id => .id
@@ -74,7 +74,7 @@ def LambdaTheoremArgs.type (t : LambdaTheoremArgs) : LambdaTheoremType :=
   | .apply  => .apply
   | .pi .. => .pi
 
-/-- Decides whether `f` is a function corresponding to one of the lambda theorems. -/
+/-- Decides whether {given}`f` is a function corresponding to one of the lambda theorems. -/
 def detectLambdaTheoremArgs (f : Expr) (ctxVars : Array Expr) :
     MetaM (Option LambdaTheoremArgs) := do
 
@@ -141,24 +141,24 @@ initialize lambdaTheoremsExt : LambdaTheoremsExt ←
          d.theorems.insert (e.funTransName, e.thmArgs.type) (es.push e)}
   }
 
-/-- Return lambda theorems of type `type` for function transformation `funTransName`
+/-- Return lambda theorems of type {given}`type` for function transformation {given}`funTransName`
 
-Theorems are filtered and sorted based on the optional argument `nargs`. It specifies the number of
+Theorems are filtered and sorted based on the optional argument {given}`nargs`. It specifies the number of
 arguments of the expression we want to transform.
 
 For example when transforming
-```
+```lean
 deriv (fun x => x * sin x)
 ```
-we do not want to use composition theorem stating `deriv (fun x' => f (g x')) x` because our
+we do not want to use composition theorem stating {lit}`deriv (fun x' => f (g x')) x` because our
 expression does not have the concrete point where we differentiate.
 
 On the other hand when transforming
-```
+```lean
 deriv (fun x' => 1/(1-x')) x
 ```
-we prefer the version `deriv (fun x' => f (g x')) x` over `deriv (fun x' => f (g x'))` as the former
-uses `DifferntiableAt` insed of `Differentiable` as preconditions. -/
+we prefer the version {lit}`deriv (fun x' => f (g x')) x` over {lit}`deriv (fun x' => f (g x'))` as the former
+uses {name}`DifferentiableAt` insed of {name}`Differentiable` as preconditions. -/
 def getLambdaTheorems (funTransName : Name) (type : LambdaTheoremType) (nargs : Option Nat):
     CoreM (Array LambdaTheorem) := do
   let .some thms := (lambdaTheoremsExt.getState (← getEnv)).theorems[(funTransName,type)]?
@@ -335,7 +335,7 @@ Examples:
       ContDiff 𝕜 n fun x => (f x) (g x)
   theorem clm_linear {f : E →L[𝕜] F} : IsLinearMap 𝕜 f
 ```
-- transition - the conclusion has to be in the form `P f` where `f` is a free variable
+- transition - the conclusion has to be in the form {lit}`P f` where {given}`f` is a free variable
 ```
   theorem linear_is_continuous [FiniteDimensional ℝ E] {f : E → F} (hf : IsLinearMap 𝕜 f) :
       Continuous f

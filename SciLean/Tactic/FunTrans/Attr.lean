@@ -24,7 +24,7 @@ namespace Meta.FunTrans
 private def funTransHelpString : String :=
 "`funTrans` tactic to compute function transformations like `fderiv` or `adjoint`"
 
-/-- Initialization of `funTrans` attribute -/
+/-- Initialization of {lit}`funTrans` attribute -/
 initialize funTransAttr : Unit ←
   registerBuiltinAttribute {
     name  := `fun_trans

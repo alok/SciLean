@@ -9,7 +9,7 @@ namespace SciLean.BLAS
 /--
 dgemm - Double precision GEneral Matrix Multiplication
 
-Computes: `C := alpha * A * B + beta * C`
+Computes: {lit}`C := alpha * A * B + beta * C`
 
 For row-major `A[M,K]`, `B[K,N]`, `C[M,N]`
 

@@ -3,7 +3,7 @@ import Lean
 /-! # Optimize Index Access Init
 
 Initialization for index access optimization simp attributes.
-Provides both `optimize_index_access` for lemmas and `optimize_index_access_proc` for simprocs.
+Provides both {lit}`optimize_index_access` for lemmas and {lit}`optimize_index_access_proc` for simprocs.
 -/
 
 namespace SciLean

@@ -6,12 +6,12 @@ open Lean Parser.Term
 bunch of other let bindings and projections.
 
 For examples
-```
+```lean
 let' (x,y) := v;
 b
 ```
 expands into
-```
+```lean
 let p := v
 let x := p.1
 let y := p.2
@@ -129,24 +129,24 @@ macro_rules (kind :=let'_syntax'')
 /-- Let binding that deconstructs structure into its fields.
 
 The notation
-```
+```lean
 let ⟨..⟩ := s
 b
 ```
 expands to
-```
+```lean
 let ⟨x₁,...,xₙ⟩ := s
 b
 ```
-where `x₁` are field names of struct `s`.
+where {lit}`x₁` are field names of struct {lit}`s`.
 
-For example, `Prod` has field `fst` and `snd` therefore
-```
+For example, {name}`Prod` has field {name}`fst` and {name}`snd` therefore
+```lean
 let ⟨..⟩ := (1,2)
 fst + snd
 ```
 as it expands to
-```
+```lean
 let ⟨fst,snd⟩ := (1,2)
 fst + snd
 ```
@@ -166,9 +166,9 @@ elab_rules (kind:=let_struct_syntax) : term
   elabTerm stx none
 
 
-/-- Structure field assigment, allows for `s.x := x'` notation in `do` block.
+/-- Structure field assigment, allows for {lit}`s.x := x'` notation in {lit}`do` block.
 
-`s.x := x'` expands into `s := {s with x := x'}` -/
+{lit}`s.x := x'` expands into {lit}`s := {s with x := x'}` -/
 macro_rules
 | `(doElem| $x:ident := $val) => do
   let .str n f := x.getId | Macro.throwUnsupported

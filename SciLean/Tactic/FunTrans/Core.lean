@@ -52,7 +52,7 @@ private def ppOrigin' (origin : FunProp.Origin) : MetaM String := do
 
 
 -- TODO: remove this once updated to newer version of mathlib
-/-- Is `e` a `fun_prop` goal? For example `∀ y z, Continuous fun x => f x y z` -/
+/-- Is {given}`e` a {lit}`fun_prop` goal? For example {lit}`∀ y z, Continuous fun x => f x y z` -/
 private def FunProp.isFunPropGoal (e : Expr) : MetaM Bool := do
   forallTelescope e fun _ b =>
   return (← FunProp.getFunProp? b).isSome

@@ -38,7 +38,7 @@ structure FunTransDecl where
   /-- path for discriminatory tree -/
   path : Array DiscrTree.Key
   /-- argument index of a function this function transformation talks about.
-  For example, this would be 8 for `@fderiv 𝕜 _ E _ _ F _ _ f` -/
+  For example, this would be 8 for {lit}`@fderiv 𝕜 _ E _ _ F _ _ f` -/
   funArgId : Nat
   deriving Inhabited, BEq
 
@@ -119,14 +119,14 @@ fun_trans bug: expression {← ppExpr e} matches multiple function transformatio
 /-- -/
 def isFunTrans (e : Expr) : MetaM Bool := do return (← getFunTrans? e).isSome
 
-/-- Returns function property transformation from `e = T f`. -/
+/-- Returns function property transformation from {lit}`e = T f`. -/
 def getFunTransDecl? (e : Expr) : MetaM (Option FunTransDecl) := do
   match ← getFunTrans? e with
   | .some (decl,_) => return decl
   | .none => return none
 
 
-/-- Returns function `f` from `e = T f` and `T` is function transformation. -/
+/-- Returns function {given}`f` from {lit}`e = T f` and {given}`T` is function transformation. -/
 def getFunTransFun? (e : Expr) : MetaM (Option Expr) := do
   match ← getFunTrans? e with
   | .some (_,f) => return f

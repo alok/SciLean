@@ -7,9 +7,9 @@ import SciLean.Util.SorryProof
 namespace SciLean
 
 /--
-  `Array α` that is guaranteed to be sorted based on `[Ord α]` and has no duplicates.
+  {name}`Array` that is guaranteed to be sorted based on {lit}`[Ord α]` and has no duplicates.
 
-  WARRNING: `Ord α` is assumed to be lawful, currently there is no typeclass for it.
+  WARRNING: {name}`Ord` is assumed to be lawful, currently there is no typeclass for it.
   -/
 structure ArraySet (α : Type _) [ord : Ord α] where
   data : Array α
