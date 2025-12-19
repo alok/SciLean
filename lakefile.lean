@@ -375,3 +375,13 @@ lean_exe AMXBenchmark where
 lean_exe AMXTest where
   root := `examples.AMXTest
   moreLinkArgs := metalLinkArgs
+
+lean_exe SquareGemmTest where
+  root := `examples.SquareGemmTest
+  moreLinkArgs := metalLinkArgs
+
+lean_exe PodTypesTest where
+  root := `test.pod_types_test
+
+lean_exe PodBenchmark where
+  root := `test.pod_benchmark

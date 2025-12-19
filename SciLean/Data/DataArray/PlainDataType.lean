@@ -4,6 +4,7 @@ import SciLean.Data.ByteArray
 import SciLean.Data.Idx
 import SciLean.Data.IndexType.Fold
 import SciLean.FFI.Float32Array
+import SciLean.FFI.IntArray
 -- import LeanColls.Classes.Ops.Fold
 
 namespace SciLean
@@ -748,3 +749,110 @@ def Float32.byteType : ByteType Float32 where
 
 instance : PlainDataType Float32 where
   btype := Float32.byteType
+
+-------- UInt16 ---------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+@[inline]
+def UInt16.byteType : ByteType UInt16 where
+  bytes := 2
+  h_size := sorry_proof
+
+  fromByteArray arr i _ := arr.ugetUInt16 i
+  toByteArray arr i _ a := arr.usetUInt16 i a
+
+  toByteArray_size := sorry_proof
+  fromByteArray_toByteArray := sorry_proof
+  fromByteArray_toByteArray_other := sorry_proof
+
+instance : PlainDataType UInt16 where
+  btype := UInt16.byteType
+
+-------- UInt32 ---------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+@[inline]
+def UInt32.byteType : ByteType UInt32 where
+  bytes := 4
+  h_size := sorry_proof
+
+  fromByteArray arr i _ := arr.ugetUInt32 i
+  toByteArray arr i _ a := arr.usetUInt32 i a
+
+  toByteArray_size := sorry_proof
+  fromByteArray_toByteArray := sorry_proof
+  fromByteArray_toByteArray_other := sorry_proof
+
+instance : PlainDataType UInt32 where
+  btype := UInt32.byteType
+
+-------- Int32 ----------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+@[inline]
+def Int32.byteType : ByteType Int32 where
+  bytes := 4
+  h_size := sorry_proof
+
+  fromByteArray arr i _ := arr.ugetInt32 i
+  toByteArray arr i _ a := arr.usetInt32 i a
+
+  toByteArray_size := sorry_proof
+  fromByteArray_toByteArray := sorry_proof
+  fromByteArray_toByteArray_other := sorry_proof
+
+instance : PlainDataType Int32 where
+  btype := Int32.byteType
+
+-------- UInt64 ---------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+@[inline]
+def UInt64.byteType : ByteType UInt64 where
+  bytes := 8
+  h_size := sorry_proof
+
+  fromByteArray arr i _ := arr.ugetUInt64 i
+  toByteArray arr i _ a := arr.usetUInt64 i a
+
+  toByteArray_size := sorry_proof
+  fromByteArray_toByteArray := sorry_proof
+  fromByteArray_toByteArray_other := sorry_proof
+
+instance : PlainDataType UInt64 where
+  btype := UInt64.byteType
+
+-------- Int64 ----------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+@[inline]
+def Int64.byteType : ByteType Int64 where
+  bytes := 8
+  h_size := sorry_proof
+
+  fromByteArray arr i _ := arr.ugetInt64 i
+  toByteArray arr i _ a := arr.usetInt64 i a
+
+  toByteArray_size := sorry_proof
+  fromByteArray_toByteArray := sorry_proof
+  fromByteArray_toByteArray_other := sorry_proof
+
+instance : PlainDataType Int64 where
+  btype := Int64.byteType
+
+-------- Complex (via Prod) ---------------------------------------------------
+-------------------------------------------------------------------------------
+-- For GPU compute, Complex numbers are represented as pairs:
+--   Complex32 = Float32 × Float32 (8 bytes)
+--   Complex64 = Float × Float (16 bytes)
+-- These get PlainDataType instances automatically via instPlainDataTypeProd.
+
+/-- Complex number with Float32 components (8 bytes total). -/
+abbrev Complex32 := Float32 × Float32
+
+/-- Complex number with Float64 components (16 bytes total). -/
+abbrev Complex64 := Float × Float
+
+-- PlainDataType instances for Complex32/Complex64 come from instPlainDataTypeProd
+example : PlainDataType Complex32 := inferInstance
+example : PlainDataType Complex64 := inferInstance
