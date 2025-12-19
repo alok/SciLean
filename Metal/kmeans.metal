@@ -1349,6 +1349,7 @@ kernel void bias_relu(
 
 // Add bias and apply GELU (Gaussian Error Linear Unit)
 // GELU(x) ≈ 0.5 * x * (1 + tanh(sqrt(2/π) * (x + 0.044715 * x³)))
+// Numerically stable: for |x| > 4, GELU saturates to x (positive) or 0 (negative)
 kernel void bias_gelu(
     device const float* input [[buffer(0)]],
     device const float* bias [[buffer(1)]],
@@ -1360,9 +1361,16 @@ kernel void bias_gelu(
     if (gid < n) {
         uint bias_idx = gid % stride;
         float x = input[gid] + bias[bias_idx];
-        // Fast GELU approximation
-        float cdf = 0.5f * (1.0f + tanh(0.7978845608f * (x + 0.044715f * x * x * x)));
-        output[gid] = x * cdf;
+
+        // Numerically stable GELU: avoid tanh overflow for large |x|
+        if (x > 4.0f) {
+            output[gid] = x;  // GELU(x) ≈ x for large positive x
+        } else if (x < -4.0f) {
+            output[gid] = 0.0f;  // GELU(x) ≈ 0 for large negative x
+        } else {
+            float cdf = 0.5f * (1.0f + tanh(0.7978845608f * (x + 0.044715f * x * x * x)));
+            output[gid] = x * cdf;
+        }
     }
 }
 
@@ -2729,6 +2737,8 @@ kernel void tanh_backward(
 
 // GELU backward using approximation derivative
 // gelu(x) ≈ 0.5 * x * (1 + tanh(sqrt(2/π) * (x + 0.044715 * x³)))
+// Numerically stable: for |x| > 4, tanh saturates and dtanh*dinner → 0*Inf = NaN
+// Solution: for large |x|, gelu'(x) ≈ 1 (x > 0) or 0 (x < 0)
 kernel void gelu_backward(
     device const float* input [[buffer(0)]],
     device const float* grad_output [[buffer(1)]],
@@ -2736,19 +2746,32 @@ kernel void gelu_backward(
     uint id [[thread_position_in_grid]]
 ) {
     float x = input[id];
+    float grad_out = grad_output[id];
+
+    // Early exit for extreme values to avoid NaN from 0 * Inf
+    if (x > 4.0f) {
+        grad_input[id] = grad_out;  // gelu'(x) ≈ 1 for large positive x
+        return;
+    }
+    if (x < -4.0f) {
+        grad_input[id] = 0.0f;  // gelu'(x) ≈ 0 for large negative x
+        return;
+    }
+
     float sqrt_2_pi = 0.7978845608f;
     float c = 0.044715f;
 
-    float x3 = x * x * x;
+    float x2 = x * x;
+    float x3 = x * x2;
     float inner = sqrt_2_pi * (x + c * x3);
     float tanh_inner = tanh(inner);
 
     // Derivative: 0.5 * (1 + tanh_inner) + 0.5 * x * (1 - tanh_inner²) * sqrt_2_pi * (1 + 3*c*x²)
     float dtanh = 1.0f - tanh_inner * tanh_inner;
-    float dinner = sqrt_2_pi * (1.0f + 3.0f * c * x * x);
+    float dinner = sqrt_2_pi * (1.0f + 3.0f * c * x2);
 
     float dgelu = 0.5f * (1.0f + tanh_inner) + 0.5f * x * dtanh * dinner;
-    grad_input[id] = grad_output[id] * dgelu;
+    grad_input[id] = grad_out * dgelu;
 }
 
 // Softmax backward (batched, per-row)

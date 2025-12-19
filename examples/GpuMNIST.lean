@@ -134,9 +134,6 @@ def forwardBatchInternal (weights : GpuWeights) (x : GpuBuffer)
   -- h = gelu(x @ W1^T + b1)
 
   -- First layer: h_pre = x @ W1^T, result is [batchSize, 128]
-  -- x[batch, 784] @ W1^T[784, 128] = h_pre[batch, 128]
-  -- Note: AMX works but has batch state issues when mixed with MPS ops over many iterations
-  -- Using MPS for stability; AMX available via gemmNT_AMX for future optimization
   let h_pre ← GpuBuffer.gemmNT x weights.w1 batchSize 784 128
 
   -- Fused bias + gelu: h = gelu(h_pre + b1)
@@ -168,8 +165,7 @@ def backwardBatchInternal (weights : GpuWeights) (x y target h_pre h : GpuBuffer
   let d_o ← GpuBuffer.sub y target (batchSize * 10)
 
   -- dL/dW2 = h^T @ d_o, h is [batch, 128], d_o is [batch, 10]
-  -- h^T[128, batch] @ d_o[batch, 10] = dW2[128, 10]
-  -- But we want dW2 in [10, 128] format, so we compute d_o^T @ h
+  -- We want dW2 in [10, 128] format, so we compute d_o^T @ h
   let dw2 ← GpuBuffer.gemmTN d_o h 10 batchSize 128
 
   -- dL/db2 = sum(d_o, axis=0) - column-wise sum gives [10]
@@ -182,8 +178,7 @@ def backwardBatchInternal (weights : GpuWeights) (x y target h_pre h : GpuBuffer
   let d_h_pre ← GpuBuffer.geluBackward h_pre d_h (batchSize * 128)
 
   -- dL/dW1 = x^T @ d_h_pre, x is [batch, 784], d_h_pre is [batch, 128]
-  -- x^T[784, batch] @ d_h_pre[batch, 128] = dW1[784, 128]
-  -- But we want dW1 in [128, 784] format, so we compute d_h_pre^T @ x
+  -- We want dW1 in [128, 784] format, so we compute d_h_pre^T @ x
   let dw1 ← GpuBuffer.gemmTN d_h_pre x 128 batchSize 784
 
   -- dL/db1 = sum(d_h_pre, axis=0) - column-wise sum gives [128]
@@ -198,7 +193,7 @@ def backwardBatch (weights : GpuWeights) (x y target h_pre h : GpuBuffer)
 
 /-! ## SGD Update -/
 
-/-- SGD update (internal, no batching): w = w - lr times grad. -/
+/-- SGD update (internal, no batching): w := w - lr·grad -/
 def sgdUpdateInternal (weights : GpuWeights) (grads : GpuGradients)
     (lr : Float) : IO GpuWeights := do
   -- w1 = w1 - lr * dw1
@@ -206,7 +201,6 @@ def sgdUpdateInternal (weights : GpuWeights) (grads : GpuGradients)
   let b1' ← GpuBuffer.axpy 128 (-lr) grads.db1 weights.b1
   let w2' ← GpuBuffer.axpy (10 * 128) (-lr) grads.dw2 weights.w2
   let b2' ← GpuBuffer.axpy 10 (-lr) grads.db2 weights.b2
-
   return { w1 := w1', b1 := b1', w2 := w2', b2 := b2' }
 
 /-- SGD update with command buffer batching -/
@@ -391,17 +385,45 @@ def diagBatchSizes (cpuImages cpuLabels : CpuBuffer)
 
 /-! ## Training Loop -/
 
+/-- Check if any value in a buffer is NaN (debugging helper) -/
+def hasNaNInBuffer (buf : GpuBuffer) (n : Nat) : IO Bool := do
+  let cpu ← buf.download
+  for i in [0:n] do
+    if (cpu.readFloat32 i).isNaN then return true
+  return false
+
 /-- Combined training step: forward + backward + update in a single command buffer.
     This eliminates per-operation dispatch overhead for maximum throughput.
     The learning rate should already be scaled for batch size. -/
 def trainStep (weights : GpuWeights) (images labels : GpuBuffer)
     (batchSize : USize) (lr : Float) : IO GpuWeights :=
   withBatch do
+    -- Check inputs for NaN
+    let w1HasNaN ← hasNaNInBuffer weights.w1 (128 * 784)
+    if w1HasNaN then
+      IO.println s!"DEBUG: w1 has NaN BEFORE forward pass!"
+
     -- Forward pass
     let (pred, h_pre, h, _) ← forwardBatchInternal weights images batchSize
 
+    -- Check forward pass outputs
+    let predHasNaN ← hasNaNInBuffer pred (batchSize.toNat * 10)
+    if predHasNaN then
+      IO.println s!"DEBUG: pred has NaN after forward pass!"
+      debugBuffer "h_pre" h_pre (batchSize.toNat * 128)
+      debugBuffer "h" h (batchSize.toNat * 128)
+      debugBuffer "pred" pred (batchSize.toNat * 10)
+
     -- Backward pass
     let grads ← backwardBatchInternal weights images pred labels h_pre h batchSize
+
+    -- Check gradients for NaN
+    let dw1HasNaN ← hasNaNInBuffer grads.dw1 (128 * 784)
+    let dw2HasNaN ← hasNaNInBuffer grads.dw2 (10 * 128)
+    if dw1HasNaN || dw2HasNaN then
+      IO.println s!"DEBUG: Gradients have NaN! dw1={dw1HasNaN} dw2={dw2HasNaN}"
+      debugBuffer "dw1" grads.dw1 (128 * 784)
+      debugBuffer "dw2" grads.dw2 (10 * 128)
 
     -- SGD update
     sgdUpdateInternal weights grads lr
@@ -476,6 +498,11 @@ def main : IO Unit := do
   let b2 ← cpuB2.upload
   IO.println "done"
 
+  -- DEBUG: Verify sizes immediately after upload
+  IO.println s!"DEBUG: After upload - b1.sizeBytes = {b1.sizeBytes} (expected 512)"
+  IO.println s!"DEBUG: After upload - w1.sizeBytes = {w1.sizeBytes} (expected {128 * 784 * 4})"
+  IO.println s!"DEBUG: cpuB1.sizeBytes = {cpuB1.sizeBytes} (expected 512)"
+
   let initialWeights : GpuWeights := { w1 := w1, b1 := b1, w2 := w2, b2 := b2 }
 
   -- For evaluation, use first evalBatchSize samples
@@ -498,6 +525,18 @@ def main : IO Unit := do
     weights ← trainEpochMiniBatch weights images labels numTrain miniBatchSize lr
 
     let elapsed := (← IO.monoMsNow) - start
+
+    -- NaN check: detect when corruption happens
+    let w1Data ← weights.w1.download
+    let mut hasNaN := false
+    for i in [0:128*784] do
+      if (w1Data.readFloat32 i).isNaN then hasNaN := true
+    if hasNaN then
+      IO.println s!"WARNING: NaN detected in w1 after epoch {epoch + 1}!"
+      debugBuffer "w1" weights.w1 (128 * 784)
+      debugBuffer "b1" weights.b1 128
+      debugBuffer "w2" weights.w2 (10 * 128)
+      debugBuffer "b2" weights.b2 10
 
     -- Compute accuracy on evaluation set
     let (pred, _, _, _) ← forwardBatch weights evalImages evalBatchSize.toUSize

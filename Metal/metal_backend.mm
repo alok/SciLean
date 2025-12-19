@@ -166,7 +166,16 @@ static void gpu_buffer_finalize(void* ptr) {
     if (data) {
         // Return buffer to pool if small enough, otherwise release
         if (data->buffer) {
-            return_pooled_buffer(data->buffer);
+            id<MTLBuffer> buffer = data->buffer;
+            // NOTE: We DON'T pool during batch mode - buffers returned during
+            // batch mode might still have pending GPU work. Instead, we only
+            // return to pool when not in batch mode (which means all GPU work
+            // is complete or we're doing synchronous operations).
+            if (!g_batch_mode) {
+                return_pooled_buffer(buffer);
+            }
+            // Explicitly release: we retained in wrap_gpu_buffer
+            CFRelease((__bridge CFTypeRef)buffer);
             data->buffer = nil;
         }
         free(data);
@@ -192,7 +201,9 @@ static lean_external_class* get_gpu_buffer_class() {
 // Create a Lean GpuBuffer object from a Metal buffer
 static lean_obj_res wrap_gpu_buffer(id<MTLBuffer> buffer, size_t size_bytes) {
     GpuBufferData* data = (GpuBufferData*)malloc(sizeof(GpuBufferData));
-    data->buffer = buffer;  // ARC retains
+    // Explicitly retain: malloc'd memory is not managed by ARC
+    CFRetain((__bridge CFTypeRef)buffer);
+    data->buffer = buffer;
     data->size_bytes = size_bytes;
     return lean_alloc_external(get_gpu_buffer_class(), data);
 }
@@ -426,7 +437,9 @@ LEAN_EXPORT lean_obj_res scilean_gpu_upload_f32(b_lean_obj_arg data, lean_obj_ar
         return lean_io_result_mk_error(lean_mk_string("Metal not available"));
     }
 
-    size_t size_bytes = lean_sarray_byte_size(data);
+    // For ByteArray (sarray of UInt8), size in bytes = number of elements
+    // Use lean_sarray_size, not lean_sarray_byte_size (which can include overhead)
+    size_t size_bytes = lean_sarray_size(data);
     const void* src = lean_sarray_cptr(data);
 
     // Allocate GPU buffer
@@ -448,6 +461,9 @@ LEAN_EXPORT lean_obj_res scilean_gpu_download_f32(b_lean_obj_arg buf, lean_obj_a
     if (!data || !data->buffer) {
         return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
     }
+
+    // CRITICAL: Sync GPU work before CPU access
+    sync_batch_for_cpu();
 
     size_t size_bytes = data->size_bytes;
     lean_obj_res arr = lean_alloc_sarray(1, size_bytes, size_bytes);
@@ -493,6 +509,10 @@ LEAN_EXPORT lean_obj_res scilean_gpu_slice_f32(
     if (offset_bytes + size_bytes > src_data->size_bytes) {
         return lean_io_result_mk_error(lean_mk_string("Slice out of bounds"));
     }
+
+    // CRITICAL: Sync GPU work before CPU access to source buffer
+    // Without this, we may read stale/incomplete data if GPU is still writing
+    sync_batch_for_cpu();
 
     // Allocate destination buffer
     id<MTLBuffer> dst_buffer = get_pooled_buffer(size_bytes);
@@ -610,6 +630,10 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_f32(
     size_t m, size_t k, size_t n,
     lean_obj_arg /* world */
 ) {
+    if (!ensure_metal_initialized()) {
+        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
+    }
+
     id<MTLBuffer> A = get_mtl_buffer(A_buf);
     id<MTLBuffer> B = get_mtl_buffer(B_buf);
     if (!A || !B) {
@@ -621,27 +645,19 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_f32(
 
     @autoreleasepool {
         size_t output_size = m * n * sizeof(float);
-        id<MTLBuffer> C = get_pooled_buffer(output_size);
-        if (!C) {
-            C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
-        }
+        // Don't use buffer pool for AMX - allocate fresh to avoid any pool corruption
+        id<MTLBuffer> C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
 
         // Get raw pointers - unified memory, no copy!
         float* a_ptr = (float*)[A contents];
         float* b_ptr = (float*)[B contents];
         float* c_ptr = (float*)[C contents];
 
-        // cblas_sgemm: C = alpha * A @ B + beta * C
-        // Uses AMX on Apple Silicon automatically
-        cblas_sgemm(CblasRowMajor,    // Row-major layout
-                    CblasNoTrans,      // A not transposed
-                    CblasNoTrans,      // B not transposed
-                    (int)m, (int)n, (int)k,  // Dimensions
-                    1.0f,              // alpha
-                    a_ptr, (int)k,     // A and leading dimension
-                    b_ptr, (int)n,     // B and leading dimension
-                    0.0f,              // beta
-                    c_ptr, (int)n);    // C and leading dimension
+        // vDSP_mmul: C = A * B (uses AMX on Apple Silicon)
+        // Parameters: A[m,k], B[k,n] -> C[m,n]
+        // Stride 1 for contiguous row-major storage
+        vDSP_mmul(a_ptr, 1, b_ptr, 1, c_ptr, 1,
+                  (vDSP_Length)m, (vDSP_Length)n, (vDSP_Length)k);
 
         // Note: batch will be restarted automatically by get_encoder_for_op()
         // when next GPU op runs
@@ -657,6 +673,10 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_tn_f32(
     size_t m, size_t k, size_t n,
     lean_obj_arg /* world */
 ) {
+    if (!ensure_metal_initialized()) {
+        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
+    }
+
     id<MTLBuffer> A = get_mtl_buffer(A_buf);
     id<MTLBuffer> B = get_mtl_buffer(B_buf);
     if (!A || !B) {
@@ -668,10 +688,8 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_tn_f32(
 
     @autoreleasepool {
         size_t output_size = m * n * sizeof(float);
-        id<MTLBuffer> C = get_pooled_buffer(output_size);
-        if (!C) {
-            C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
-        }
+        // Don't use buffer pool for AMX - allocate fresh to avoid any pool corruption
+        id<MTLBuffer> C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
 
         float* a_ptr = (float*)[A contents];
         float* b_ptr = (float*)[B contents];
@@ -699,6 +717,10 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_nt_f32(
     size_t m, size_t k, size_t n,
     lean_obj_arg /* world */
 ) {
+    if (!ensure_metal_initialized()) {
+        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
+    }
+
     id<MTLBuffer> A = get_mtl_buffer(A_buf);
     id<MTLBuffer> B = get_mtl_buffer(B_buf);
     if (!A || !B) {
@@ -710,10 +732,8 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_nt_f32(
 
     @autoreleasepool {
         size_t output_size = m * n * sizeof(float);
-        id<MTLBuffer> C = get_pooled_buffer(output_size);
-        if (!C) {
-            C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
-        }
+        // Don't use buffer pool for AMX - allocate fresh to avoid any pool corruption
+        id<MTLBuffer> C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
 
         float* a_ptr = (float*)[A contents];
         float* b_ptr = (float*)[B contents];
@@ -1452,7 +1472,6 @@ LEAN_EXPORT lean_obj_res scilean_gpu_layer_norm_f32(
 }
 
 // Bias + GELU fused operation on GPU buffers
-// Supports batching: when in batch mode, queues to shared command buffer
 // y = gelu(x + bias) where gelu(x) ≈ 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3)))
 LEAN_EXPORT lean_obj_res scilean_gpu_bias_gelu_f32(
     b_lean_obj_arg X_buf,
@@ -1486,7 +1505,6 @@ LEAN_EXPORT lean_obj_res scilean_gpu_bias_gelu_f32(
         uint32_t n32 = (uint32_t)n;
         uint32_t stride32 = (uint32_t)stride;
 
-        // Use batch encoder if in batch mode
         bool batched = is_batch_mode();
         id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
         id<MTLCommandBuffer> commandBuffer = nil;
@@ -1514,8 +1532,7 @@ LEAN_EXPORT lean_obj_res scilean_gpu_bias_gelu_f32(
             [g_batch_outputs addObject:Y];
         }
 
-        lean_obj_res result = wrap_gpu_buffer(Y, output_size);
-        return lean_io_result_mk_ok(result);
+        return lean_io_result_mk_ok(wrap_gpu_buffer(Y, output_size));
     }
 }
 
