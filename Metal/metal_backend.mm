@@ -766,6 +766,9 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_nt_f32(
 
 // Heuristic helper: should we use AMX instead of MPS for this GEMM size?
 static inline bool should_use_amx(size_t m, size_t k, size_t n) {
+    // Never use AMX in batch mode - it would commit the batch and break subsequent MPS ops
+    if (g_batch_mode) return false;
+
     // AMX is faster for small matrices where GPU launch overhead (~10-50μs) dominates
     // Use AMX when: total FLOPs < 1M AND min dimension < 256
     // This avoids using AMX for large matrices with one small dimension

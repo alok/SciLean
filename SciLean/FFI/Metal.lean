@@ -56,10 +56,6 @@ opaque isBatchMode : Unit → Bool
 /-- Execute a batch of GPU operations in a single command buffer submission.
     This eliminates per-operation synchronization overhead (3-5x speedup for op chains). -/
 def withBatch (f : IO α) : IO α := do
-  -- DEBUG: Disable batching to isolate nondeterministic NaN bug
-  -- With batching disabled, each op commits and waits synchronously
-  f
-  /- DISABLED FOR DEBUGGING
   batchBegin
   try
     let result ← f
@@ -68,7 +64,6 @@ def withBatch (f : IO α) : IO α := do
   catch e =>
     batchCancel
     throw e
-  -/
 
 /-- Opaque handle to a GPU-resident Metal buffer.
     Data stays on GPU until explicitly downloaded. -/

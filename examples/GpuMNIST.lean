@@ -397,36 +397,16 @@ def hasNaNInBuffer (buf : GpuBuffer) (n : Nat) : IO Bool := do
 
 /-- Combined training step: forward + backward + update in a single command buffer.
     This eliminates per-operation dispatch overhead for maximum throughput.
-    The learning rate should already be scaled for batch size. -/
+    The learning rate should already be scaled for batch size.
+    Note: No downloads inside withBatch - downloads commit the batch early! -/
 def trainStep (weights : GpuWeights) (images labels : GpuBuffer)
     (batchSize : USize) (lr : Float) : IO GpuWeights :=
   withBatch do
-    -- Check inputs for NaN
-    let w1HasNaN ← hasNaNInBuffer weights.w1 (128 * 784)
-    if w1HasNaN then
-      IO.println s!"DEBUG: w1 has NaN BEFORE forward pass!"
-
     -- Forward pass
     let (pred, h_pre, h, _) ← forwardBatchInternal weights images batchSize
 
-    -- Check forward pass outputs
-    let predHasNaN ← hasNaNInBuffer pred (batchSize.toNat * 10)
-    if predHasNaN then
-      IO.println s!"DEBUG: pred has NaN after forward pass!"
-      debugBuffer "h_pre" h_pre (batchSize.toNat * 128)
-      debugBuffer "h" h (batchSize.toNat * 128)
-      debugBuffer "pred" pred (batchSize.toNat * 10)
-
     -- Backward pass
     let grads ← backwardBatchInternal weights images pred labels h_pre h batchSize
-
-    -- Check gradients for NaN
-    let dw1HasNaN ← hasNaNInBuffer grads.dw1 (128 * 784)
-    let dw2HasNaN ← hasNaNInBuffer grads.dw2 (10 * 128)
-    if dw1HasNaN || dw2HasNaN then
-      IO.println s!"DEBUG: Gradients have NaN! dw1={dw1HasNaN} dw2={dw2HasNaN}"
-      debugBuffer "dw1" grads.dw1 (128 * 784)
-      debugBuffer "dw2" grads.dw2 (10 * 128)
 
     -- SGD update
     sgdUpdateInternal weights grads lr
