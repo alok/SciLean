@@ -103,18 +103,15 @@ def PlainDataType.toByteArray {α : Type*} (pd : PlainDataType α) (data : ByteA
   --   byteType.toByteArray data (i.toUSize*byteType.bytes) sorry_proof v
 
 /-- Translate `PlainDataType X` along equivalence `f : X ≃ Y` to `PlainDataType Y` -/
+@[inline]
 def PlainDataType.ofEquiv {X Y : Type*} [pd : PlainDataType X] (f : X ≃ Y) : PlainDataType Y where
   btype := {
       bytes := pd.btype.bytes
       h_size := pd.btype.h_size
-      fromByteArray b i h :=
-        let x := pd.btype.fromByteArray b i h
-        let y := f x
-        y
-      toByteArray b i h vy :=
-        let vx := f.symm vy
-        let b := pd.btype.toByteArray b i h vx
-        b
+      fromByteArray := fun b i h =>
+        f (pd.btype.fromByteArray b i h)
+      toByteArray := fun b i h vy =>
+        pd.btype.toByteArray b i h (f.symm vy)
       toByteArray_size := sorry_proof
       fromByteArray_toByteArray := sorry_proof
       fromByteArray_toByteArray_other := sorry_proof

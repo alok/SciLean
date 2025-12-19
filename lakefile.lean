@@ -392,3 +392,7 @@ lean_exe StructMarshalingTest where
 
 lean_exe DerivePlainDataTypeTest where
   root := `test.derive_plaindatatype_test
+
+lean_exe StructVsTupleBenchmark where
+  buildType := .release
+  root := `test.struct_vs_tuple_benchmark
