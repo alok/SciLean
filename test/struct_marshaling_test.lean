@@ -1,4 +1,4 @@
-import SciLean.Data.DataArray.PlainDataType
+import SciLean.Data.DataArray.DerivePlainDataType
 import SciLean.FFI.Metal
 
 /-!
@@ -6,59 +6,37 @@ import SciLean.FFI.Metal
 
 Goal: Custom structures should work with GPU buffers automatically.
 This tests the path: Structure → PlainDataType → ByteArray → GpuBuffer
+
+Uses `deriving PlainDataType` for automatic instance generation!
 -/
 
 open SciLean
 
 -- ============================================================================
--- Example 1: Simple Vec3 structure
+-- Example 1: Simple Vec3 structure (now with auto-derive!)
 -- ============================================================================
 
 structure Vec3 where
   x : Float32
   y : Float32
   z : Float32
-  deriving Repr, Inhabited
+  deriving PlainDataType, Repr, Inhabited
 
 instance : ToString Vec3 where
   toString v := s!"Vec3({v.x}, {v.y}, {v.z})"
 
--- Manual equivalence to nested product (current approach)
-def Vec3.toProd (v : Vec3) : Float32 × Float32 × Float32 := (v.x, v.y, v.z)
-def Vec3.fromProd (p : Float32 × Float32 × Float32) : Vec3 := ⟨p.1, p.2.1, p.2.2⟩
-
-def Vec3.equiv : Vec3 ≃ Float32 × Float32 × Float32 where
-  toFun := Vec3.toProd
-  invFun := Vec3.fromProd
-  left_inv := fun _ => rfl
-  right_inv := fun _ => rfl
-
--- PlainDataType instance via equivalence
-instance : PlainDataType Vec3 := PlainDataType.ofEquiv Vec3.equiv.symm
-
 -- ============================================================================
--- Example 2: Particle with multiple fields
+-- Example 2: Particle with multiple fields (also auto-derived!)
 -- ============================================================================
 
 structure Particle where
   pos : Vec3
   vel : Vec3
   mass : Float32
-  deriving Repr, Inhabited
+  deriving PlainDataType, Repr, Inhabited
 
 instance : ToString Particle where
   toString p := s!"Particle(pos={p.pos}, vel={p.vel}, mass={p.mass})"
-
-def Particle.toProd (p : Particle) : Vec3 × Vec3 × Float32 := (p.pos, p.vel, p.mass)
-def Particle.fromProd (t : Vec3 × Vec3 × Float32) : Particle := ⟨t.1, t.2.1, t.2.2⟩
-
-def Particle.equiv : Particle ≃ Vec3 × Vec3 × Float32 where
-  toFun := Particle.toProd
-  invFun := Particle.fromProd
-  left_inv := fun _ => rfl
-  right_inv := fun _ => rfl
-
-instance : PlainDataType Particle := PlainDataType.ofEquiv Particle.equiv.symm
 
 -- ============================================================================
 -- Helper: Serialize/deserialize arrays of structs
