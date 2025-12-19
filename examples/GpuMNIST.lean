@@ -134,13 +134,15 @@ def forwardBatchInternal (weights : GpuWeights) (x : GpuBuffer)
   -- h = gelu(x @ W1^T + b1)
 
   -- First layer: h_pre = x @ W1^T, result is [batchSize, 128]
-  let h_pre ← GpuBuffer.gemmNT x weights.w1 batchSize 784 128
+  -- Auto-dispatch: uses MPS for large matrix (3.2M FLOPs)
+  let h_pre ← GpuBuffer.gemmNT_Auto x weights.w1 batchSize 784 128
 
   -- Fused bias + gelu: h = gelu(h_pre + b1)
   let h ← GpuBuffer.biasGelu h_pre weights.b1 (batchSize * 128) 128
 
   -- Second layer: o_pre = h @ W2^T, result is [batchSize, 10]
-  let o_pre ← GpuBuffer.gemmNT h weights.w2 batchSize 128 10
+  -- Auto-dispatch: uses AMX for small matrix (40K FLOPs, min_dim=10)
+  let o_pre ← GpuBuffer.gemmNT_Auto h weights.w2 batchSize 128 10
 
   -- Add bias to output
   let o ← GpuBuffer.biasAdd o_pre weights.b2 (batchSize * 10) 10
@@ -166,6 +168,7 @@ def backwardBatchInternal (weights : GpuWeights) (x y target h_pre h : GpuBuffer
 
   -- dL/dW2 = h^T @ d_o, h is [batch, 128], d_o is [batch, 10]
   -- We want dW2 in [10, 128] format, so we compute d_o^T @ h
+  -- Note: Using MPS for backward pass (AMX causes numerical instability - TODO: investigate)
   let dw2 ← GpuBuffer.gemmTN d_o h 10 batchSize 128
 
   -- dL/db2 = sum(d_o, axis=0) - column-wise sum gives [10]
@@ -239,16 +242,16 @@ def forwardBatchDiag (weights : GpuWeights) (x : GpuBuffer)
   debugBuffer "input x" x (batchSize.toNat * 784)
 
   -- First layer: h_pre = x @ W1^T
-  let h_pre ← GpuBuffer.gemmNT x weights.w1 batchSize 784 128
-  debugBuffer "h_pre (after gemmNT)" h_pre (batchSize.toNat * 128)
+  let h_pre ← GpuBuffer.gemmNT_Auto x weights.w1 batchSize 784 128
+  debugBuffer "h_pre (after gemmNT_Auto)" h_pre (batchSize.toNat * 128)
 
   -- Fused bias + gelu
   let h ← GpuBuffer.biasGelu h_pre weights.b1 (batchSize * 128) 128
   debugBuffer "h (after biasGelu)" h (batchSize.toNat * 128)
 
   -- Second layer: o_pre = h @ W2^T
-  let o_pre ← GpuBuffer.gemmNT h weights.w2 batchSize 128 10
-  debugBuffer "o_pre (after gemmNT)" o_pre (batchSize.toNat * 10)
+  let o_pre ← GpuBuffer.gemmNT_Auto h weights.w2 batchSize 128 10
+  debugBuffer "o_pre (after gemmNT_Auto)" o_pre (batchSize.toNat * 10)
 
   -- Add bias
   let o ← GpuBuffer.biasAdd o_pre weights.b2 (batchSize * 10) 10

@@ -56,6 +56,10 @@ opaque isBatchMode : Unit → Bool
 /-- Execute a batch of GPU operations in a single command buffer submission.
     This eliminates per-operation synchronization overhead (3-5x speedup for op chains). -/
 def withBatch (f : IO α) : IO α := do
+  -- DEBUG: Disable batching to isolate nondeterministic NaN bug
+  -- With batching disabled, each op commits and waits synchronously
+  f
+  /- DISABLED FOR DEBUGGING
   batchBegin
   try
     let result ← f
@@ -64,6 +68,7 @@ def withBatch (f : IO α) : IO α := do
   catch e =>
     batchCancel
     throw e
+  -/
 
 /-- Opaque handle to a GPU-resident Metal buffer.
     Data stays on GPU until explicitly downloaded. -/
@@ -146,6 +151,16 @@ opaque gemmNT_AMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
     Heuristic: AMX when min dimension < 256 or < 1M FLOPs. -/
 @[extern "scilean_auto_gemm_f32"]
 opaque gemmAuto (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
+
+/-- Auto-dispatch GEMM with A transposed: `C = A^T @ B`.
+    Automatically uses AMX for small matrices to avoid MPS encoder switching. -/
+@[extern "scilean_auto_gemm_tn_f32"]
+opaque gemmTN_Auto (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
+
+/-- Auto-dispatch GEMM with B transposed: `C = A @ B^T`.
+    Automatically uses AMX for small matrices to avoid MPS encoder switching. -/
+@[extern "scilean_auto_gemm_nt_f32"]
+opaque gemmNT_Auto (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
 /-- Element-wise add: `C = A + B`. -/
 @[extern "scilean_gpu_add_f32"]

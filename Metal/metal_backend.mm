@@ -5,6 +5,16 @@
 #include <lean/lean.h>
 #include <vector>
 
+// Forward declarations for auto-dispatch functions
+extern "C" {
+LEAN_EXPORT lean_obj_res scilean_gpu_gemm_tn_f32(
+    b_lean_obj_arg A_buf, b_lean_obj_arg B_buf,
+    size_t m, size_t k, size_t n, lean_obj_arg world);
+LEAN_EXPORT lean_obj_res scilean_gpu_gemm_nt_f32(
+    b_lean_obj_arg A_buf, b_lean_obj_arg B_buf,
+    size_t m, size_t k, size_t n, lean_obj_arg world);
+}
+
 // Global Metal state
 static id<MTLDevice> device = nil;
 static id<MTLCommandQueue> commandQueue = nil;
@@ -754,27 +764,57 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_nt_f32(
     }
 }
 
+// Heuristic helper: should we use AMX instead of MPS for this GEMM size?
+static inline bool should_use_amx(size_t m, size_t k, size_t n) {
+    // AMX is faster for small matrices where GPU launch overhead (~10-50μs) dominates
+    // Use AMX when: total FLOPs < 1M AND min dimension < 256
+    // This avoids using AMX for large matrices with one small dimension
+    size_t min_dim = (m < k) ? ((m < n) ? m : n) : ((k < n) ? k : n);
+    size_t total_flops = 2 * m * k * n;
+    return (min_dim < 256) && (total_flops < 1000000);
+}
+
 // Auto-dispatch GEMM: uses AMX for small matrices, MPS for large
-// Threshold based on typical GPU launch overhead (~10-50μs)
 LEAN_EXPORT lean_obj_res scilean_auto_gemm_f32(
     b_lean_obj_arg A_buf,
     b_lean_obj_arg B_buf,
     size_t m, size_t k, size_t n,
     lean_obj_arg world
 ) {
-    // Heuristic: use AMX for matrices < 256 elements on any dimension
-    // GPU overhead dominates at this size
-    size_t min_dim = (m < k) ? ((m < n) ? m : n) : ((k < n) ? k : n);
-    size_t total_flops = 2 * m * k * n;
-
-    // Use AMX for small matrices or when already in batch mode
-    // (batch mode means GPU is busy, AMX can run in parallel)
-    bool use_amx = (min_dim < 256) || (total_flops < 1000000);
-
-    if (use_amx) {
+    if (should_use_amx(m, k, n)) {
         return scilean_amx_gemm_f32(A_buf, B_buf, m, k, n, world);
     } else {
         return scilean_gpu_gemm_f32(A_buf, B_buf, m, k, n, world);
+    }
+}
+
+// Auto-dispatch GEMM with A transposed: C = A^T @ B
+// Uses AMX for small matrices to avoid encoder switching overhead
+LEAN_EXPORT lean_obj_res scilean_auto_gemm_tn_f32(
+    b_lean_obj_arg A_buf,
+    b_lean_obj_arg B_buf,
+    size_t m, size_t k, size_t n,
+    lean_obj_arg world
+) {
+    if (should_use_amx(m, k, n)) {
+        return scilean_amx_gemm_tn_f32(A_buf, B_buf, m, k, n, world);
+    } else {
+        return scilean_gpu_gemm_tn_f32(A_buf, B_buf, m, k, n, world);
+    }
+}
+
+// Auto-dispatch GEMM with B transposed: C = A @ B^T
+// Uses AMX for small matrices to avoid encoder switching overhead
+LEAN_EXPORT lean_obj_res scilean_auto_gemm_nt_f32(
+    b_lean_obj_arg A_buf,
+    b_lean_obj_arg B_buf,
+    size_t m, size_t k, size_t n,
+    lean_obj_arg world
+) {
+    if (should_use_amx(m, k, n)) {
+        return scilean_amx_gemm_nt_f32(A_buf, B_buf, m, k, n, world);
+    } else {
+        return scilean_gpu_gemm_nt_f32(A_buf, B_buf, m, k, n, world);
     }
 }
 

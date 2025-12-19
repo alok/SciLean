@@ -217,3 +217,7 @@ def timeGPU (key : String) (op : IO α) : IO α := do
   trace[GPU.metal.timing] "{key}: {nanos.print}"
   return result
 ```
+
+---
+
+Wrap math in docstrings in backticks or else you'll get weird parse errors.
