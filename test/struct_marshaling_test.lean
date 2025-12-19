@@ -1,4 +1,4 @@
-import SciLean.Data.DataArray.DerivePlainDataType
+import SciLean.Data.DataArray.DerivePlainDataTypeFast
 import SciLean.FFI.Metal
 
 /-!

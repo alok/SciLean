@@ -1,4 +1,4 @@
-import SciLean.Data.DataArray.DerivePlainDataType
+import SciLean.Data.DataArray.DerivePlainDataTypeFast
 
 -- Benchmark: Struct vs Tuple PlainDataType Performance
 -- Compares raw tuples vs struct with deriving PlainDataType
