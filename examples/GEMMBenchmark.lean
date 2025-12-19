@@ -64,6 +64,10 @@ def verifyGEMM (m k n : Nat) (A B : FloatArray) : IO Bool := do
   IO.println s!"Max difference: {maxDiff}"
   return maxDiff < 1e-10
 
+/-- Compute GFLOPs/s from average time in nanoseconds. -/
+def gflops (flops : Nat) (avgTimeNs : Nat) : Float :=
+  if avgTimeNs == 0 then 0.0 else flops.toFloat / avgTimeNs.toFloat
+
 /-- Test high-level DataArrayN API -/
 def testDataArrayNGEMM : IO Unit := do
   IO.println "\n╔════════════════════════════════════════════════════════════╗"
@@ -149,6 +153,11 @@ def runBenchmarks : IO Unit := do
     suite := suite.add blasResult
 
     suite.print
+
+    let flops := 2 * m * k * n
+    let naiveGF := gflops flops naiveResult.avgTimeNs
+    let blasGF := gflops flops blasResult.avgTimeNs
+    IO.println s!"GFLOPs/s: naive {Float.round (naiveGF * 100) / 100}, BLAS {Float.round (blasGF * 100) / 100}"
 
   -- Test high-level DataArrayN API
   testDataArrayNGEMM

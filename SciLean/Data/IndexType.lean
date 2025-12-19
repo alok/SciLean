@@ -6,5 +6,6 @@ import SciLean.Data.IndexType.Init
 import SciLean.Data.IndexType.Operations
 import SciLean.Data.IndexType.Range
 import SciLean.Data.IndexType.RangeNotation
+import SciLean.Data.IndexType.Shape
 import SciLean.Data.IndexType.SumProduct
 import SciLean.Data.IndexType.TensorIndex

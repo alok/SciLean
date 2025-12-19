@@ -53,7 +53,7 @@ section FunctionModify
 
 variable {α : Sort u} {β : α → Sort v} {α' : Sort w} [DecidableEq α] [DecidableEq α']
 
-/-- Similar to `Function.update` but `g` specifies how to change the value at `a'`. -/
+/-- Similar to {name}`Function.update`, but uses an update function to change the value at the chosen index. -/
 def Function.modify (f : ∀ a, β a) (a' : α) (g : β a' → β a') (a : α) : β a :=
   Function.update f a' (g (f a')) a
 

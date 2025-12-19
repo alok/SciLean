@@ -1,10 +1,9 @@
 /-
-Test for strided GPU tensor system.
+Test for GPU tensor system.
 Tests O(1) transpose, layout operations, and GEMM backward with transpose views.
 -/
 import SciLean.Data.Tensor
 import SciLean.Data.Tensor.Layout
-import SciLean.Data.Tensor.StridedGpuTensor
 import SciLean.AD.TensorRevFDeriv
 import SciLean.FFI.Metal
 import SciLean.FFI.Metal.StridedBuffer
@@ -200,11 +199,11 @@ def testLayoutFlatIndex : IO Unit := do
   else
     IO.println s!"  ✗ Transposed flatIndex wrong: {flatT}"
 
--- ## GPU Strided Tensor Tests
+-- ## GPU Tensor Tests
 
-/-- Test StridedGpuTensor creation and layout queries -/
-def testStridedTensorBasic : IO Unit := do
-  IO.println "\n=== Testing StridedGpuTensor basic operations ==="
+/-- Test GpuTensor creation and layout queries -/
+def testGpuTensorBasic : IO Unit := do
+  IO.println "\n=== Testing GpuTensor basic operations ==="
 
   if !Metal.isAvailable () then
     IO.println "  (Skipped: Metal not available)"
@@ -214,8 +213,8 @@ def testStridedTensorBasic : IO Unit := do
   let data := floatsToByteArray [1, 2, 3, 4, 5, 6]
   let gpuBuf ← Metal.GpuBuffer.fromByteArray data
 
-  let tensor : StridedGpuTensor Float (Idx 2 × Idx 3) :=
-    StridedGpuTensor.fromContiguousBuffer gpuBuf #[2, 3]
+  let tensor : GpuTensor Float (Idx 2 × Idx 3) :=
+    GpuTensor.fromContiguousBuffer gpuBuf #[2, 3]
 
   if tensor.shape.toList == [2, 3] then
     IO.println "  ✓ Shape [2, 3] correct"
@@ -233,8 +232,8 @@ def testStridedTensorBasic : IO Unit := do
     IO.println "  ✗ Should not be transposed"
 
 /-- Test O(1) transpose operation -/
-def testStridedTranspose : IO Unit := do
-  IO.println "\n=== Testing StridedGpuTensor.transpose (O(1)) ==="
+def testGpuTranspose : IO Unit := do
+  IO.println "\n=== Testing GpuTensor.transpose (O(1)) ==="
 
   if !Metal.isAvailable () then
     IO.println "  (Skipped: Metal not available)"
@@ -244,8 +243,8 @@ def testStridedTranspose : IO Unit := do
   let data := floatsToByteArray [1, 2, 3, 4, 5, 6]
   let gpuBuf ← Metal.GpuBuffer.fromByteArray data
 
-  let tensor : StridedGpuTensor Float (Idx 2 × Idx 3) :=
-    StridedGpuTensor.fromContiguousBuffer gpuBuf #[2, 3]
+  let tensor : GpuTensor Float (Idx 2 × Idx 3) :=
+    GpuTensor.fromContiguousBuffer gpuBuf #[2, 3]
 
   -- Transpose: (2,3) -> (3,2)
   let transposed := tensor.transpose
@@ -270,8 +269,8 @@ def testStridedTranspose : IO Unit := do
   IO.println "  ✓ Transpose is O(1) - no data copy (same underlying buffer)"
 
 /-- Test GEMM with contiguous matrices -/
-def testStridedGemmContiguous : IO Unit := do
-  IO.println "\n=== Testing StridedGpuTensor.gemm (contiguous) ==="
+def testGpuGemmContiguous : IO Unit := do
+  IO.println "\n=== Testing GpuTensor.gemm (contiguous) ==="
 
   if !Metal.isAvailable () then
     IO.println "  (Skipped: Metal not available)"
@@ -287,12 +286,12 @@ def testStridedGemmContiguous : IO Unit := do
   let aGpu ← Metal.GpuBuffer.fromByteArray aData
   let bGpu ← Metal.GpuBuffer.fromByteArray bData
 
-  let A : StridedGpuTensor Float (Idx 2 × Idx 3) :=
-    StridedGpuTensor.fromContiguousBuffer aGpu #[2, 3]
-  let B : StridedGpuTensor Float (Idx 3 × Idx 2) :=
-    StridedGpuTensor.fromContiguousBuffer bGpu #[3, 2]
+  let A : GpuTensor Float (Idx 2 × Idx 3) :=
+    GpuTensor.fromContiguousBuffer aGpu #[2, 3]
+  let B : GpuTensor Float (Idx 3 × Idx 2) :=
+    GpuTensor.fromContiguousBuffer bGpu #[3, 2]
 
-  let C ← StridedGpuTensor.gemm A B
+  let C ← GpuTensor.gemm A B
 
   -- Read result
   let cData ← C.toGpuBuffer.toByteArray
@@ -311,8 +310,8 @@ def testStridedGemmContiguous : IO Unit := do
     IO.println "  ✓ Contiguous GEMM result correct"
 
 /-- Test GEMM with transposed B (should use gemmNT kernel) -/
-def testStridedGemmTransposedB : IO Unit := do
-  IO.println "\n=== Testing StridedGpuTensor.gemm with B transposed ==="
+def testGpuGemmTransposedB : IO Unit := do
+  IO.println "\n=== Testing GpuTensor.gemm with B transposed ==="
 
   if !Metal.isAvailable () then
     IO.println "  (Skipped: Metal not available)"
@@ -328,12 +327,12 @@ def testStridedGemmTransposedB : IO Unit := do
   let aGpu ← Metal.GpuBuffer.fromByteArray aData
   let btGpu ← Metal.GpuBuffer.fromByteArray btData
 
-  let A : StridedGpuTensor Float (Idx 2 × Idx 3) :=
-    StridedGpuTensor.fromContiguousBuffer aGpu #[2, 3]
+  let A : GpuTensor Float (Idx 2 × Idx 3) :=
+    GpuTensor.fromContiguousBuffer aGpu #[2, 3]
 
   -- Create B_storage as (2x3), then transpose to get (3x2) view
-  let BStorage : StridedGpuTensor Float (Idx 2 × Idx 3) :=
-    StridedGpuTensor.fromContiguousBuffer btGpu #[2, 3]
+  let BStorage : GpuTensor Float (Idx 2 × Idx 3) :=
+    GpuTensor.fromContiguousBuffer btGpu #[2, 3]
   let B := BStorage.transpose  -- Now (3x2) but transposed in layout
 
   -- Verify B is transposed
@@ -341,7 +340,7 @@ def testStridedGemmTransposedB : IO Unit := do
     IO.println "  ✗ B should be transposed"
     return
 
-  let C ← StridedGpuTensor.gemm A B
+  let C ← GpuTensor.gemm A B
 
   let cData ← C.toGpuBuffer.toByteArray
 
@@ -360,8 +359,8 @@ def testStridedGemmTransposedB : IO Unit := do
     IO.println "  ✓ GEMM with transposed B correct (used gemmNT)"
 
 /-- Test GEMM with transposed A (should use gemmTN kernel) -/
-def testStridedGemmTransposedA : IO Unit := do
-  IO.println "\n=== Testing StridedGpuTensor.gemm with A transposed ==="
+def testGpuGemmTransposedA : IO Unit := do
+  IO.println "\n=== Testing GpuTensor.gemm with A transposed ==="
 
   if !Metal.isAvailable () then
     IO.println "  (Skipped: Metal not available)"
@@ -377,19 +376,19 @@ def testStridedGemmTransposedA : IO Unit := do
   let bGpu ← Metal.GpuBuffer.fromByteArray bData
 
   -- Create A_storage as (3x2), then transpose to get (2x3) view
-  let AStorage : StridedGpuTensor Float (Idx 3 × Idx 2) :=
-    StridedGpuTensor.fromContiguousBuffer atGpu #[3, 2]
+  let AStorage : GpuTensor Float (Idx 3 × Idx 2) :=
+    GpuTensor.fromContiguousBuffer atGpu #[3, 2]
   let A := AStorage.transpose  -- Now (2x3) but transposed
 
-  let B : StridedGpuTensor Float (Idx 3 × Idx 2) :=
-    StridedGpuTensor.fromContiguousBuffer bGpu #[3, 2]
+  let B : GpuTensor Float (Idx 3 × Idx 2) :=
+    GpuTensor.fromContiguousBuffer bGpu #[3, 2]
 
   -- Verify A is transposed
   if !A.isTransposed then
     IO.println "  ✗ A should be transposed"
     return
 
-  let C ← StridedGpuTensor.gemm A B
+  let C ← GpuTensor.gemm A B
 
   let cData ← C.toGpuBuffer.toByteArray
 
@@ -407,8 +406,8 @@ def testStridedGemmTransposedA : IO Unit := do
     IO.println "  ✓ GEMM with transposed A correct (used gemmTN)"
 
 /-- Test GEMM backward using O(1) transpose views -/
-def testStridedGemmBackward : IO Unit := do
-  IO.println "\n=== Testing StridedGpuTensor.gemmBackward ==="
+def testGpuGemmBackward : IO Unit := do
+  IO.println "\n=== Testing GpuTensor.gemmBackward ==="
 
   if !Metal.isAvailable () then
     IO.println "  (Skipped: Metal not available)"
@@ -427,14 +426,14 @@ def testStridedGemmBackward : IO Unit := do
   let bGpu ← Metal.GpuBuffer.fromByteArray bData
   let dcGpu ← Metal.GpuBuffer.fromByteArray dcData
 
-  let A : StridedGpuTensor Float (Idx 2 × Idx 3) :=
-    StridedGpuTensor.fromContiguousBuffer aGpu #[2, 3]
-  let B : StridedGpuTensor Float (Idx 3 × Idx 2) :=
-    StridedGpuTensor.fromContiguousBuffer bGpu #[3, 2]
-  let dC : StridedGpuTensor Float (Idx 2 × Idx 2) :=
-    StridedGpuTensor.fromContiguousBuffer dcGpu #[2, 2]
+  let A : GpuTensor Float (Idx 2 × Idx 3) :=
+    GpuTensor.fromContiguousBuffer aGpu #[2, 3]
+  let B : GpuTensor Float (Idx 3 × Idx 2) :=
+    GpuTensor.fromContiguousBuffer bGpu #[3, 2]
+  let dC : GpuTensor Float (Idx 2 × Idx 2) :=
+    GpuTensor.fromContiguousBuffer dcGpu #[2, 2]
 
-  let (dA, dB) ← StridedGpuTensor.gemmBackward A B dC
+  let (dA, dB) ← GpuTensor.gemmBackward A B dC
 
   -- Verify shapes
   if dA.shape.toList == [2, 3] then
@@ -483,7 +482,7 @@ def testStridedGemmBackward : IO Unit := do
 
 /-- Test batch transpose for 3D tensors -/
 def testBatchTranspose : IO Unit := do
-  IO.println "\n=== Testing StridedGpuTensor.batchTranspose ==="
+  IO.println "\n=== Testing GpuTensor.batchTranspose ==="
 
   if !Metal.isAvailable () then
     IO.println "  (Skipped: Metal not available)"
@@ -493,8 +492,8 @@ def testBatchTranspose : IO Unit := do
   let data := floatsToByteArray (List.range 24 |>.map (fun i => Float.ofNat i))
   let gpuBuf ← Metal.GpuBuffer.fromByteArray data
 
-  let tensor : StridedGpuTensor Float (Idx 2 × Idx 3 × Idx 4) :=
-    StridedGpuTensor.fromContiguousBuffer gpuBuf #[2, 3, 4]
+  let tensor : GpuTensor Float (Idx 2 × Idx 3 × Idx 4) :=
+    GpuTensor.fromContiguousBuffer gpuBuf #[2, 3, 4]
 
   -- Batch transpose: (2,3,4) -> (2,4,3)
   let transposed := tensor.batchTranspose
@@ -514,7 +513,7 @@ def testBatchTranspose : IO Unit := do
 
 def main : IO Unit := do
   IO.println "==================================="
-  IO.println "  Strided GPU Tensor Test Suite"
+  IO.println "  GPU Tensor Test Suite"
   IO.println "===================================\n"
 
   -- Pure layout tests (no GPU needed)
@@ -530,12 +529,12 @@ def main : IO Unit := do
   -- GPU tests
   if Metal.isAvailable () then
     IO.println "\n\n--- GPU Tests ---"
-    testStridedTensorBasic
-    testStridedTranspose
-    testStridedGemmContiguous
-    testStridedGemmTransposedB
-    testStridedGemmTransposedA
-    testStridedGemmBackward
+    testGpuTensorBasic
+    testGpuTranspose
+    testGpuGemmContiguous
+    testGpuGemmTransposedB
+    testGpuGemmTransposedA
+    testGpuGemmBackward
     testBatchTranspose
   else
     IO.println "\n\nMetal GPU not available, skipping GPU tests."

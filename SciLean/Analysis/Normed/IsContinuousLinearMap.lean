@@ -319,7 +319,7 @@ theorem HMul.hMul.arg_a1.IsContinuousLinearMap_rule
 -- Smul.smul ---------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-/-- Creates `fun x =>L[R] r • g x` -/
+/-- Creates {lit}`fun x =>L[R] r • g x` -/
 def ContinuousLinearMap.smulLeft
   {R : Type _} [CommSemiring R]
   {X : Type _} [TopologicalSpace X] [AddCommMonoid X] [Module R X]
@@ -373,7 +373,7 @@ theorem HSMul.hSMul.arg_a1.IsContinuousLinearMap_rule
 -- HDiv.hDiv -------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-/-- Creates `fun x =>L[R] g x / y` -/
+/-- Creates {lit}`fun x =>L[R] g x / y` -/
 def ContinuousLinearMap.divRight
   {R : Type _} [NontriviallyNormedField R]
   {K : Type _} [NontriviallyNormedField K] [NormedAlgebra R K]

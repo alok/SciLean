@@ -21,16 +21,16 @@ structure BitType (α : Type*) where
 structure ByteType (α : Type*) where
   bytes : USize
   h_size : 1 < bytes  -- for one byte types use BitInfo
-  /-- Read `a : α` from byte array `b` starting at the byte `i` -/
+  /-- Read a value of type {lean}`α` from a byte array starting at byte offset {lean}`i`. -/
   fromByteArray (b : ByteArray) (i : USize) (h : (i+bytes).toNat ≤ b.size) : α
-  /-- Write `a : α` from byte array `b` starting at the byte `i` -/
+  /-- Write a value of type {lean}`α` to a byte array starting at byte offset {lean}`i`. -/
   toByteArray   (b : ByteArray) (i : USize) (h : (i+bytes).toNat ≤ b.size) (a : α) : ByteArray
 
-  /-- `toByteArray` does not modify ByteArray size -/
+  /-- The result of {lit}`toByteArray` does not modify the {name}`ByteArray` size. -/
   toByteArray_size : ∀ b i h a, (toByteArray b i h a).size = b.size
-  /-- we can recover `a` from bytes -/
+  /-- We can recover the original value from bytes. -/
   fromByteArray_toByteArray : ∀ a b i h h', fromByteArray (toByteArray b i h a) i h' = a
-  /-- `toByteArray` does not affect other bytes -/
+  /-- Writing does not affect other bytes. -/
   fromByteArray_toByteArray_other : ∀ a b i j h, (j < i) ∨ (i + bytes) ≤ j → (toByteArray b i h a).uget j sorry_proof = b.uget j sorry_proof
 
 
@@ -38,9 +38,14 @@ structure ByteType (α : Type*) where
 
 wiki: https://en.wikipedia.org/wiki/Passive_data_structure
 
-We distinguish between two main types of POD. `BitType` a type that is smaller or equal to a byte and `ByteType` that takes up multiple bytes. The main motivation is an efficient storage of `Array Bool` where `Bool` takes up only a single bit, so we can fit 8 bools into a single byte and achieve significant memore reduction.
+We distinguish between two main types of POD. {name}`BitType` a type that is smaller or equal to a byte and
+{name}`ByteType` that takes up multiple bytes. The main motivation is an efficient storage of
+{lean}`Array Bool` where {name}`Bool` takes up only a single bit, so we can fit 8 bools into a single byte
+and achieve significant memore reduction.
 
-Potentially surprising edge case is array of fixed length, i.e. the type `{a : Array α // a.size = n}`. It is `PlainDataType` if `α` is `PlainDataType`. However, `Array α` is not `PlainDataType`, even if `α` is `PlainDataType`, as it does not have a fixed byte size.
+Potentially surprising edge case is array of fixed length, i.e. the type {lit}`{a : Array α // a.size = n}`.
+It is {name}`PlainDataType` if {lean}`α` is {name}`PlainDataType`. However, {lean}`Array α` is not
+{name}`PlainDataType`, even if {lean}`α` is {name}`PlainDataType`, as it does not have a fixed byte size.
 -/
 class PlainDataType (α : Type*) where
   btype : ByteType α
@@ -54,16 +59,16 @@ class PlainDataType (α : Type*) where
 def PlainDataType.bytes {α : Type*} (pd : PlainDataType α) (n : Nat) : Nat :=
   pd.btype.bytes.toNat * n
 
-/-- How many `α` can fit into a buffer with `byteNum` bytes -/
+/-- How many {lean}`α` can fit into a buffer with {lean}`byteNum` bytes -/
 def PlainDataType.capacity {α : Type*} (pd : PlainDataType α) (byteNum : Nat) : Nat :=
   byteNum / pd.btype.bytes.toNat
 
 
 
 set_option linter.unusedVariables false in
-/-- Get `i`-th element from `ByteArray`.
+/-- Get {lean}`i`-th element from {name}`ByteArray`.
 
-The index `i` is `i`-th element *not* `i`-th byte!. -/
+The index {lean}`i` is {lean}`i`-th element *not* {lean}`i`-th byte!. -/
 @[inline]
 def PlainDataType.fromByteArray {α : Type*} (pd : PlainDataType α) (data : ByteArray) (i : USize) (hi : i.toNat*pd.bytes < data.size): α :=
   pd.btype.fromByteArray data (i*pd.btype.bytes) sorry_proof
@@ -83,7 +88,7 @@ def PlainDataType.fromByteArray {α : Type*} (pd : PlainDataType α) (data : Byt
   --   byteType.
 
 set_option linter.unusedVariables false in
-/-- Write `v` to `ByteArray` at `i`-th position. -/
+/-- Write {lean}`v` to {name}`ByteArray` at {lean}`i`-th position. -/
 def PlainDataType.toByteArray {α : Type*} (pd : PlainDataType α) (data : ByteArray) (i : Nat) (v : α) (hi : i*pd.bytes < data.size): ByteArray :=
   pd.btype.toByteArray data (i.toUSize*pd.btype.bytes) sorry_proof v
 
@@ -102,7 +107,8 @@ def PlainDataType.toByteArray {α : Type*} (pd : PlainDataType α) (data : ByteA
   --   -- todo: add bound check
   --   byteType.toByteArray data (i.toUSize*byteType.bytes) sorry_proof v
 
-/-- Translate `PlainDataType X` along equivalence `f : X ≃ Y` to `PlainDataType Y` -/
+/-- Translate {name}`PlainDataType` {lean}`X` along equivalence {lean}`f : X ≃ Y` to
+{name}`PlainDataType` {lean}`Y`. -/
 @[inline]
 def PlainDataType.ofEquiv {X Y : Type*} [pd : PlainDataType X] (f : X ≃ Y) : PlainDataType Y where
   btype := {
@@ -247,22 +253,25 @@ def Prod.byteTypeProd {α β} (ta : ByteType α) (tb : ByteType β) : ByteType (
     fromByteArray_toByteArray_other := sorry_proof
   }
 
-/-- Product of `PlainDataType` is `PlainDataType`
+/-- Product of {name}`PlainDataType` is {name}`PlainDataType`
 
-**Instance diamond:** This instance is currently preferred over `instPlainDataTypeEnumtype`.
+**Instance diamond:** This instance is currently preferred over {lit}`instPlainDataTypeEnumtype`.
 
-This instance makes a diamond together with `instPlainDataTypeEnumtype`  when `α` and `β` are `Enumtype`. Using this instance is less computationally intensive when writing and reading from `DataArray` but it consumes more memory. The `instPlainDataTypeEnumtype` is doing the exact opposite.
+This instance makes a diamond together with {lit}`instPlainDataTypeEnumtype` when {lit}`α` and {lit}`β`
+are {lit}`Enumtype`. Using this instance is less computationally intensive when writing and reading
+from {lit}`DataArray` but it consumes more memory. The {lit}`instPlainDataTypeEnumtype` instance
+does the exact opposite.
 
-Example: `Fin (2^4+1) × Fin (2^4-1)`
+Example: {lit}`Fin (2^4+1) × Fin (2^4-1)`
 
 As Product:
-  The type `Fin (2^4+1)` needs 5 bits.
-  The type `Fin (2^4-1)` needs 4 bits.
-  Thus `Fin (2^4+1) × Fin (2^4-1)` needs 9 bits, thus 2 bytes, as `instPlainDataTypeProd`
+  The type {lit}`Fin (2^4+1)` needs 5 bits.
+  The type {lit}`Fin (2^4-1)` needs 4 bits.
+  Thus {lit}`Fin (2^4+1) × Fin (2^4-1)` needs 9 bits, thus 2 bytes, as {name}`instPlainDataTypeProd`
 
 As Enumtype:
-  `Fin (2^4+1) × Fin (2^4-1) ≈ Fin (2^8-1)`
-  The type `Fin (2^8-1)` needs 8 bits thus only a single byte as `instPlainDataTypeEnumtype`
+  {lit}`Fin (2^4+1) × Fin (2^4-1) ≈ Fin (2^8-1)`
+  The type {lit}`Fin (2^8-1)` needs 8 bits thus only a single byte as {lit}`instPlainDataTypeEnumtype`
 
 -/
 instance instPlainDataTypeProd [ta : PlainDataType α] [tb : PlainDataType β] : PlainDataType (α×β) where
@@ -376,22 +385,24 @@ def Sigma.byteTypeSigma {α β} (ta : ByteType α) (tb : ByteType β) : ByteType
     fromByteArray_toByteArray_other := sorry_proof
   }
 
-/-- Sigma of `PlainDataType` is `PlainDataType`
+/-- Sigma of {name}`PlainDataType` is {name}`PlainDataType`
 
-**Instance diamond:** This instance is currently preferred over `instPlainDataTypeEnumtype`.
+**Instance diamond:** This instance is currently preferred over {lit}`instPlainDataTypeEnumtype`.
 
-This instance makes a diamond together with `instPlainDataTypeEnumtype`  when `α` and `β` are `Enumtype`. Using this instance is less computationally intensive when writing and reading from `DataArray` but it consumes more memory. The `instPlainDataTypeEnumtype` is doing the exact opposite.
+This instance makes a diamond together with {lit}`instPlainDataTypeEnumtype` when {lit}`α` and {lit}`β`
+are {lit}`Enumtype`. Using this instance is less computationally intensive when writing and reading
+from {lit}`DataArray` but it consumes more memory. The {lit}`instPlainDataTypeEnumtype` is doing the exact opposite.
 
-Example: `Fin (2^4+1) × Fin (2^4-1)`
+Example: {lit}`Fin (2^4+1) × Fin (2^4-1)`
 
-As Sigmauct:
-  The type `Fin (2^4+1)` needs 5 bits.
-  The type `Fin (2^4-1)` needs 4 bits.
-  Thus `Fin (2^4+1) × Fin (2^4-1)` needs 9 bits, thus 2 bytes, as `instPlainDataTypeSigma`
+As Sigma:
+  The type {lit}`Fin (2^4+1)` needs 5 bits.
+  The type {lit}`Fin (2^4-1)` needs 4 bits.
+  Thus {lit}`Fin (2^4+1) × Fin (2^4-1)` needs 9 bits, thus 2 bytes, as {name}`instPlainDataTypeSigma`.
 
 As Enumtype:
-  `Fin (2^4+1) × Fin (2^4-1) ≈ Fin (2^8-1)`
-  The type `Fin (2^8-1)` needs 8 bits thus only a single byte as `instPlainDataTypeEnumtype`
+  {lit}`Fin (2^4+1) × Fin (2^4-1) ≈ Fin (2^8-1)`
+  The type {lit}`Fin (2^8-1)` needs 8 bits thus only a single byte as {lit}`instPlainDataTypeEnumtype`.
 
 -/
 instance instPlainDataTypeSigma [ta : PlainDataType α] [tb : PlainDataType β] : PlainDataType ((_ : α)×β) where
@@ -531,7 +542,7 @@ instance instPlainDataTypeMProd [ta : PlainDataType α] [tb : PlainDataType β] 
 --------------- Fin n ------------------------------------------------
 ----------------------------------------------------------------------
 
-/-- Number of bits necessary to store `Fin n` -/
+/-- Number of bits necessary to store {lean}`Fin n`. -/
 @[inline]
 def Fin.bitSize  (n : Nat) : Nat := (Nat.log2 n + (n - (1 <<< (Nat.log2 n)) != 0).toUInt64.toNat)
 @[inline]

@@ -5,15 +5,16 @@ Authors: SciLean contributors
 -/
 import SciLean.FFI.Metal.StridedBuffer
 import SciLean.Data.DataArray
+import SciLean.Data.IndexType.Shape
 
 -- Type-safe strided GPU tensor with shape encoded in the type
 
 namespace SciLean
 
 /-- Type-safe strided GPU tensor.
-    Shape is tracked in the type via IndexType, layout metadata enables O(1) views. -/
+    Shape is tracked in the type via {name}`IndexType`, and layout metadata enables constant-time views. -/
 structure StridedGpuTensor (α : Type) [PlainDataType α] (ι : Type) {n : outParam ℕ} [IndexType ι n] : Type where
-  /-- Underlying strided GPU buffer -/
+  /-- Underlying {name}`StridedGpuBuffer`. -/
   data : StridedGpuBuffer α
 
 instance [PlainDataType α] [IndexType ι n] : Nonempty (StridedGpuTensor α ι) :=
@@ -26,19 +27,19 @@ variable {ι : Type} {n : ℕ} [IndexType ι n]
 
 -- Layout queries (delegate to underlying buffer)
 
-/-- Number of dimensions -/
+/-- Number of dimensions. -/
 def rank (t : StridedGpuTensor α ι) : Nat := t.data.rank
 
-/-- Shape as array -/
+/-- Shape as {name}`Array`. -/
 def shape (t : StridedGpuTensor α ι) : Array Nat := t.data.shape
 
-/-- Strides as array -/
+/-- Strides as {name}`Array`. -/
 def strides (t : StridedGpuTensor α ι) : Array Nat := t.data.strides
 
-/-- Check if contiguous -/
+/-- Check if contiguous. -/
 def isContiguous (t : StridedGpuTensor α ι) : Bool := t.data.isContiguous
 
-/-- Check if transposed -/
+/-- Check if transposed. -/
 def isTransposed (t : StridedGpuTensor α ι) : Bool := t.data.isTransposed
 
 -- O(1) view operations
@@ -46,35 +47,46 @@ def isTransposed (t : StridedGpuTensor α ι) : Bool := t.data.isTransposed
 
 variable {m k p : ℕ}
 
-/-- Transpose last two dimensions - O(1), no data copy.
-    Changes type from (Idx m × Idx k) to (Idx k × Idx m). -/
+/-- Transpose last two dimensions (no data copy).
+    Changes type from {lean}`Idx m × Idx k` to {lean}`Idx k × Idx m`. -/
 def transpose (t : StridedGpuTensor α (Idx m × Idx k)) :
     StridedGpuTensor α (Idx k × Idx m) :=
   ⟨t.data.transpose⟩
 
-/-- Transpose for 3D batched tensors - swaps last two dims.
-    (batch × m × k) → (batch × k × m) -/
+/-- Transpose for 3D batched tensors by swapping last two dimensions.
+    Changes type from {lean}`Idx p × Idx m × Idx k` to {lean}`Idx p × Idx k × Idx m`. -/
 def batchTranspose (t : StridedGpuTensor α (Idx p × Idx m × Idx k)) :
     StridedGpuTensor α (Idx p × Idx k × Idx m) :=
   ⟨t.data.transpose⟩
 
-/-- Make contiguous copy if needed -/
+/-- Make a contiguous copy if needed. -/
 def contiguous (t : StridedGpuTensor α ι) : IO (StridedGpuTensor α ι) := do
   let newData ← t.data.contiguous
   return ⟨newData⟩
 
+/-! ## Contiguity helpers -/
+
+/-- Ensure a contiguous layout (copy if needed). -/
+def ensureContiguous (t : StridedGpuTensor α ι) : IO (StridedGpuTensor α ι) :=
+  if t.isContiguous then
+    pure t
+  else
+    t.contiguous
+
 -- Construction
 
-/-- Create from StridedGpuBuffer -/
+/-- Create from {name}`StridedGpuBuffer`. -/
 def ofBuffer (buf : StridedGpuBuffer α) : StridedGpuTensor α ι := ⟨buf⟩
 
-/-- Create from contiguous GPU buffer with shape derived from IndexType -/
+/-- Create from contiguous {name}`Metal.GpuBuffer` with an explicit shape. -/
 def fromContiguousBuffer (buffer : Metal.GpuBuffer) (shape : Array Nat) : StridedGpuTensor α ι :=
   ⟨StridedGpuBuffer.fromContiguous buffer shape⟩
 
--- Conversion to/from legacy GpuTensor (for migration)
+/-- Create from contiguous {name}`Metal.GpuBuffer` using {name}`IndexTypeShape` for layout. -/
+def fromContiguous (buffer : Metal.GpuBuffer) [IndexTypeShape ι n] : StridedGpuTensor α ι :=
+  ⟨StridedGpuBuffer.fromContiguous buffer (IndexTypeShape.shape (ι:=ι))⟩
 
-/-- Get underlying GPU buffer -/
+/-- Get underlying {name}`Metal.GpuBuffer`. -/
 def toGpuBuffer (t : StridedGpuTensor α ι) : Metal.GpuBuffer := t.data.buffer
 
 end StridedGpuTensor
@@ -86,8 +98,9 @@ namespace StridedGpuTensor
 variable {m k p : ℕ}
 
 /-- Matrix multiply with strided inputs.
-    Automatically dispatches to gemm, gemmTN, or gemmNT based on transpose state.
-    This enables O(1) transpose views to work efficiently with GPU GEMM. -/
+    Automatically dispatches to {name}`Metal.GpuBuffer.gemm`, {name}`Metal.GpuBuffer.gemmTN`,
+    or {name}`Metal.GpuBuffer.gemmNT` based on transpose state.
+    This lets transpose views work without materializing a copy. -/
 def gemm (A : StridedGpuTensor Float (Idx m × Idx k))
          (B : StridedGpuTensor Float (Idx k × Idx p)) :
     IO (StridedGpuTensor Float (Idx m × Idx p)) := do
@@ -118,8 +131,9 @@ variable {batch : ℕ}
 
 /-- Batched matrix multiply with strided inputs.
     Each batch computes an independent matrix multiplication.
-    A is (batch, m, k), B is (batch, k, p), returns C (batch, m, p).
-    Automatically dispatches based on transpose state of last two dims. -/
+    Shapes: A {lean}`Idx batch × Idx m × Idx k`, B {lean}`Idx batch × Idx k × Idx p`,
+    returns {lean}`Idx batch × Idx m × Idx p`.
+    Automatically dispatches based on transpose state of the last two dimensions. -/
 def batchedGemm (A : StridedGpuTensor Float (Idx batch × Idx m × Idx k))
                 (B : StridedGpuTensor Float (Idx batch × Idx k × Idx p)) :
     IO (StridedGpuTensor Float (Idx batch × Idx m × Idx p)) := do
@@ -139,11 +153,9 @@ def batchedGemm (A : StridedGpuTensor Float (Idx batch × Idx m × Idx k))
       Metal.GpuBuffer.gemmBatchedNT aContig.data.buffer B.data.buffer batch.toUSize m.toUSize k.toUSize p.toUSize
   return ⟨StridedGpuBuffer.fromContiguous result #[batch, m, p]⟩
 
-/-- Batched GEMM backward using O(1) transpose views.
-    For each batch b: C\_b = A\_b @ B\_b, so:
-    - dA\_b = dC\_b @ B\_b^T
-    - dB\_b = A\_b^T @ dC\_b
-    Transposes are O(1) metadata swaps! -/
+/-- Batched GEMM backward using transpose views.
+    Uses {name}`batchTranspose` and {name}`batchedGemm` to compute gradients without
+    materializing transposed buffers. -/
 def batchedGemmBackward
     (A : StridedGpuTensor Float (Idx batch × Idx m × Idx k))
     (B : StridedGpuTensor Float (Idx batch × Idx k × Idx p))
@@ -167,14 +179,9 @@ namespace StridedGpuTensor
 variable {seqLen headDim : ℕ}
 
 /-- Flash Attention with strided inputs.
-    Computes: output = softmax(Q @ K^T / sqrt(headDim)) @ V
-
-    Q, K, V have shape (seqLen, headDim).
-    Returns output of shape (seqLen, headDim).
-
-    Handles transposed inputs by making contiguous copies if needed.
-    The internal kernel already handles K^T, so we only need to ensure
-    Q and V are in the expected layout. -/
+    Uses {name}`Metal.GpuBuffer.flashAttention` on contiguous buffers.
+    Inputs have shape {lean}`Idx seqLen × Idx headDim`, returns {lean}`Idx seqLen × Idx headDim`.
+    Transposed inputs are made contiguous as needed. -/
 def flashAttention
     (Q : StridedGpuTensor Float (Idx seqLen × Idx headDim))
     (K : StridedGpuTensor Float (Idx seqLen × Idx headDim))
@@ -193,10 +200,8 @@ def flashAttention
   return ⟨StridedGpuBuffer.fromContiguous result #[seqLen, headDim]⟩
 
 /-- Flash Attention with causal mask and strided inputs.
-    Position i can only attend to positions ≤ i (for autoregressive models).
-
-    Q, K, V have shape (seqLen, headDim).
-    Returns output of shape (seqLen, headDim). -/
+    Each position can only attend to earlier positions.
+    Inputs have shape {lean}`Idx seqLen × Idx headDim`, returns {lean}`Idx seqLen × Idx headDim`. -/
 def flashAttentionCausal
     (Q : StridedGpuTensor Float (Idx seqLen × Idx headDim))
     (K : StridedGpuTensor Float (Idx seqLen × Idx headDim))
@@ -213,14 +218,10 @@ def flashAttentionCausal
   let result ← Metal.GpuBuffer.flashAttentionCausal qBuf kBuf vBuf seqLen.toUSize headDim.toUSize
   return ⟨StridedGpuBuffer.fromContiguous result #[seqLen, headDim]⟩
 
-/-- Scaled dot-product attention using strided GEMM.
-    Computes: output = softmax(Q @ K^T / sqrt(headDim)) @ V
-
-    This version uses explicit GEMM operations instead of a fused kernel,
-    which allows K to be a transposed view (O(1) transpose).
-
-    Note: Less memory-efficient than flash attention for long sequences,
-    but more flexible with strided inputs. -/
+/-- Scaled dot-product attention using explicit GEMM operations.
+    This version uses {name}`gemm` instead of a fused kernel, which allows
+    transpose views without materializing copies.
+    Inputs have shape {lean}`Idx seqLen × Idx headDim`, returns {lean}`Idx seqLen × Idx headDim`. -/
 def scaledDotProductAttention
     (Q : StridedGpuTensor Float (Idx seqLen × Idx headDim))
     (K : StridedGpuTensor Float (Idx seqLen × Idx headDim))

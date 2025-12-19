@@ -8,20 +8,19 @@ import SciLean.Meta.SimpAttr
 namespace SciLean
 
 
-/-- This class says that `Cont` behaves like an array with `Elem` values indexed by `Idx`
+/-- This class says that a container behaves like an array with elements indexed by {lean}`Idx`.
 
-Examples for `Idx = Fin n` and `Elem = ℝ` are: `ArrayN ℝ n` or `ℝ^{n}`
+Examples include {lit}`ArrayN` and fixed-length real vectors.
 
-For `array : Cont` you can:
-  1. get values: `ArrayType.get array i : Elem` for `i : Idx`
-  2. set values: `ArrayType.set array i x : Cont` for `i : Idx` and `x : Elem`
-  3. make new a array: `Indexed.ofFn f : Cont` for `f : Idx → Elem`
+For a container you can:
+  1. get values via {name}`ArrayType.get`
+  2. set values via {name}`ArrayType.set`
+  3. make a new container via {name}`ArrayType.ofFn`
 
 Alternative notation:
-  1. `array[x]`
-  2. in `do` block: `array[x] := y`, `array[x] += y`, ...
-  3. `λ [x] => f x` this notation works only if the type `Cont` can be infered from the context
-     Common use: `let array : Cont := λ [x] => f x` where the type asscription `: Cont` is important.
+  1. {lit}`array[x]`
+  2. in a do block: {lit}`array[x] := y`, {lit}`array[x] += y`, ...
+  3. {lit}`λ [x] => f x` (requires an explicit type annotation, e.g. {lit}`: Cont`)
 -/
 class ArrayType (Cont : Type u) (Idx : Type v |> outParam) (Elem : Type w |> outParam) where
   ofFn (f : Idx → Elem) : Cont

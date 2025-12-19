@@ -7,8 +7,8 @@ namespace SciLean
 
 open Function
 
-/-- `StructType X I XI` says that the type `X` behaves like a structure with fields indexed by
-`i : I` of type `XI i`. -/
+/-- {name}`StructType` says a type behaves like a structure with fields indexed by
+an index type and a corresponding type family. -/
 class StructType (X : Sort _) (I : (Sort _)) (XI : outParam <| I → Sort _) where
   structProj (x : X) (i : I) : (XI i)
   structMake (f : (i : I) → (XI i)) : X
@@ -72,18 +72,23 @@ by
 -- Every type ------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-/-- Every type is `StructType` with `Unit` as index set.
+/-- Every type is {name}`StructType` with {name}`Unit` as index set.
 
-The motivation behind this instance is that type like `X×(Y×Z)` should have `StructType`
-instance that the type has three components. Such instance is defines inductively
-and this is the base case of this induction, the inductive step is `instStrucTypeProd`.
+This is the base case for product instances, e.g. {lit}`X×(Y×Z)`.
+The inductive step is {lit}`instStrucTypeProd`.
 -/
 instance (priority:=low) instStructTypeDefault : StructType α Unit (fun _ => α) where
   structProj := fun x _ => x
   structMake := fun f => f ()
   structModify := fun _ f x => f x
-  left_inv := by simp[LeftInverse]
-  right_inv := by simp[Function.RightInverse, LeftInverse]
+  left_inv := by
+    intro f
+    funext i
+    cases i
+    rfl
+  right_inv := by
+    intro x
+    rfl
   structProj_structModify := by simp
   structProj_structModify' := by simp
 
@@ -206,8 +211,14 @@ instance instStrucTypeProd
     match i with
     | .inl a => (StructType.structModify a f x, y)
     | .inr b => (x, StructType.structModify b f y)
-  left_inv := by intro x; funext i; induction i <;> simp[LeftInverse]
-  right_inv := by simp[Function.RightInverse, LeftInverse]
+  left_inv := by
+    intro x
+    funext i
+    induction i <;> simp
+  right_inv := by
+    intro x
+    cases x
+    simp
   structProj_structModify := by simp
   structProj_structModify' := by
     intro i j f x h
@@ -228,8 +239,14 @@ instance instStrucTypeSigma
     match i with
     | .inl a => ⟨structModify a f x, y⟩
     | .inr b => ⟨x, structModify b f y⟩
-  left_inv := by intro x; funext i; induction i <;> simp[LeftInverse]
-  right_inv := by simp[Function.RightInverse, LeftInverse]
+  left_inv := by
+    intro x
+    funext i
+    induction i <;> simp
+  right_inv := by
+    intro x
+    cases x
+    simp
   structProj_structModify := by simp
   structProj_structModify' := by
     intro i j f x h

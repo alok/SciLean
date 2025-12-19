@@ -5,36 +5,26 @@ import SciLean.Algebra.MatrixType.Basic
 namespace SciLean
 
 /--
-Type `X` provides fused multiply add operation
-```
-axpby a x b y = a • x + b • y
-```
-for `a b : R`.
+Type {lit}`X` provides fused multiply add operation
+{lit}`axpby a x b y = a • x + b • y`
+for {lit}`a b : R`.
 
-Expression involing `•` and `+` can be optimized by running `simp only [vector_optimize]`
+Expression involing {lit}`•` and {lit}`+` can be optimized by running {lit}`simp only [vector_optimize]`.
 
 For example:
-```
--- axpby (a*b) x c (apxby 1 y d z)
-#check (a•b•x + c•(y + d•z)) rewrite_by simp only [vector_optimize]
-```
+{lit}`#check (a•b•x + c•(y + d•z)) rewrite_by simp only [vector_optimize]`.
 Which effectivelly reduces six loops(for every operation) into two loops.
 -/
 class Axpby (R : outParam Type*) (X : Type*) [Ring R] [AddCommGroup X] [Module R X] where
   /--
   Fused vector add multiply operation
-  ```
-  axpby a x b y = a • x + b • y
-  ```
-  Used to optimize expressions involving `•` and `+`.
+  {lit}`axpby a x b y = a • x + b • y`.
+  Used to optimize expressions involving {lit}`•` and {lit}`+`.
 
-  You can optimize expression by running `simp only [vector_optimize]`
+  You can optimize expression by running {lit}`simp only [vector_optimize]`.
 
   For example:
-  ```
-  -- axpby (a*b) x c (apxby 1 y d z)
-  #check (a•b•x + c•(y + d•z)) rewrite_by simp only [vector_optimize]
-  ```
+  {lit}`#check (a•b•x + c•(y + d•z)) rewrite_by simp only [vector_optimize]`.
   Which effectivelly reduces six loops(for every operation) into two loops.
   -/
   axpby (a : R) (x : X) (b : R) (y : X) : X

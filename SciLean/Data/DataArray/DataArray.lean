@@ -74,7 +74,7 @@ instance : SetElem (DataArray α) USize α (fun a i => i.toNat < a.size) where
   --   ⟨byteType.toByteArray arr.byteData (byteType.bytes * i) sorry_proof val, arr.size, sorry_proof⟩
 
 
-/-- Capacity of an array. The return type is `Squash Nat` as the capacity is is just an implementation detail and should not affect semantics of the program. -/
+/-- Capacity of an array. The return type is {lit}`Squash Nat` as the capacity is is just an implementation detail and should not affect semantics of the program. -/
 def DataArray.capacity (arr : DataArray α) : Squash Nat := Quot.mk _ (pd.capacity (arr.byteData.size))
 
 -- /-- Makes sure that `arr` fits at least `n` elements of `α` -/
@@ -107,7 +107,7 @@ def DataArray.replicate (n : Nat) (v : α) : DataArray α := Id.run do
   return data
 
 
-/-- Push array `y` to array `x` `k`-times  -/
+/-- Push array {lit}`y` to array {lit}`x` {lit}`k`-times. -/
 def _root_.SciLean.DataArray.pushArray (x y : DataArray α) (k : Nat := 1) : DataArray α := Id.run do
   let mut data := x.1 -- todo: reserve enough memory upfront
   let ydata := y.1
@@ -119,7 +119,7 @@ def _root_.SciLean.DataArray.pushArray (x y : DataArray α) (k : Nat := 1) : Dat
     data := ydata.copySlice 0 data idx.toNat width.toNat
   return ⟨data, sorry_proof⟩
 
-/-- Push element `v` to array `x` `k`-times  -/
+/-- Push element {lit}`v` to array {lit}`x` {lit}`k`-times. -/
 def _root_.SciLean.DataArray.push (x : DataArray α) (v : α) (k : Nat := 1) : DataArray α := Id.run do
   let v' := DataArray.replicate 1 v
   x.pushArray v' k

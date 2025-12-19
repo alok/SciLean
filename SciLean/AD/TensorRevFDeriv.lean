@@ -198,37 +198,47 @@ def gradRelu (a dt : CpuTensor Float ι) : CpuTensor Float ι :=
 namespace GpuTensor
 
 /-- ReLU backward pass on GPU.
-    Returns `grad_input = grad_output * (input > 0)`. -/
+    Uses {name}`Metal.GpuBuffer.reluBackward` on contiguous buffers. -/
 def reluBackward (input gradOutput : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+  let input ← GpuTensor.ensureContiguous input
+  let gradOutput ← GpuTensor.ensureContiguous gradOutput
   let result ← Metal.GpuBuffer.reluBackward input.data.buffer gradOutput.data.buffer n.toUSize
-  return ⟨⟨result⟩⟩
+  return GpuTensor.fromContiguousBuffer (ι:=Idx n) result #[n]
 
 /-- Element-wise multiply backward pass on GPU.
-    Returns `(grad_a, grad_b)` where `grad_a = grad * b`, `grad_b = grad * a`. -/
+    Returns gradients for both inputs. -/
 def mulBackward (a b gradOutput : GpuTensor Float (Idx n)) :
     IO (GpuTensor Float (Idx n) × GpuTensor Float (Idx n)) := do
+  let a ← GpuTensor.ensureContiguous a
+  let b ← GpuTensor.ensureContiguous b
+  let gradOutput ← GpuTensor.ensureContiguous gradOutput
   let (gradA, gradB) ← Metal.GpuBuffer.mulBackward a.data.buffer b.data.buffer
       gradOutput.data.buffer n.toUSize
-  return (⟨⟨gradA⟩⟩, ⟨⟨gradB⟩⟩)
+  return (GpuTensor.fromContiguousBuffer (ι:=Idx n) gradA #[n],
+          GpuTensor.fromContiguousBuffer (ι:=Idx n) gradB #[n])
 
-/-- GELU backward pass on GPU -/
+/-- GELU backward pass on GPU. -/
 def geluBackward (input gradOutput : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+  let input ← GpuTensor.ensureContiguous input
+  let gradOutput ← GpuTensor.ensureContiguous gradOutput
   let result ← Metal.GpuBuffer.geluBackward input.data.buffer gradOutput.data.buffer n.toUSize
-  return ⟨⟨result⟩⟩
+  return GpuTensor.fromContiguousBuffer (ι:=Idx n) result #[n]
 
-/-- Softmax backward pass on GPU -/
+/-- Softmax backward pass on GPU. -/
 def softmaxBackward (softmaxOutput gradOutput : GpuTensor Float (Idx m × Idx n)) :
     IO (GpuTensor Float (Idx m × Idx n)) := do
+  let softmaxOutput ← GpuTensor.ensureContiguous softmaxOutput
+  let gradOutput ← GpuTensor.ensureContiguous gradOutput
   let result ← Metal.GpuBuffer.softmaxBackward softmaxOutput.data.buffer
       gradOutput.data.buffer m.toUSize n.toUSize
-  return ⟨⟨result⟩⟩
+  return GpuTensor.fromContiguousBuffer (ι:=Idx m × Idx n) result #[m, n]
 
 end GpuTensor
 
 -- ## Backward Pass for Common Operations -/
 
-/-- Backward pass for a simple feedforward computation: `relu(a * x + b)`.
-    Returns gradient w.r.t. `x`. -/
+/-- Backward pass for a simple feedforward computation using {name}`CpuTensor.relu`.
+    Returns the gradient with respect to the input. -/
 def backwardDense (a x b : CpuTensor Float ι) (dout : CpuTensor Float ι) : CpuTensor Float ι :=
   let y := CpuTensor.add (CpuTensor.mul a x) b
   let dy := CpuTensor.reluGrad y dout
@@ -402,7 +412,7 @@ noncomputable instance : AdjointSpace Float (GpuTensor Float (Idx n)) where
 
 -- ### data_synth Rules for GPU Operations -/
 
-/-- GPU ReLU: HasRevFDerivM rule using reluBackward kernel -/
+/-- GPU ReLU: {name}`HasRevFDerivM` rule using {name}`GpuTensor.reluBackward`. -/
 @[data_synth]
 theorem GpuTensor.relu.arg_x.HasRevFDerivM_rule :
     HasRevFDerivM Float
@@ -412,7 +422,7 @@ theorem GpuTensor.relu.arg_x.HasRevFDerivM_rule :
         pure (y, fun dy => GpuTensor.reluBackward x dy)) := by
   trivial
 
-/-- GPU element-wise multiply: HasRevFDerivM rule using mulBackward kernel -/
+/-- GPU element-wise multiply: {name}`HasRevFDerivM` rule using {name}`GpuTensor.mulBackward`. -/
 @[data_synth]
 theorem GpuTensor.mul.arg_ab.HasRevFDerivM_rule :
     HasRevFDerivM Float
@@ -425,7 +435,7 @@ theorem GpuTensor.mul.arg_ab.HasRevFDerivM_rule :
           pure (da, db))) := by
   trivial
 
-/-- GPU element-wise add: HasRevFDerivM rule (gradient is identity for both args) -/
+/-- GPU element-wise add: {name}`HasRevFDerivM` rule (identity gradient for both args). -/
 @[data_synth]
 theorem GpuTensor.add.arg_ab.HasRevFDerivM_rule :
     HasRevFDerivM Float
@@ -436,7 +446,7 @@ theorem GpuTensor.add.arg_ab.HasRevFDerivM_rule :
         pure (y, fun dy => pure (dy, dy))) := by
   trivial
 
-/-- GPU GELU: HasRevFDerivM rule using geluBackward kernel -/
+/-- GPU GELU: {name}`HasRevFDerivM` rule using {name}`GpuTensor.geluBackward`. -/
 @[data_synth]
 theorem GpuTensor.gelu.arg_x.HasRevFDerivM_rule :
     HasRevFDerivM Float
@@ -525,8 +535,8 @@ noncomputable instance : AdjointSpace Float (GpuTensor Float (Idx m × Idx n)) w
 
 -- ### data_synth Rules for 2D GPU Operations -/
 
-/-- GPU Softmax: HasRevFDerivM rule using softmaxBackward kernel
-    Softmax is applied row-wise. Backward pass uses the efficient Jacobian formula. -/
+/-- GPU Softmax: {name}`HasRevFDerivM` rule using {name}`GpuTensor.softmaxBackward`.
+    Softmax is applied row-wise. -/
 @[data_synth]
 theorem GpuTensor.softmax.arg_x.HasRevFDerivM_rule :
     HasRevFDerivM Float
@@ -538,7 +548,7 @@ theorem GpuTensor.softmax.arg_x.HasRevFDerivM_rule :
 
 -- ### data_synth Rules for Element-wise Operations -/
 
-/-- GPU subtraction: gradient is `(dy, -dy)` -/
+/-- GPU subtraction: gradient returns the upstream gradient and its negation. -/
 @[data_synth]
 theorem GpuTensor.sub.arg_ab.HasRevFDerivM_rule :
     HasRevFDerivM Float
@@ -551,7 +561,7 @@ theorem GpuTensor.sub.arg_ab.HasRevFDerivM_rule :
           pure (dy, negDy))) := by
   trivial
 
-/-- GPU negation: gradient is `-dy` -/
+/-- GPU negation: gradient is the negation of the upstream gradient. -/
 @[data_synth]
 theorem GpuTensor.neg.arg_x.HasRevFDerivM_rule :
     HasRevFDerivM Float
@@ -561,7 +571,7 @@ theorem GpuTensor.neg.arg_x.HasRevFDerivM_rule :
         pure (y, fun dy => GpuTensor.neg dy)) := by
   trivial
 
-/-- GPU scalar multiply: gradient is `alpha * dy` -/
+/-- GPU scalar multiply: gradient scales the upstream gradient by {lean}`alpha`. -/
 @[data_synth]
 theorem GpuTensor.scale.arg_x.HasRevFDerivM_rule (alpha : Float) :
     HasRevFDerivM Float
@@ -571,7 +581,8 @@ theorem GpuTensor.scale.arg_x.HasRevFDerivM_rule (alpha : Float) :
         pure (y, fun dy => GpuTensor.scale alpha dy)) := by
   trivial
 
-/-- GPU AXPY: For `y = alpha * x + z`, gradients are `(alpha * dy, dy)` -/
+/-- GPU AXPY: gradient w.r.t. the first argument is scaled by {lean}`alpha`,
+    and the second argument receives the upstream gradient. -/
 @[data_synth]
 theorem GpuTensor.axpy.arg_xy.HasRevFDerivM_rule (alpha : Float) :
     HasRevFDerivM Float
@@ -586,7 +597,8 @@ theorem GpuTensor.axpy.arg_xy.HasRevFDerivM_rule (alpha : Float) :
 
 -- ### Bias Operations -/
 
-/-- GPU bias add: `y = x + bias` with broadcast. Gradients: `(dy, colSum(dy))`. -/
+/-- GPU bias add with broadcast.
+    Gradients are the upstream gradient and its column sum. -/
 @[data_synth]
 theorem GpuTensor.biasAdd.arg_xb.HasRevFDerivM_rule :
     HasRevFDerivM Float
@@ -743,11 +755,9 @@ noncomputable instance : AdjointSpace Float (StridedGpuTensor Float (Idx m × Id
 
 -- ### Strided GEMM Backward Function -/
 
-/-- Strided GEMM backward pass using O(1) transpose views.
-    For C = A @ B where A:(m,k), B:(k,n), C:(m,n):
-    - dA = dC @ B^T  (B^T is O(1) view, just swap strides)
-    - dB = A^T @ dC  (A^T is O(1) view, just swap strides)
-    No data copies for transposes - strided GEMM dispatches to gemmTN/gemmNT. -/
+/-- Strided GEMM backward pass using transpose views.
+    Uses {name}`StridedGpuTensor.transpose` and {name}`StridedGpuTensor.gemm` without
+    materializing transposed buffers. -/
 def StridedGpuTensor.gemmBackward
     (A : StridedGpuTensor Float (Idx m × Idx k))
     (B : StridedGpuTensor Float (Idx k × Idx n))
@@ -761,9 +771,21 @@ def StridedGpuTensor.gemmBackward
   let dB ← StridedGpuTensor.gemm A_T dC   -- (k,m) @ (m,n) = (k,n)
   return (dA, dB)
 
+namespace GpuTensor
+
+/-- GEMM backward pass on GPU. -/
+def gemmBackward
+    (A : GpuTensor Float (Idx m × Idx k))
+    (B : GpuTensor Float (Idx k × Idx n))
+    (dC : GpuTensor Float (Idx m × Idx n)) :
+    IO (GpuTensor Float (Idx m × Idx k) × GpuTensor Float (Idx k × Idx n)) :=
+  StridedGpuTensor.gemmBackward A B dC
+
+end GpuTensor
+
 -- ### data_synth Rules for StridedGpuTensor GEMM -/
 
-/-- Strided GEMM: HasRevFDerivM rule using O(1) transpose views -/
+/-- Strided GEMM: {name}`HasRevFDerivM` rule using transpose views. -/
 @[data_synth]
 theorem StridedGpuTensor.gemm.arg_AB.HasRevFDerivM_rule :
     HasRevFDerivM Float

@@ -88,9 +88,29 @@ Build docs: `cd verso-docs && lake build && .lake/build/bin/generate-docs`
   use lean-lsp-mcp hover on nested src code after writing it to ENSURE its in
   the right namespace. like `Float.inf` may need to be `_root_.Float.inf`.
 
-## Strided Tensor System (In Progress)
+## PlainDataType Derive Handler
 
-**Goal:** Replace current `GpuTensor`/`GpuBufferN` with PyTorch-style strided tensors. Enables O(1) transpose/slice/permute without data copies. Critical for efficient GEMM backward in autodiff.
+Fast derive handler for POD (Plain Old Data) serialization:
+
+```lean
+structure Vec3 where
+  x : Float
+  y : Float
+  z : Float
+  deriving PlainDataType  -- Zero overhead!
+```
+
+**Location:** `SciLean/Data/DataArray/DerivePlainDataTypeFast.lean`
+
+**Key features:**
+- Generates `@[inline]` ByteType with direct field access
+- Compile-time byte offset computation via `evalExpr`
+- Supports nested structures up to 8 fields
+- Verified: derived instances match raw tuple performance
+
+## Strided Tensor System ✅
+
+PyTorch-style strided tensors with O(1) view operations. Enables efficient GEMM backward without data copies.
 
 ### Core Types
 
@@ -159,21 +179,22 @@ MPSMatrixDescriptor* desc = [MPSMatrixDescriptor
     dataType: MPSDataTypeFloat32];
 ```
 
-### Implementation Order
+### Implementation Status
 
-1. `SciLean/Data/Tensor/Layout.lean` - TensorLayout struct
-2. `SciLean/FFI/Metal/StridedBuffer.lean` - StridedGpuBuffer
-3. `SciLean/Data/Tensor/StridedGpuTensor.lean` - Type-safe wrapper
-4. `ffi/metal_backend.mm` - copyStrided + gemmStrided kernels
-5. `SciLean/FFI/Metal.lean` - FFI bindings
-6. `SciLean/AD/TensorRevFDeriv.lean` - GEMM backward rule
-7. Replace `GpuTensor` → `StridedGpuTensor` throughout
+| File | Status |
+|------|--------|
+| `SciLean/Data/Tensor/Layout.lean` | ✅ TensorLayout with O(1) ops |
+| `SciLean/FFI/Metal/StridedBuffer.lean` | ✅ StridedGpuBuffer |
+| `SciLean/Data/Tensor/StridedGpuTensor.lean` | ✅ Type-safe wrapper |
+| `Metal/metal_backend.mm` | ✅ copyStrided, gemmTN, gemmNT |
+| `SciLean/FFI/Metal.lean` | ✅ FFI bindings |
+| `SciLean/AD/TensorRevFDeriv.lean` | ✅ GEMM backward rule |
+| `test/gpu_strided_tensor.lean` | ✅ All tests passing |
 
-### Migration
+### Migration (TODO)
 
-Total switch to strided (not a compatibility layer):
 - Port existing ops to use StridedGpuTensor
-- Remove GpuTensor/GpuBufferN once complete
+- Remove legacy GpuTensor/GpuBufferN
 - All tensors carry layout metadata from creation
 
 ## GPU Observability / Tracing

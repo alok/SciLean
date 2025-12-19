@@ -115,7 +115,7 @@ opaque copyStrided (src : @& GpuBuffer) (shape strides : @& Array USize) (offset
 
 /-! ### GPU-to-GPU Operations (no CPU copies!) -/
 
-/-- Matrix multiply on GPU: `C = A * B`.
+/-- Matrix multiply on GPU.
     A is (m, k), B is (k, n), returns C (m, n).
     Both inputs and output stay on GPU. -/
 @[extern "scilean_gpu_gemm_f32"]
@@ -134,11 +134,11 @@ Better for small matrices where GPU launch overhead dominates.
 @[extern "scilean_amx_gemm_f32"]
 opaque gemmAMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
-/-- GEMM with A transposed using AMX: C = A^T @ B -/
+/-- GEMM with A transposed using AMX. -/
 @[extern "scilean_amx_gemm_tn_f32"]
 opaque gemmTN_AMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
-/-- GEMM with B transposed using AMX: C = A @ B^T -/
+/-- GEMM with B transposed using AMX. -/
 @[extern "scilean_amx_gemm_nt_f32"]
 opaque gemmNT_AMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
@@ -147,21 +147,21 @@ opaque gemmNT_AMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 @[extern "scilean_auto_gemm_f32"]
 opaque gemmAuto (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
-/-- Auto-dispatch GEMM with A transposed: `C = A^T @ B`.
+/-- Auto-dispatch GEMM with A transposed.
     Automatically uses AMX for small matrices to avoid MPS encoder switching. -/
 @[extern "scilean_auto_gemm_tn_f32"]
 opaque gemmTN_Auto (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
-/-- Auto-dispatch GEMM with B transposed: `C = A @ B^T`.
+/-- Auto-dispatch GEMM with B transposed.
     Automatically uses AMX for small matrices to avoid MPS encoder switching. -/
 @[extern "scilean_auto_gemm_nt_f32"]
 opaque gemmNT_Auto (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
-/-- Element-wise add: `C = A + B`. -/
+/-- Element-wise add. -/
 @[extern "scilean_gpu_add_f32"]
 opaque add (A B : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
-/-- Element-wise multiply: `C = A * B`. -/
+/-- Element-wise multiply. -/
 @[extern "scilean_gpu_mul_f32"]
 opaque mul (A B : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
@@ -259,14 +259,13 @@ opaque batchNorm2d (input gamma beta mean var : @& GpuBuffer)
 
 /-! ### Backward Pass Operations (for autodiff) -/
 
-/-- ReLU backward: `grad_input = grad_output * (input > 0)`.
+/-- ReLU backward (element-wise).
     Supports batching. -/
 @[extern "scilean_gpu_relu_backward_f32"]
 opaque reluBackward (input gradOutput : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
 /-- Element-wise multiply backward.
-    For `c = a * b`: `grad_a = grad_c * b`, `grad_b = grad_c * a`.
-    Returns (grad_a, grad_b) pair.
+    Returns a pair of gradients for the inputs.
     Supports batching. -/
 @[extern "scilean_gpu_mul_backward_f32"]
 opaque mulBackward (a b gradOutput : @& GpuBuffer) (n : USize) : IO (GpuBuffer × GpuBuffer)
@@ -277,7 +276,6 @@ opaque mulBackward (a b gradOutput : @& GpuBuffer) (n : USize) : IO (GpuBuffer �
 opaque geluBackward (input gradOutput : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
 /-- Softmax backward (batched).
-    For `y = softmax(x)`: `grad_x = y * (grad_y - sum(grad_y * y))`.
     Takes the softmax output (not input) for efficiency.
     Supports batching. -/
 @[extern "scilean_gpu_softmax_backward_f32"]
@@ -286,46 +284,45 @@ opaque softmaxBackward (softmaxOutput gradOutput : @& GpuBuffer)
 
 /-! ### Additional Training Operations -/
 
-/-- AXPY: `result = alpha * x + y` (for SGD updates).
+/-- AXPY (scaled sum), for SGD updates.
     Supports batching. -/
 @[extern "scilean_gpu_axpy_f32"]
 opaque axpy (n : USize) (alpha : Float) (x y : @& GpuBuffer) : IO GpuBuffer
 
-/-- Scale: `result = alpha * x` (scalar multiplication).
+/-- Scale (scalar multiplication).
     Supports batching. -/
 @[extern "scilean_gpu_scale_f32"]
 opaque scale (n : USize) (alpha : Float) (x : @& GpuBuffer) : IO GpuBuffer
 
-/-- Subtraction: `result = x - y`.
+/-- Subtraction.
     Supports batching. -/
 @[extern "scilean_gpu_sub_f32"]
 opaque sub (x y : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
-/-- GEMM with first matrix transposed: `C = A^T @ B`.
-    A is stored as (k, m), computes A^T(m, k) @ B(k, n) = C(m, n).
+/-- GEMM with first matrix transposed.
+    A is stored as (k, m), returns C (m, n).
     Supports batching. -/
 @[extern "scilean_gpu_gemm_tn_f32"]
 opaque gemmTN (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
-/-- GEMM with second matrix transposed: `C = A @ B^T`.
-    A is (m, k), B is stored as (n, k), computes A @ B^T(k, n) = C(m, n).
+/-- GEMM with second matrix transposed.
+    A is (m, k), B is stored as (n, k), returns C (m, n).
     Supports batching. -/
 @[extern "scilean_gpu_gemm_nt_f32"]
 opaque gemmNT (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
-/-- Batched GEMM: `C[b] = A[b] @ B[b]` for each batch.
+/-- Batched GEMM for independent batch matrices.
     A is (batch, m, k), B is (batch, k, n), returns C (batch, m, n).
-    Each batch computes an independent matrix multiplication.
     Essential for multi-head attention. -/
 @[extern "scilean_gpu_gemm_batched_f32"]
 opaque gemmBatched (A B : @& GpuBuffer) (batch m k n : USize) : IO GpuBuffer
 
-/-- Batched GEMM with A transposed: `C[b] = A[b]^T @ B[b]`.
+/-- Batched GEMM with A transposed.
     A is stored as (batch, k, m), B is (batch, k, n), returns C (batch, m, n). -/
 @[extern "scilean_gpu_gemm_batched_tn_f32"]
 opaque gemmBatchedTN (A B : @& GpuBuffer) (batch m k n : USize) : IO GpuBuffer
 
-/-- Batched GEMM with B transposed: `C[b] = A[b] @ B[b]^T`.
+/-- Batched GEMM with B transposed.
     A is (batch, m, k), B is stored as (batch, n, k), returns C (batch, m, n). -/
 @[extern "scilean_gpu_gemm_batched_nt_f32"]
 opaque gemmBatchedNT (A B : @& GpuBuffer) (batch m k n : USize) : IO GpuBuffer
@@ -353,18 +350,19 @@ makes transfers **explicit** at the type level - no implicit coercions allowed!
 - GpuBuffer: GPU-resident data (opaque Metal buffer handle)
 
 To transfer data, you MUST use explicit functions:
-- CpuBuffer.upload: CPU → GPU
-- GpuBuffer.download: GPU → CPU
+- {lit}`CpuBuffer.upload`: CPU → GPU
+- {lit}`GpuBuffer.download`: GPU → CPU
 
 This prevents accidental data transfers that kill performance. GPU operations only
 accept GpuBuffer, CPU operations only accept CpuBuffer.
 
-Usage: Load on CPU with `CpuBuffer`, call `.upload` to get `GpuBuffer`,
-chain GPU operations, then `.download` when results are needed on CPU.
+Usage: load on CPU with {lit}`CpuBuffer`, call {lit}`CpuBuffer.upload` to get
+{lit}`GpuBuffer`, chain GPU operations, then {lit}`GpuBuffer.download` when results
+are needed on CPU.
 -/
 
-/-- CPU-resident buffer. Wrapper around ByteArray that prevents implicit conversion to GpuBuffer.
-    Use `.upload` to explicitly move data to GPU. -/
+/-- CPU-resident buffer. Wrapper around {name}`ByteArray` that prevents implicit conversion to {name}`GpuBuffer`.
+    Use the explicit upload function to move data to GPU. -/
 structure CpuBuffer where
   /-- The underlying raw byte data (Float32 format) -/
   data : ByteArray

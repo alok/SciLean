@@ -4,14 +4,14 @@ import SciLean.Data.DataArray.DataArrayEquiv
 import SciLean.Analysis.Scalar.Basic
 import SciLean.Analysis.AdjointSpace.Basic
 
-/-! Class `HasRnEquiv X n R` states that `X` is canonically isomorphic to `R^[n]`
+/-! Class {lit}`HasRnEquiv X n R` states that {lit}`X` is canonically isomorphic to {lit}`R^[n]`
 
 Main functions:
-  - `toRn : X → R^[n]`
-  - `fromRn : R^[n] → X`
+  - {lit}`toRn : X → R^[n]`
+  - {lit}`fromRn : R^[n] → X`
 
-Functions to transfer structures from `R^[n]` to `X`
-  - `<class>.ofRnEquiv` - transfers corresponding class from `R^[n]` to `X`
+Functions to transfer structures from {lit}`R^[n]` to {lit}`X`
+  - {lit}`<class>.ofRnEquiv` - transfers corresponding class from {lit}`R^[n]` to {lit}`X`
 -/
 
 namespace SciLean
@@ -130,7 +130,7 @@ variable (X : Type*)
   [HasRnEquiv X I R]
 
 
-/-- Transfers `AddCommGroup` structure from `R^[I]` to `X` together with all operations. -/
+/-- Transfers {lit}`AddCommGroup` structure from {lit}`R^[I]` to {lit}`X` together with all operations. -/
 @[inline]
 def _root_.NormedAddCommGroup.ofRnEquiv : NormedAddCommGroup X := {
   toAdd := Add.ofRnEquiv X

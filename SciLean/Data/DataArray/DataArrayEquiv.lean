@@ -6,12 +6,12 @@ namespace SciLean
 open Function
 
 
-/-- Type `X` is equivalent to `K^[I]`.
+/-- Type {lit}`X` is equivalent to {lit}`K^[I]`.
 
 This class us useful for uncurrying arrays. For example derive equivalence
-`K^[k]^[n]^[m] ≃ K^[m,n,k]` or `K^[k]^[n]^[m] ≃ K^[k]^[n,m]`
+{lit}`K^[k]^[n]^[m] ≃ K^[m,n,k]` or {lit}`K^[k]^[n]^[m] ≃ K^[k]^[n,m]`
 
-This class is often used in conjunction with `GetElem` or `DefaultIndex` to derive `K` or `I` as `outParam`. -/
+This class is often used in conjunction with {lit}`GetElem` or {lit}`DefaultIndex` to derive {lit}`K` or {lit}`I` as {lit}`outParam`. -/
 class DataArrayEquiv (X : Type*) (I : Type*) (K : outParam Type*)
     {n : outParam ℕ} [IndexType I n] [PlainDataType K] where
   toKn : X → K^[I]
@@ -25,11 +25,11 @@ class DataArrayEquiv (X : Type*) (I : Type*) (K : outParam Type*)
   -- also probably require that `X` is `PlainDataType` and `toByteArray` commutes with `toKn`
 
 
-/-- `HasRnEquiv X n R` says that `X` is canonically isomorphic to `R^[n]`
+/-- {lit}`HasRnEquiv X n R` says that {lit}`X` is canonically isomorphic to {lit}`R^[n]`
 
 This provides class provides:
-  - `toRn : X → R^[n]`
-  - `fromRn : R^[n] → X`
+  - {lit}`toRn : X → R^[n]`
+  - {lit}`fromRn : R^[n] → X`
 
 This class is supposed to be zero cost at runtime or close to zero.
 -/
@@ -49,18 +49,18 @@ def fromKn (X : Type*) {I K : Type*} {nI} [IndexType I nI] [PlainDataType K] [Da
   (x : K^[I]) : X := DataArrayEquiv.fromKn x
 
 /--
-Converts `X` to `R^[I]`
+Converts {lit}`X` to {lit}`R^[I]`.
 
-Similar to `toKn` but can infer `R` and `I` automatically.
+Similar to {lit}`toKn` but can infer {lit}`R` and {lit}`I` automatically.
 -/
 @[macro_inline]
 def toRn {X I R : Type*} [RealScalar R] [PlainDataType R] {nI} [IndexType I nI] [HasRnEquiv X I R]
   (x : X) : R^[I] := DataArrayEquiv.toKn x
 
 /--
-Converts `R^[I]` to `X`
+Converts {lit}`R^[I]` to {lit}`X`.
 
-Similar to `fromKn` can infer `R` and `I` automatically.
+Similar to {lit}`fromKn` can infer {lit}`R` and {lit}`I` automatically.
 -/
 @[macro_inline]
 def fromRn {X I R : Type*} [RealScalar R] [PlainDataType R] {nI} [IndexType I nI] [HasRnEquiv X I R]
@@ -113,7 +113,7 @@ instance instDataArrayEquivSelf
 -- Get Element -------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 
-/-- Uncurry element access `x[i][j]` for `x : X^[I]` where `X` can be element accessed with `j : J` -/
+/-- Uncurry element access {lit}`x[i][j]` for {lit}`x : X^[I]` where {lit}`X` can be element accessed with {lit}`j : J`. -/
 instance instGetElemUncurry
     {I J} {nI} [IndexType I nI] {nJ} [IndexType J nJ]
     {K} [PlainDataType K]
@@ -129,7 +129,7 @@ instance {I J} {nI} [IndexType I nI] {nJ} [IndexType J nJ]
     DefaultIndexOfRank (X^[I]) (r+1) (I×J) where
 
 
-/-- `x[i,j] = x[i][j]` for `x : X^[I]` -/
+/-- {lit}`x[i,j] = x[i][j]` for {lit}`x : X^[I]`. -/
 instance instIsGetElemCurry
     {I J} {nI} [IndexType I nI] {nJ} [IndexType J nJ]
     {K} [PlainDataType K]

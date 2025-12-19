@@ -5,7 +5,7 @@ import SciLean.Data.DataArray.DataArray
 namespace SciLean
 
 /--
-Class providing identity matrix of type `X ⊗ X`
+Class providing identity matrix of type {lit}`X ⊗ X`.
  -/
 class TensorProductSelf
     (R X : Type*) (XX : outParam Type*) [RCLike R]
@@ -13,12 +13,12 @@ class TensorProductSelf
     [AddCommGroup XX] [Module R XX]
     [TensorProductType R X X XX]
   where
-    /-- Identit matrix `𝐈` -/
+    /-- Identit matrix {lit}`𝐈`. -/
     identityMatrix : XX
     identityMatrix_spec (x : X) :
       matVecMulAdd (1:R) identityMatrix x 0 0 = x
 
-    /-- `addIdentityMatrix a A = A + a•𝐈` - adds `a` multiple of identity to `A` -/
+    /-- {lit}`addIdentityMatrix a A = A + a•𝐈` - adds {lit}`a` multiple of identity to {lit}`A`. -/
     addIdentityMatrix (a : R) (A : XX) : XX
     addIdentityMatrix_spec (a : R) (A : XX) :
       addIdentityMatrix a A = a • identityMatrix + A
@@ -88,9 +88,9 @@ end Self
 
 open Lean Meta Elab Term Qq in
 /--
-`𝐈[𝕜,X]` is identity matrix on `X` which is a vector space over field 𝕜
+{lit}`𝐈[𝕜,X]` is identity matrix on {lit}`X` which is a vector space over field {lit}`𝕜`.
 
-`𝐈[𝕜,n]` is identityt matrix on `𝕜^[n]` where `𝕜` is the default scalar
+{lit}`𝐈[𝕜,n]` is identityt matrix on {lit}`𝕜^[n]` where {lit}`𝕜` is the default scalar.
 -/
 elab (priority:=high) "𝐈[" k:term "," X:term "]" : term <= XX => do
 
@@ -109,13 +109,13 @@ elab (priority:=high) "𝐈[" k:term "," X:term "]" : term <= XX => do
   elabTerm (← `(identityMatrix $k $X)) XX --(cls.getArg! 2)
 
 /--
-`𝐈[X]` is the identity matrix for space `X`.
+{lit}`𝐈[X]` is the identity matrix for space {lit}`X`.
 
-`𝐈[n]` is identityt matrix on `R^[n]` where `R` is the default scalar
+{lit}`𝐈[n]` is identityt matrix on {lit}`R^[n]` where {lit}`R` is the default scalar.
  -/
 macro "𝐈[" X:term "]" : term => `(𝐈[defaultScalar%, $X])
 
-/-- `𝐈` is the identity Matrix  -/
+/-- {lit}`𝐈` is the identity Matrix. -/
 macro "𝐈" : term => `(𝐈[defaultScalar%, _])
 
 @[app_unexpander identityMatrix] def unexpandIdentityMatrix : Lean.PrettyPrinter.Unexpander
@@ -129,7 +129,7 @@ macro "𝐈" : term => `(𝐈[defaultScalar%, _])
 ----------------------------------------------------------------------------------------------------
 
 /--
-Class providing operations on diagonals of matrices of type `X ⊗ X`
+Class providing operations on diagonals of matrices of type {lit}`X ⊗ X`.
 
 Is there basis free version?
  -/
@@ -141,7 +141,7 @@ class TensorProductDiag
     [Fintype I] [CanonicalBasis I R X]
   where
 
-    /-- Turn vector `x` into diagonal matrix -/
+    /-- Turn vector {lit}`x` into diagonal matrix. -/
     diagonal (x : X) : XX
     diagonal_spec : ∀ (x : X) ,
       (diagonal x)
@@ -150,7 +150,7 @@ class TensorProductDiag
       Finset.univ.sum fun (i : I) =>
         (ℼ[R,i] x) • (tmulAdd (1:R) ⅇ[R,X,i] ⅇ'[R,X,i] 0)
 
-    /-- Turn vector `x` into diagonal matrix -/
+    /-- Turn vector {lit}`x` into diagonal matrix. -/
     diag (A : XX) : X
     diag_spec : ∀ (A : XX) (i : I) ,
       ℼ[R,i] (diag A)

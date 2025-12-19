@@ -2,10 +2,10 @@ import SciLean.Data.DataArray.RnEquiv
 import SciLean.Data.ArrayOperations.Algebra
 import SciLean.Algebra.VectorOptimize.Basic
 
-/-! Algebraic structure in `X^[I]`
+/-! Algebraic structure in {lit}`X^[I]`
 
-This file automatically pulls algebraic structure of `R^[n]` onto `X^[I]` anytime `X` has
-an instance of `HasRnEquiv X m R`.
+This file automatically pulls algebraic structure of {lit}`R^[n]` onto {lit}`X^[I]` anytime {lit}`X` has
+an instance of {lit}`HasRnEquiv X m R`.
 
 TODO: There should be a class that the structure of.
 -/

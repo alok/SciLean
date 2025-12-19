@@ -19,11 +19,11 @@ the same thing as the mathematical specification (modulo floating-point).
 ## Design
 
 The axioms follow this pattern:
-1. `interpret dt bytes` - Convert ByteArray to mathematical representation
-2. `toByteArray dt vals` - Convert mathematical representation to ByteArray
-3. `kernel_op_correct` - Axiom that kernel op = spec composed with interpretation
+1. {lean}`interpret dt bytes` - Convert ByteArray to mathematical representation
+2. {lean}`toByteArray dt vals` - Convert mathematical representation to ByteArray
+3. {lit}`kernel_op_correct` - Axiom that kernel op = spec composed with interpretation
 
-This allows proofs to work with the clean `Spec.*` definitions while
+This allows proofs to work with the clean {lit}`Spec.*` definitions while
 computation uses the fast C kernel.
 -/
 
@@ -38,7 +38,7 @@ axiom interpret (dt : DType) (bytes : ByteArray) (n : Nat)
     (h : bytes.size = n * dt.bytes := by native_decide) : Fin n → ℝ
 
 /-- Convert a vector of reals to ByteArray.
-    Inverse of `interpret`. -/
+    Inverse of {name}`interpret`. -/
 axiom toByteArray (dt : DType) (n : Nat) (v : Fin n → ℝ) : ByteArray
 
 /-- Interpret a ByteArray as a matrix of reals. -/
@@ -109,14 +109,14 @@ axiom exp_correct (x : ByteArray) (n : Nat)
 -- The kernel returns Float, but Spec.sum_spec returns ℝ.
 -- This can be addressed later by importing RealToFloat conversion utilities.
 
-/-- GEMV kernel correctness: y = A @ x -/
+/-- GEMV kernel correctness: {lit}`y = A @ x`. -/
 axiom gemv_correct (A x : ByteArray) (m n : Nat)
     (hA : A.size = m * n * dt.bytes) (hx : x.size = n * dt.bytes)
     (hout : (Typed.gemv dt A x m n).size = m * dt.bytes) :
     interpret dt (Typed.gemv dt A x m n) m hout =
     Spec.gemv_spec (interpretMatrix dt A m n hA) (interpret dt x n hx)
 
-/-- GEMM kernel correctness: C = A @ B -/
+/-- GEMM kernel correctness: {lit}`C = A @ B`. -/
 axiom gemm_correct (A B : ByteArray) (m k n : Nat)
     (hA : A.size = m * k * dt.bytes) (hB : B.size = k * n * dt.bytes)
     (hout : (Typed.gemm dt A B m k n).size = m * n * dt.bytes) :
@@ -140,16 +140,16 @@ end CoreAxioms
 ## How to Use These Axioms
 
 1. **Proving kernel properties**: Use spec theorems + correctness axioms
-   ```
+   ```lean
    theorem kernel_gemm_assoc : ... := by
      rw [gemm_correct, gemm_correct, Spec.gemm_spec_assoc]
    ```
 
 2. **AD rules**: Derive from spec + correctness
-   - Forward: `d/dx (A @ x) = A @ dx` via `gemv_correct` + `Spec.gemv_spec_linear`
-   - Reverse: `∇_x (A @ x) = Aᵀ @ dy` via `transpose_correct` + `gemv_correct`
+   - Forward: {lit}`d/dx (A @ x) = A @ dx` via {name}`gemv_correct` + {name}`Spec.gemv_spec_linear`
+   - Reverse: {lit}`∇_x (A @ x) = Aᵀ @ dy` via {name}`transpose_correct` + {name}`gemv_correct`
 
-3. **Verification**: Properties proven about Spec.* automatically apply to kernel
+3. **Verification**: Properties proven about {lit}`Spec.*` automatically apply to kernel
    via the correctness axioms (modulo floating-point).
 -/
 

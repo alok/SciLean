@@ -14,9 +14,9 @@ namespace SciLean
 Tage type to indicate what implementation of tensor product we want.
 
 Because tensor product is usually implemented with matrices/tensors we have two main tags
-`dense` and `sparse`. To make keep this user extensible we also support `custom n`.
+{lit}`dense` and {lit}`sparse`. To make keep this user extensible we also support {lit}`custom n`.
 
-TODO: TensorProductType should accept this as an input
+TODO: TensorProductType should accept this as an input.
  -/
 inductive TansorProductTag where
   | dense
@@ -24,37 +24,33 @@ inductive TansorProductTag where
   | custom (name : Name)
 
 open TensorProduct  in
-/-- `TensorProductType R Y X YX` says that `YX` is mathematical tensor product `Y ⊗ X`.
+/-- {lit}`TensorProductType R Y X YX` says that {lit}`YX` is mathematical tensor product {lit}`Y ⊗ X`.
 
-When the default scalar type it not set you have to write `X ⊗[R] Y`
+When the default scalar type it not set you have to write {lit}`X ⊗[R] Y`.
 
 Example:
-```
-Float^[m] ⊗ Float^[n] = Float^[m,n]
-Float^[m] ⊗ Float     = Float^[m]
-    Float ⊗ Float^[n] = Float^[n]
-(Float^[m] × Float^[n]) ⊗ Float^[k] = Float^[m,k] × Float^[n,k]
-```
+- {lit}`Float^[m] ⊗ Float^[n] = Float^[m,n]`
+- {lit}`Float^[m] ⊗ Float = Float^[m]`
+- {lit}`Float ⊗ Float^[n] = Float^[n]`
+- {lit}`(Float^[m] × Float^[n]) ⊗ Float^[k] = Float^[m,k] × Float^[n,k]`
 
-Because we consider tensor product only on inner product spaces we identify `Dual R X` with `X` and
-because `(Y ⊗ Dual R X) ≃ (X →L[R] Y)` we consider elements of `(Y ⊗ X)` as linear maps.
-Thus this class also provides matrix-vector multiplication `matVecMulAdd` and vector-matrix
-multiplication `vecMatMulAdd` (when we identity `Dual R Y` with `Y`).
+Because we consider tensor product only on inner product spaces we identify {lit}`Dual R X` with {lit}`X` and
+because {lit}`(Y ⊗ Dual R X) ≃ (X →L[R] Y)` we consider elements of {lit}`(Y ⊗ X)` as linear maps.
+Thus this class also provides matrix-vector multiplication {lit}`matVecMulAdd` and vector-matrix
+multiplication {lit}`vecMatMulAdd` (when we identity {lit}`Dual R Y` with {lit}`Y`).
 -/
 class TensorProductType (R Y X : Type*) (YX : outParam Type*) [RCLike R]
   [NormedAddCommGroup Y] [AdjointSpace R Y] [NormedAddCommGroup X] [AdjointSpace R X]
   [AddCommGroup YX] [Module R YX]
   where
-    /-- Equivalence between the computational tensor product `YX` and the mathematical `Y ⊗ X`
+    /-- Equivalence between the computational tensor product {lit}`YX` and the mathematical {lit}`Y ⊗ X`.
 
-    It is marked as `Erased` as many mathlib functions about the tensor product are noncomputable. -/
+    It is marked as {lit}`Erased` as many mathlib functions about the tensor product are noncomputable. -/
     equiv : Erased (YX ≃ₗ[R] (Y ⊗[R] X))
 
-    /-- Outer/tensor product of two vectors added to a matrix
+    /-- Outer/tensor product of two vectors added to a matrix.
 
-    ```
-    tmulAdd a y x A = a•y*xᴴ + A
-    ```
+    {lit}`tmulAdd a y x A = a•y*xᴴ + A`.
     -/
     tmulAdd (a : R) (y : Y) (x : X) (A : YX) : YX
 
@@ -64,36 +60,32 @@ class TensorProductType (R Y X : Type*) (YX : outParam Type*) [RCLike R]
       equiv.out.symm (r • (y ⊗ₜ[R] x) + equiv.out A)
 
 
-    /-- Matrix vector multiplication
-    ```
-    matVecMul a A x b y = a•A*x + b•y
-    ```
+    /-- Matrix vector multiplication.
+    {lit}`matVecMul a A x b y = a•A*x + b•y`.
     -/
     matVecMulAdd (a : R) (A : YX) (x : X) (b : R) (y : Y) : Y
 
 
-    /-- Vector matrix multiplication
-    ```
-    vecMatMulAdd a y A b x = a•y*A + b•x
-    ```
+    /-- Vector matrix multiplication.
+    {lit}`vecMatMulAdd a y A b x = a•y*A + b•x`.
     -/
     vecMatMulAdd (a : R) (y : Y) (A : YX) (b : R) (x : X) : X
 
 
 export TensorProductType (tmulAdd matVecMulAdd vecMatMulAdd)
 
-/-- Tag class used to obtain the canonical tensor product type of `Y` and `X` -/
+/-- Tag class used to obtain the canonical tensor product type of {lit}`Y` and {lit}`X`. -/
 class TensorProductGetYX (R Y X : Type*) (YX : outParam Type*)
 
-/-- Tag class used to obtain the output type `Y` of matrix multiplication `Y ⊗ X → X → Y` -/
+/-- Tag class used to obtain the output type {lit}`Y` of matrix multiplication {lit}`Y ⊗ X → X → Y`. -/
 class TensorProductGetY (R Y : outParam Type*) (X YX : Type*)
 
-/-- Tag class used to obtain the output type `X` of transposed matrix multiplication `Y ⊗ X → Y → X` -/
+/-- Tag class used to obtain the output type {lit}`X` of transposed matrix multiplication {lit}`Y ⊗ X → Y → X`. -/
 class TensorProductGetX (R : outParam Type*) (Y : Type*) (X : outParam Type*) (YX : Type*)
 
-/-- Tag class to infer `R`,`X` and `Y` from `YX = Y ⊗[R] X`.
+/-- Tag class to infer {lit}`R`, {lit}`X` and {lit}`Y` from {lit}`YX = Y ⊗[R] X`.
 
-Together with `TensorProductGetYX` it is use to infer the result type of matrix-matrix
+Together with {lit}`TensorProductGetYX` it is use to infer the result type of matrix-matrix
 multiplication -/
 class TensorProductGetRXY (R Y X : outParam Type*) (YX : Type*)
 
@@ -295,7 +287,7 @@ def tcurry (f : X ⊗ Y → Z) (x : X) (y : Y) : Z := f (x⊗y)
 
 open Classical in
 /--
-Uncurry bilinear map `f : X → Y → Z` to a linear map over tensor product `X ⊗ Y`
+Uncurry bilinear map {lit}`f : X → Y → Z` to a linear map over tensor product {lit}`X ⊗ Y`.
 -/
 noncomputable
 def tuncurry (f : X →L[𝕜] Y →L[𝕜] Z) (xy : X⊗Y) : Z :=

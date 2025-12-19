@@ -1,6 +1,5 @@
 import SciLean.Data.Tensor
 import SciLean.Data.Tensor.Layout
-import SciLean.Data.Tensor.StridedGpuTensor
 import SciLean.AD.TensorRevFDeriv
 import SciLean.FFI.Metal
 import SciLean.FFI.Metal.StridedBuffer
@@ -8,10 +7,10 @@ import SciLean.Util.Benchmark
 import SciLean.Data.ByteArray
 
 /-!
-# Strided GEMM Benchmark
+# GPU GEMM Benchmark
 
-Benchmarks comparing legacy GpuTensor.gemm vs StridedGpuTensor.gemm.
-Tests O(1) transpose views and GEMM backward performance.
+Benchmarks GEMM variants for layout views and transpose metadata.
+Tests constant-time transpose views and GEMM backward performance.
 -/
 
 open SciLean
@@ -76,8 +75,8 @@ def benchmarkGemmRaw (m k n : Nat) (label : String) : IO Unit := do
     pure ()
   suite := suite.add directResult
 
-  -- 2. Strided contiguous (should be same as direct)
-  let stridedContiguousResult ← Benchmark.run "Strided contiguous" gpuConfig fun () => do
+  -- 2. Contiguous view (should be same as direct)
+  let stridedContiguousResult ← Benchmark.run "Contiguous view" gpuConfig fun () => do
     -- Contiguous A and B → dispatch to gemm
     if layoutA.isContiguous && layoutB.isContiguous then
       let _ ← Metal.GpuBuffer.gemm aGpu bGpu mU kU nU
@@ -96,16 +95,16 @@ def benchmarkGemmRaw (m k n : Nat) (label : String) : IO Unit := do
     pure ()
   suite := suite.add gemmNTResult
 
-  -- 5. Strided dispatch simulation with transposed A
-  let stridedTNResult ← Benchmark.run "Strided A^T dispatch" gpuConfig fun () => do
+  -- 5. Transposed A view
+  let stridedTNResult ← Benchmark.run "A^T view" gpuConfig fun () => do
     -- Simulates: detect transposed, dispatch to gemmTN
     if layoutAT.isTransposed && !layoutB.isTransposed then
       let _ ← Metal.GpuBuffer.gemmTN atGpu bGpu mU kU nU
     pure ()
   suite := suite.add stridedTNResult
 
-  -- 6. Strided dispatch simulation with transposed B
-  let stridedNTResult ← Benchmark.run "Strided B^T dispatch" gpuConfig fun () => do
+  -- 6. Transposed B view
+  let stridedNTResult ← Benchmark.run "B^T view" gpuConfig fun () => do
     if !layoutA.isTransposed && layoutBT.isTransposed then
       let _ ← Metal.GpuBuffer.gemmNT aGpu btGpu mU kU nU
     pure ()
@@ -130,7 +129,7 @@ def benchmarkGemmRaw (m k n : Nat) (label : String) : IO Unit := do
   IO.println s!"\n  FLOPs: {Float.round (gflops * 100) / 100} GFLOPs"
   IO.println s!  "  Performance: ~{Float.round (tflops * 100) / 100} TFLOPs/s"
 
-/-- Benchmark O(1) transpose overhead (pure metadata, no GPU) -/
+/-- Benchmark constant-time transpose overhead (pure metadata, no GPU). -/
 def benchmarkTransposeOverhead : IO Unit := do
   IO.println s!"\n═══════════════════════════════════════════════════════════════"
   IO.println s!"  O(1) Transpose Overhead (metadata only, no GPU)"
@@ -183,7 +182,7 @@ def main : IO Unit := do
     return
 
   IO.println "╔═══════════════════════════════════════════════════════════════╗"
-  IO.println "║         Strided vs Legacy GPU GEMM Benchmark                  ║"
+  IO.println "║           GPU GEMM Benchmark (Views vs Legacy)                ║"
   IO.println "║                                                               ║"
   IO.println "║  Tests O(1) transpose views and kernel dispatch overhead      ║"
   IO.println "╚═══════════════════════════════════════════════════════════════╝"
@@ -203,7 +202,7 @@ def main : IO Unit := do
   IO.println ""
   IO.println "  Key findings:"
   IO.println "  • O(1) transpose = just metadata swap, no GPU copy"
-  IO.println "  • Strided dispatch adds ~nanoseconds overhead"
+  IO.println "  • View dispatch adds ~nanoseconds overhead"
   IO.println "  • GEMM backward uses same kernels, just different dispatch"
   IO.println "══════════════════════════════════════════════════════════════════"
 

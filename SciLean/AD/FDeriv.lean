@@ -28,7 +28,7 @@ namespace SciLean
 
 attribute [fun_trans] fderiv
 
-/-- Turn `deriv` to `fderiv`, this goes against mathlib that turns `fderiv` to `deriv`.
+/-- Turn {name}`deriv` to {name}`fderiv`, this goes against mathlib that turns {name}`fderiv` to {name}`deriv`.
 -/
 @[simp, simp_core]
 theorem deriv_fderiv'
@@ -264,7 +264,7 @@ theorem Neg.neg.arg_a0.fderiv_rule (f : X → Y) :
 @[fun_trans]
 theorem HMul.hMul.arg_a0a1.fderiv_rule_at
     {Y : Type _} [NormedCommRing Y] [NormedAlgebra K Y] (x : X)
-    (f g : X → Y) (hf : DifferentiableAt K f x) (hg : DifferentiableAt K g x) :
+    (f g : X → Y) (_hf : DifferentiableAt K f x) (_hg : DifferentiableAt K g x) :
     (fderiv K fun x => f x * g x) x
     =
     let y := f x
@@ -282,7 +282,7 @@ theorem HMul.hMul.arg_a0a1.fderiv_rule_at
 @[fun_trans]
 theorem HSMul.hSMul.arg_a0a1.fderiv_rule_at (x : X)
     (f : X → K) (g : X → Y)
-    (hf : DifferentiableAt K f x) (hg : DifferentiableAt K g x) :
+    (_hf : DifferentiableAt K f x) (_hg : DifferentiableAt K g x) :
     (fderiv K fun x => f x • g x) x
     =
     let k := f x
@@ -290,7 +290,7 @@ theorem HSMul.hSMul.arg_a0a1.fderiv_rule_at (x : X)
     fun dx =>L[K]
       let dk := fderiv K f x dx
       let dy := fderiv K g x dx
-      k • dy + dk • y := fderiv_smul hf hg
+      k • dy + dk • y := fderiv_smul _hf _hg
 
 
 -- HDiv.hDiv -------------------------------------------------------------------
