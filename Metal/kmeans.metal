@@ -1350,6 +1350,7 @@ kernel void bias_relu(
 // Add bias and apply GELU (Gaussian Error Linear Unit)
 // GELU(x) ≈ 0.5 * x * (1 + tanh(sqrt(2/π) * (x + 0.044715 * x³)))
 // Numerically stable: for |x| > 4, GELU saturates to x (positive) or 0 (negative)
+// TODO: Consider using exact GELU with erf() or a C1-continuous piecewise approximation
 kernel void bias_gelu(
     device const float* input [[buffer(0)]],
     device const float* bias [[buffer(1)]],
@@ -2739,6 +2740,7 @@ kernel void tanh_backward(
 // gelu(x) ≈ 0.5 * x * (1 + tanh(sqrt(2/π) * (x + 0.044715 * x³)))
 // Numerically stable: for |x| > 4, tanh saturates and dtanh*dinner → 0*Inf = NaN
 // Solution: for large |x|, gelu'(x) ≈ 1 (x > 0) or 0 (x < 0)
+// TODO: Consider using exact GELU with erf() or a C1-continuous piecewise approximation
 kernel void gelu_backward(
     device const float* input [[buffer(0)]],
     device const float* grad_output [[buffer(1)]],
