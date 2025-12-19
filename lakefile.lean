@@ -396,3 +396,7 @@ lean_exe DerivePlainDataTypeTest where
 lean_exe StructVsTupleBenchmark where
   buildType := .release
   root := `test.struct_vs_tuple_benchmark
+
+lean_exe NestedPodStressTest where
+  buildType := .release
+  root := `test.nested_pod_stress_test
