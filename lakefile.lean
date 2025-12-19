@@ -385,3 +385,7 @@ lean_exe PodTypesTest where
 
 lean_exe PodBenchmark where
   root := `test.pod_benchmark
+
+lean_exe StructMarshalingTest where
+  root := `test.struct_marshaling_test
+  moreLinkArgs := metalLinkArgs
