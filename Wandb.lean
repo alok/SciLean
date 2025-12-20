@@ -6,3 +6,5 @@ import Wandb.GraphQL
 import Wandb.Run
 import Wandb.Files
 import Wandb.Api
+import Wandb.Artifacts
+import Wandb.RunQueue

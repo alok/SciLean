@@ -474,4 +474,161 @@ def listRunFiles (cfg : Wandb.Config) (ref : Wandb.RunRef) (q : FileQuery := {})
   let hasNextPage := (pageInfo.getObjValAs? Bool "hasNextPage" |>.toOption).getD false
   pure { files := files, endCursor := endCursor, hasNextPage := hasNextPage, fileCount := fileCount }
 
+/-! ### Runs listing -/
+
+/-- Run list query parameters. -/
+structure RunListQuery where
+  entity : Option String := none
+  project : Option String := none
+  cursor : Option String := none
+  perPage : Nat := 50
+  order : Option String := none
+  filters : Option J := none
+
+/-- Lightweight run summary used for lists. -/
+structure RunListItem where
+  id : String
+  name : String
+  displayName : Option String := none
+  state : Option String := none
+  createdAt : Option String := none
+  heartbeatAt : Option String := none
+  description : Option String := none
+  notes : Option String := none
+  tags : Array String := #[]
+  project : String
+  entity : String
+
+/-- Parse a run list item from JSON. -/
+def RunListItem.fromJson (j : J) : Except String RunListItem := do
+  let id ← j.getObjValAs? String "id"
+  let name ← j.getObjValAs? String "name"
+  let displayName := j.getObjValAs? String "displayName" |>.toOption
+  let state := j.getObjValAs? String "state" |>.toOption
+  let createdAt := j.getObjValAs? String "createdAt" |>.toOption
+  let heartbeatAt := j.getObjValAs? String "heartbeatAt" |>.toOption
+  let description := j.getObjValAs? String "description" |>.toOption
+  let notes := j.getObjValAs? String "notes" |>.toOption
+  let tags := (j.getObjValAs? (Array String) "tags" |>.toOption).getD #[]
+  let projectObj ← j.getObjVal? "project"
+  let project ← projectObj.getObjValAs? String "name"
+  let entityObj ← projectObj.getObjVal? "entity"
+  let entity ← entityObj.getObjValAs? String "name"
+  pure {
+    id := id
+    name := name
+    displayName := displayName
+    state := state
+    createdAt := createdAt
+    heartbeatAt := heartbeatAt
+    description := description
+    notes := notes
+    tags := tags
+    project := project
+    entity := entity
+  }
+
+/-- A single page of run list results. -/
+structure RunListPage where
+  runs : Array RunListItem
+  endCursor : Option String := none
+  hasNextPage : Bool := false
+  runCount : Option Nat := none
+  readOnly : Option Bool := none
+
+/-- GraphQL query for listing runs. -/
+def runsQuery : String :=
+"
+query Runs($project: String!, $entity: String!, $cursor: String, $perPage: Int = 50, $order: String, $filters: JSONString) {
+  project(name: $project, entityName: $entity) {
+    runCount(filters: $filters)
+    readOnly
+    runs(filters: $filters, after: $cursor, first: $perPage, order: $order) {
+      edges {
+        node {
+          id
+          name
+          displayName
+          state
+          createdAt
+          heartbeatAt
+          description
+          notes
+          tags
+          project { name entity { name } }
+        }
+        cursor
+      }
+      pageInfo { endCursor hasNextPage }
+    }
+  }
+}
+"
+
+/-- List runs for a project, returning a single page. -/
+def listRuns (cfg : Wandb.Config) (q : RunListQuery := {}) : IO RunListPage := do
+  let entity ←
+    match q.entity with
+    | some v => pure v
+    | none =>
+      match cfg.entity with
+      | some v => pure v
+      | none => throw <| IO.userError "WANDB_ENTITY not set"
+  let project ←
+    match q.project with
+    | some v => pure v
+    | none =>
+      match cfg.project with
+      | some v => pure v
+      | none => throw <| IO.userError "WANDB_PROJECT not set"
+  let mut fields : List (String × J) := []
+  fields := addStrField "project" (some project) fields
+  fields := addStrField "entity" (some entity) fields
+  fields := addStrField "cursor" q.cursor fields
+  fields := addField "perPage" (some <| nat q.perPage) fields
+  fields := addStrField "order" q.order fields
+  fields := addStrField "filters" (jsonString? q.filters) fields
+  let vars := obj fields.reverse
+  let resp ← Wandb.postGraphQL cfg runsQuery (some vars)
+  let data ← parseGraphQLData resp
+  let projectObj ← exceptToIO (data.getObjVal? "project")
+  let runCount := projectObj.getObjValAs? Nat "runCount" |>.toOption
+  let readOnly := projectObj.getObjValAs? Bool "readOnly" |>.toOption
+  let runsObj ← exceptToIO (projectObj.getObjVal? "runs")
+  let edges ← exceptToIO (runsObj.getObjValAs? (Array J) "edges")
+  let mut runs : Array RunListItem := #[]
+  for edge in edges do
+    let node ← exceptToIO (edge.getObjVal? "node")
+    let item ← exceptToIO (RunListItem.fromJson node)
+    runs := runs.push item
+  let pageInfo ← exceptToIO (runsObj.getObjVal? "pageInfo")
+  let endCursor := pageInfo.getObjValAs? String "endCursor" |>.toOption
+  let hasNextPage := (pageInfo.getObjValAs? Bool "hasNextPage" |>.toOption).getD false
+  pure {
+    runs := runs
+    endCursor := endCursor
+    hasNextPage := hasNextPage
+    runCount := runCount
+    readOnly := readOnly
+  }
+
+/-! ### Convenience helpers -/
+
+/-- Update a run's config by internal id. -/
+def setRunConfig (cfg : Wandb.Config) (id : String) (config : J) : IO UpsertResult :=
+  updateRun cfg id { config := some config }
+
+/-- Update a run's summary metrics by internal id. -/
+def setRunSummary (cfg : Wandb.Config) (id : String) (summary : J) : IO UpsertResult :=
+  updateRun cfg id { summaryMetrics := some summary }
+
+/-- Update description/notes/tags for a run by internal id. -/
+def updateRunMeta
+    (cfg : Wandb.Config)
+    (id : String)
+    (description : Option String := none)
+    (notes : Option String := none)
+    (tags : List String := []) : IO UpsertResult :=
+  updateRun cfg id { description := description, notes := notes, tags := tags }
+
 end Wandb.Api
