@@ -132,6 +132,11 @@ lean_lib SciLean.FFI.Metal where
   precompileModules := false
   moreLinkObjs := #[libscileanmetal]
 
+-- W&B bindings (raw HTTP helpers and minimal client)
+lean_lib Wandb where
+  roots := #[`Wandb]
+  precompileModules := false
+
 
 @[test_driver]
 lean_lib SciLeanTest {
@@ -350,13 +355,13 @@ lean_exe GpuFusedKernelTest where
   root := `test.gpu_fused_kernels
   moreLinkArgs := metalLinkArgs
 
-lean_exe GpuStridedTensorTest where
-  root := `test.gpu_strided_tensor
+lean_exe GpuTensorTest where
+  root := `test.gpu_tensor
   moreLinkArgs := metalLinkArgs
 
-lean_exe StridedGemmBenchmark where
+lean_exe GemmViewBenchmark where
   buildType := .release
-  root := `examples.StridedGemmBenchmark
+  root := `examples.GemmViewBenchmark
   moreLinkArgs := metalLinkArgs
 
 lean_exe GpuBatchingBenchmark where
