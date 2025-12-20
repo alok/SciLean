@@ -108,9 +108,9 @@ structure Vec3 where
 - Supports nested structures up to 8 fields
 - Verified: derived instances match raw tuple performance
 
-## Strided Tensor System ✅
+## Layout-Aware Tensor System ✅
 
-PyTorch-style strided tensors with O(1) view operations. Enables efficient GEMM backward without data copies.
+PyTorch-style layout-aware tensors with O(1) view operations. Enables efficient GEMM backward without data copies.
 
 ### Core Types
 
@@ -122,14 +122,14 @@ structure TensorLayout where
   offset : Nat := 0
 
 -- GPU buffer + layout metadata
-structure StridedGpuBuffer (α : Type*) [PlainDataType α] where
+structure GpuBufferView (α : Type*) [PlainDataType α] where
   buffer : Metal.GpuBuffer
   layout : TensorLayout
 
 -- Type-safe wrapper (shape in type via IndexType)
-structure StridedGpuTensor (α : Type*) [PlainDataType α] (ι : Type*)
+structure GpuTensor (α : Type*) [PlainDataType α] (ι : Type*)
     {n : outParam ℕ} [IndexType ι n] where
-  data : StridedGpuBuffer α
+  data : GpuBufferView α
 ```
 
 ### O(1) View Operations
@@ -153,24 +153,24 @@ def TensorLayout.transpose (l : TensorLayout) : TensorLayout :=
 -- dB = A^T @ dC   (O(1) transpose view!)
 
 @[data_synth]
-theorem StridedGpuTensor.gemm.arg_AB.HasRevFDerivM_rule :
+theorem GpuTensor.gemm.arg_AB.HasRevFDerivM_rule :
     HasRevFDerivM Float
-      (fun (AB : StridedGpuTensor Float (Idx m × Idx k) ×
-                 StridedGpuTensor Float (Idx k × Idx n)) =>
-        StridedGpuTensor.gemm AB.1 AB.2)
+      (fun (AB : GpuTensor Float (Idx m × Idx k) ×
+                 GpuTensor Float (Idx k × Idx n)) =>
+        GpuTensor.gemm AB.1 AB.2)
       (fun AB => do
-        let C ← StridedGpuTensor.gemm AB.1 AB.2
+        let C ← GpuTensor.gemm AB.1 AB.2
         pure (C, fun dC => do
           let B_T := AB.2.transpose  -- O(1), no copy
           let A_T := AB.1.transpose  -- O(1), no copy
-          let dA ← StridedGpuTensor.gemm dC B_T
-          let dB ← StridedGpuTensor.gemm A_T dC
+          let dA ← GpuTensor.gemm dC B_T
+          let dB ← GpuTensor.gemm A_T dC
           pure (dA, dB))) := by trivial
 ```
 
 ### Metal FFI
 
-MPS supports strided access via `rowBytes` parameter:
+MPS supports non-contiguous access via `rowBytes` parameter:
 ```objc
 MPSMatrixDescriptor* desc = [MPSMatrixDescriptor
     matrixDescriptorWithRows: m
@@ -184,17 +184,17 @@ MPSMatrixDescriptor* desc = [MPSMatrixDescriptor
 | File | Status |
 |------|--------|
 | `SciLean/Data/Tensor/Layout.lean` | ✅ TensorLayout with O(1) ops |
-| `SciLean/FFI/Metal/StridedBuffer.lean` | ✅ StridedGpuBuffer |
-| `SciLean/Data/Tensor/StridedGpuTensor.lean` | ✅ Type-safe wrapper |
-| `Metal/metal_backend.mm` | ✅ copyStrided, gemmTN, gemmNT |
+| `SciLean/FFI/Metal/GpuBufferView.lean` | ✅ GpuBufferView |
+| `SciLean/Data/Tensor/GpuTensor.lean` | ✅ Type-safe wrapper |
+| `Metal/metal_backend.mm` | ✅ copyLayout, gemmTN, gemmNT |
 | `SciLean/FFI/Metal.lean` | ✅ FFI bindings |
 | `SciLean/AD/TensorRevFDeriv.lean` | ✅ GEMM backward rule |
-| `test/gpu_strided_tensor.lean` | ✅ All tests passing |
+| `test/gpu_tensor.lean` | ✅ All tests passing |
 
 ### Migration (TODO)
 
-- Port existing ops to use StridedGpuTensor
-- Remove legacy GpuTensor/GpuBufferN
+- Port existing ops to use GpuTensor
+- Remove prior GpuTensor/GpuBufferN
 - All tensors carry layout metadata from creation
 
 ## GPU Observability / Tracing
@@ -242,3 +242,10 @@ def timeGPU (key : String) (op : IO α) : IO α := do
 ---
 
 Wrap math in docstrings in backticks or else you'll get weird parse errors.
+
+## Experiment Logging
+
+- Log all benchmark/experiment runs to `doc/bench/experiment-log.md`.
+- Each entry should include timestamp, commit hash, command, and key metrics.
+- Commit each log entry as its own commit.
+- Prefer using `SciLean.Util.ExperimentLog` helpers when available.
