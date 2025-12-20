@@ -313,4 +313,79 @@ mutation ackRunQueueItem($itemId: ID!, $runId: String!) {
   let result ← Wandb.Api.exceptToIO (data.getObjVal? "ackRunQueueItem")
   pure <| (result.getObjValAs? Bool "success" |>.toOption).getD false
 
+/-! ### Fail and warn -/
+
+def failRunQueueItemQueryBasic : String :=
+"
+mutation failRunQueueItem($runQueueItemId: ID!) {
+  failRunQueueItem(input: { runQueueItemId: $runQueueItemId }) { success }
+}
+"
+
+def failRunQueueItemQueryWithFields : String :=
+"
+mutation failRunQueueItem($runQueueItemId: ID!, $message: String!, $stage: String!, $filePaths: [String!]) {
+  failRunQueueItem(input: {
+    runQueueItemId: $runQueueItemId,
+    message: $message,
+    stage: $stage,
+    filePaths: $filePaths
+  }) { success }
+}
+"
+
+/-- Mark a run queue item as failed. -/
+def failRunQueueItem
+    (cfg : Wandb.Config)
+    (itemId : String)
+    (message : Option String := none)
+    (stage : Option String := none)
+    (filePaths : List String := []) : IO Bool := do
+  let useFields := message.isSome || stage.isSome || (not filePaths.isEmpty)
+  let vars :=
+    if useFields then
+      json% {
+        runQueueItemId: $(itemId),
+        message: $(message.getD ""),
+        stage: $(stage.getD "run"),
+        filePaths: $(arr (filePaths.map str))
+      }
+    else
+      json% { runQueueItemId: $(itemId) }
+  let query := if useFields then failRunQueueItemQueryWithFields else failRunQueueItemQueryBasic
+  let resp ← Wandb.postGraphQL cfg query (some vars)
+  let data ← Wandb.Api.parseGraphQLData resp
+  let result ← Wandb.Api.exceptToIO (data.getObjVal? "failRunQueueItem")
+  pure <| (result.getObjValAs? Bool "success" |>.toOption).getD false
+
+def updateRunQueueItemWarningQuery : String :=
+"
+mutation updateRunQueueItemWarning($runQueueItemId: ID!, $message: String!, $stage: String!, $filePaths: [String!]) {
+  updateRunQueueItemWarning(input: {
+    runQueueItemId: $runQueueItemId,
+    message: $message,
+    stage: $stage,
+    filePaths: $filePaths
+  }) { success }
+}
+"
+
+/-- Add a warning to a run queue item. -/
+def updateRunQueueItemWarning
+    (cfg : Wandb.Config)
+    (itemId : String)
+    (message : String)
+    (stage : String := "run")
+    (filePaths : List String := []) : IO Bool := do
+  let vars := json% {
+    runQueueItemId: $(itemId),
+    message: $(message),
+    stage: $(stage),
+    filePaths: $(arr (filePaths.map str))
+  }
+  let resp ← Wandb.postGraphQL cfg updateRunQueueItemWarningQuery (some vars)
+  let data ← Wandb.Api.parseGraphQLData resp
+  let result ← Wandb.Api.exceptToIO (data.getObjVal? "updateRunQueueItemWarning")
+  pure <| (result.getObjValAs? Bool "success" |>.toOption).getD false
+
 end Wandb.RunQueue
