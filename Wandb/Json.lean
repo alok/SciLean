@@ -1,4 +1,9 @@
+import Lean.Data.Json.Elab
 import Lean.Data.Json.Printer
+
+/-!
+JSON helpers for W&B. Prefer using {lit}`json%` for literals.
+-/
 
 namespace Wandb.Json
 

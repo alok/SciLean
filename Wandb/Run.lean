@@ -1,4 +1,5 @@
 import Wandb.Json
+import Wandb.Env
 
 /-! Run metadata helpers. -/
 
@@ -13,21 +14,14 @@ structure RunRef where
   id : String
 
 /-- Build JSON for a run reference. -/
-def RunRef.toJson (r : RunRef) : Json.J :=
-  Json.obj
-    [ ("entity", Json.str r.entity)
-    , ("project", Json.str r.project)
-    , ("id", Json.str r.id)
-    ]
+def RunRef.toJson (r : RunRef) : J :=
+  json% { entity: $(r.entity), project: $(r.project), id: $(r.id) }
 
 /-- Build a run reference from environment variables. -/
 def RunRef.fromEnv : IO RunRef := do
-  let some entity ← IO.getEnv "WANDB_ENTITY"
-    | throw <| IO.userError "WANDB_ENTITY not set"
-  let some project ← IO.getEnv "WANDB_PROJECT"
-    | throw <| IO.userError "WANDB_PROJECT not set"
-  let some runId ← IO.getEnv "WANDB_RUN_ID"
-    | throw <| IO.userError "WANDB_RUN_ID not set"
+  let entity ← Wandb.Env.requireEntity
+  let project ← Wandb.Env.requireProject
+  let runId ← Wandb.Env.requireRunId
   pure { entity := entity, project := project, id := runId }
 
 end Wandb
