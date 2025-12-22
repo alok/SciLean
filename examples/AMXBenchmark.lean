@@ -4,20 +4,41 @@ AMX vs MPS GEMM Benchmark
 Compares Accelerate/AMX (CPU) vs MPS (GPU) GEMM performance.
 -/
 import SciLean.FFI.Metal
+import SciLean.Util.Benchmark
+import SciLean.Data.Tensor
 
+open SciLean
 open SciLean.Metal
 
-def benchmarkGemm (name : String) (gemm : GpuBuffer → GpuBuffer → USize → USize → USize → IO GpuBuffer)
-    (A B : GpuBuffer) (m k n : USize) (iters : Nat) : IO Unit := do
+/-- Upload ByteArray as a contiguous GPU matrix. -/
+def toGpuMatrix (m k : Nat) (data : ByteArray) : IO (Float^[Idx m × Idx k]@metal) := do
+  let gpuBuf ← (CpuBuffer.mk data).upload
+  return GpuTensor.fromContiguousBuffer (ι:=Idx m × Idx k) gpuBuf #[m, k]
+
+def benchmarkGemm {m k n : Nat} (caseName backendName : String)
+    (gemm : Float^[Idx m × Idx k]@metal → Float^[Idx k × Idx n]@metal → IO (Float^[Idx m × Idx n]@metal))
+    (A : Float^[Idx m × Idx k]@metal) (B : Float^[Idx k × Idx n]@metal)
+    (iters : Nat) : IO Unit := do
   -- Warmup
-  for _ in [0:5] do let _ ← gemm A B m k n
+  for _ in [0:5] do let _ ← gemm A B
   -- Benchmark
   let start ← IO.monoMsNow
-  for _ in [0:iters] do let _ ← gemm A B m k n
+  for _ in [0:iters] do let _ ← gemm A B
   let elapsed := (← IO.monoMsNow) - start
-  let flops := 2.0 * m.toNat.toFloat * k.toNat.toFloat * n.toNat.toFloat * iters.toFloat
-  let gflops := flops / elapsed.toFloat / 1e6
-  IO.println s!"  {name}: {gflops} GFLOP/s ({elapsed}ms / {iters} iters)"
+  let elapsedMs := elapsed.toFloat
+  let flops := 2.0 * m.toFloat * k.toFloat * n.toFloat * iters.toFloat
+  let gflops := flops / elapsedMs / 1e6
+  IO.println s!"  {backendName}: {gflops} GFLOP/s ({elapsed}ms / {iters} iters)"
+  let params := [
+    SciLean.Benchmark.paramStr "case" caseName,
+    SciLean.Benchmark.paramStr "backend" backendName,
+    SciLean.Benchmark.paramNat "m" m,
+    SciLean.Benchmark.paramNat "k" k,
+    SciLean.Benchmark.paramNat "n" n,
+    SciLean.Benchmark.paramNat "iters" iters
+  ]
+  SciLean.Benchmark.logMetric "amx_gemm" "gflops" gflops (unit? := some "GFLOP/s") (params := params)
+  SciLean.Benchmark.logMetric "amx_gemm" "elapsed_ms" elapsedMs (unit? := some "ms") (params := params)
 
 def main : IO Unit := do
   IO.println "═══════════════════════════════════════════════════════════════"
@@ -36,11 +57,11 @@ def main : IO Unit := do
     IO.println s!"\n{name}"
     let aData := ByteArray.replicateFloat32 (m * k) 0.5
     let bData := ByteArray.replicateFloat32 (k * n) 0.5
-    let A ← (CpuBuffer.mk aData).upload
-    let B ← (CpuBuffer.mk bData).upload
-    benchmarkGemm "AMX " GpuBuffer.gemmAMX A B m.toUSize k.toUSize n.toUSize iters
-    benchmarkGemm "MPS " GpuBuffer.gemm A B m.toUSize k.toUSize n.toUSize iters
-    benchmarkGemm "Auto" GpuBuffer.gemmAuto A B m.toUSize k.toUSize n.toUSize iters
+    let A ← toGpuMatrix m k aData
+    let B ← toGpuMatrix k n bData
+    benchmarkGemm name "AMX" GpuTensor.gemmAMX A B iters
+    benchmarkGemm name "MPS" GpuTensor.gemm A B iters
+    benchmarkGemm name "Auto" GpuTensor.gemmAuto A B iters
 
   IO.println "\n═══════════════════════════════════════════════════════════════"
   IO.println "Done!"

@@ -1,8 +1,15 @@
 -- Minimal Metal benchmark that doesn't require full SciLean (avoids Mathlib linker issues)
 import SciLean.FFI.Metal
 import SciLean.FFI.Float32Array
+import SciLean.Util.Benchmark
 
 open SciLean
+
+def logMs (group metric : String) (params : List (String × _root_.Wandb.Json.J)) (ms : Float) : IO Unit := do
+  Benchmark.logMetric group metric ms (unit? := some "ms") (params := params)
+
+def logGflops (group : String) (params : List (String × _root_.Wandb.Json.J)) (gflops : Float) : IO Unit := do
+  Benchmark.logMetric group "gflops" gflops (unit? := some "GFLOP/s") (params := params)
 
 -- Timing helper for ByteArray operations
 @[noinline] def timeByteArray (iters : Nat := 10) (compute : Unit → ByteArray) : IO Float := do
@@ -72,6 +79,15 @@ def main : IO Unit := do
     IO.println s!"    Simd:    {simdMs.toString.take 7}ms  {gflopsSimd.toString.take 6} GFLOP/s"
     IO.println s!"    MPS:     {mpsMs.toString.take 7}ms  {gflopsMPS.toString.take 6} GFLOP/s"
     IO.println ""
+    let params := [Benchmark.paramNat "n" n]
+    logMs "metal_minimal/gemm" "time_ms" (params := params ++ [Benchmark.paramStr "kernel" "naive"]) naiveMs
+    logMs "metal_minimal/gemm" "time_ms" (params := params ++ [Benchmark.paramStr "kernel" "tiled"]) tiledMs
+    logMs "metal_minimal/gemm" "time_ms" (params := params ++ [Benchmark.paramStr "kernel" "simd"]) simdMs
+    logMs "metal_minimal/gemm" "time_ms" (params := params ++ [Benchmark.paramStr "kernel" "mps"]) mpsMs
+    logGflops "metal_minimal/gemm" (params := params ++ [Benchmark.paramStr "kernel" "naive"]) gflopsNaive
+    logGflops "metal_minimal/gemm" (params := params ++ [Benchmark.paramStr "kernel" "tiled"]) gflopsTiled
+    logGflops "metal_minimal/gemm" (params := params ++ [Benchmark.paramStr "kernel" "simd"]) gflopsSimd
+    logGflops "metal_minimal/gemm" (params := params ++ [Benchmark.paramStr "kernel" "mps"]) gflopsMPS
 
   -- Flash Attention
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -90,6 +106,12 @@ def main : IO Unit := do
       Metal.Float32.flashAttention seqLen.toUSize headDim.toUSize Q K V)
     let gflops := if attnMs > 0.001 then flops / (attnMs / 1000.0) else 0.0
     IO.println s!"  seq={seqLen}, d={headDim}: {attnMs.toString.take 8}ms ({gflops.toString.take 6} GFLOP/s)"
+    let params := [
+      Benchmark.paramNat "seq_len" seqLen,
+      Benchmark.paramNat "head_dim" headDim
+    ]
+    logMs "metal_minimal/flash_attn" "time_ms" (params := params) attnMs
+    logGflops "metal_minimal/flash_attn" (params := params) gflops
 
   -- Causal Attention
   IO.println ""
@@ -108,6 +130,12 @@ def main : IO Unit := do
       Metal.Float32.flashAttentionCausal seqLen.toUSize headDim.toUSize Q K V)
     let gflops := if attnMs > 0.001 then flops / (attnMs / 1000.0) else 0.0
     IO.println s!"  seq={seqLen}, d={headDim}: {attnMs.toString.take 8}ms ({gflops.toString.take 6} GFLOP/s)"
+    let params := [
+      Benchmark.paramNat "seq_len" seqLen,
+      Benchmark.paramNat "head_dim" headDim
+    ]
+    logMs "metal_minimal/causal_attn" "time_ms" (params := params) attnMs
+    logGflops "metal_minimal/causal_attn" (params := params) gflops
 
   -- Softmax
   IO.println ""
@@ -120,6 +148,7 @@ def main : IO Unit := do
     let data := generateFloat32Data n
     let sftmxMs ← timeByteArray 10 (fun () => Metal.Float32.softmax n.toUSize data)
     IO.println s!"  N={n}: {sftmxMs.toString.take 8}ms"
+    logMs "metal_minimal/softmax" "time_ms" (params := [Benchmark.paramNat "n" n]) sftmxMs
 
   -- Reduce Sum
   IO.println ""
@@ -136,6 +165,7 @@ def main : IO Unit := do
     let stop ← IO.monoNanosNow
     let ms := (stop - start).toFloat / 1000000.0 / 10.0
     IO.println s!"  N={n}: {ms.toString.take 8}ms"
+    logMs "metal_minimal/reduce_sum" "time_ms" (params := [Benchmark.paramNat "n" n]) ms
 
   IO.println ""
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

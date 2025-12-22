@@ -1,8 +1,31 @@
 -- Benchmark CPU vs Metal performance
 import SciLean.FFI.Metal
 import SciLean.Compiler.ComputeBackend
+import SciLean.Util.Benchmark
 
 open SciLean.Compiler
+
+def logTime (op backend : String) (n : Nat) (ms : Float) : IO Unit := do
+  SciLean.Benchmark.logMetric
+    s!"backend/{op}"
+    "time_ms"
+    ms
+    (unit? := some "ms")
+    (params := [
+      SciLean.Benchmark.paramStr "backend" backend,
+      SciLean.Benchmark.paramNat "n" n
+    ])
+
+def logGflops (op backend : String) (n : Nat) (gflops : Float) : IO Unit := do
+  SciLean.Benchmark.logMetric
+    s!"backend/{op}"
+    "gflops"
+    gflops
+    (unit? := some "GFLOP/s")
+    (params := [
+      SciLean.Benchmark.paramStr "backend" backend,
+      SciLean.Benchmark.paramNat "n" n
+    ])
 
 -- Timing helper with multiple iterations (returns average milliseconds)
 def timeItMs (iters : Nat := 10) (action : IO α) : IO (α × Float) := do
@@ -130,6 +153,8 @@ def main : IO Unit := do
     let cpuMs ← timeArrayThunk 10 (fun () => CPUOps.fill size 3.14)
     let metalMs ← timeArrayThunk 10 (fun () => MetalOps.fill size 3.14)
     IO.println s!"  N={size}: CPU {cpuMs.toString.take 8}ms, Metal {metalMs.toString.take 8}ms  ({formatSpeedup cpuMs metalMs})"
+    logTime "fill" "cpu" size cpuMs
+    logTime "fill" "metal" size metalMs
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -141,6 +166,8 @@ def main : IO Unit := do
     let cpuMs ← timeArrayThunk 10 (fun () => CPUOps.neg data)
     let metalMs ← timeArrayThunk 10 (fun () => MetalOps.neg data)
     IO.println s!"  N={size}: CPU {cpuMs.toString.take 8}ms, Metal {metalMs.toString.take 8}ms  ({formatSpeedup cpuMs metalMs})"
+    logTime "neg" "cpu" size cpuMs
+    logTime "neg" "metal" size metalMs
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -153,6 +180,8 @@ def main : IO Unit := do
     let cpuMs ← timeArrayThunk 10 (fun () => CPUOps.add a b)
     let metalMs ← timeArrayThunk 10 (fun () => MetalOps.add a b)
     IO.println s!"  N={size}: CPU {cpuMs.toString.take 8}ms, Metal {metalMs.toString.take 8}ms  ({formatSpeedup cpuMs metalMs})"
+    logTime "add" "cpu" size cpuMs
+    logTime "add" "metal" size metalMs
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -164,6 +193,8 @@ def main : IO Unit := do
     let cpuMs ← timeFloatThunk 10 (fun () => CPUOps.reduceSum data)
     let metalMs ← timeFloatThunk 10 (fun () => MetalOps.reduceSum data)
     IO.println s!"  N={size}: CPU {cpuMs.toString.take 8}ms, Metal {metalMs.toString.take 8}ms  ({formatSpeedup cpuMs metalMs})"
+    logTime "reduce_sum" "cpu" size cpuMs
+    logTime "reduce_sum" "metal" size metalMs
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -177,6 +208,8 @@ def main : IO Unit := do
     let cpuMs ← timeArrayThunk 5 (fun () => CPUOps.gemm n n n matA matB)
     let metalMs ← timeArrayThunk 5 (fun () => MetalOps.gemm n n n matA matB)
     IO.println s!"  {n}x{n}: CPU {cpuMs.toString.take 10}ms, Metal {metalMs.toString.take 8}ms  ({formatSpeedup cpuMs metalMs})"
+    logTime "gemm" "cpu" n cpuMs
+    logTime "gemm" "metal" n metalMs
 
   -- Large matrices: Metal only (CPU too slow)
   IO.println "\n  [Metal-only for larger matrices - CPU too slow]"
@@ -187,6 +220,8 @@ def main : IO Unit := do
     let flops := 2.0 * n.toFloat * n.toFloat * n.toFloat / 1e9  -- GFLOPs
     let gflops := if metalMs > 0.001 then flops / (metalMs / 1000.0) else 0.0
     IO.println s!"  {n}x{n}: Metal {metalMs.toString.take 8}ms  ({gflops.toString.take 6} GFLOP/s)"
+    logTime "gemm" "metal" n metalMs
+    logGflops "gemm" "metal" n gflops
 
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   IO.println "Benchmark complete!"

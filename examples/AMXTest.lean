@@ -4,17 +4,26 @@ AMX vs MPS GEMM Correctness Test
 Compares output of AMX and MPS GEMM implementations to verify correctness.
 -/
 import SciLean.FFI.Metal
+import SciLean.Data.Tensor
 
+open SciLean
 open SciLean.Metal
+
+def toGpuMatrix (m k : Nat) (data : ByteArray) : IO (Float^[Idx m × Idx k]@metal) := do
+  let gpuBuf ← (CpuBuffer.mk data).upload
+  return GpuTensor.fromContiguousBuffer (ι:=Idx m × Idx k) gpuBuf #[m, k]
+
+def downloadFloat32 (t : Float^[Idx m × Idx n]@metal) : IO CpuBuffer := do
+  (GpuTensor.toGpuBuffer t).download
 
 def testGemm : IO Unit := do
   IO.println "Testing standard GEMM (C = A @ B)"
   IO.println "================================="
 
   -- Small test: 2x3 @ 3x4 = 2x4
-  let m : USize := 2
-  let k : USize := 3
-  let n : USize := 4
+  let m : Nat := 2
+  let k : Nat := 3
+  let n : Nat := 4
 
   -- Create test data
   -- A = [[1, 2, 3], [4, 5, 6]]  (2x3)
@@ -33,19 +42,16 @@ def testGemm : IO Unit := do
     |>.usetFloat32 16 5.0 |>.usetFloat32 20 6.0 |>.usetFloat32 24 7.0 |>.usetFloat32 28 8.0
     |>.usetFloat32 32 9.0 |>.usetFloat32 36 10.0 |>.usetFloat32 40 11.0 |>.usetFloat32 44 12.0
 
-  let cpuA := CpuBuffer.mk aData
-  let cpuB := CpuBuffer.mk bData
-
-  let gpuA ← cpuA.upload
-  let gpuB ← cpuB.upload
+  let gpuA ← toGpuMatrix m k aData
+  let gpuB ← toGpuMatrix k n bData
 
   -- Run MPS GEMM
-  let mpsC ← GpuBuffer.gemm gpuA gpuB m k n
-  let mpsCpu ← mpsC.download
+  let mpsC ← GpuTensor.gemm gpuA gpuB
+  let mpsCpu ← downloadFloat32 mpsC
 
   -- Run AMX GEMM
-  let amxC ← GpuBuffer.gemmAMX gpuA gpuB m k n
-  let amxCpu ← amxC.download
+  let amxC ← GpuTensor.gemmAMX gpuA gpuB
+  let amxCpu ← downloadFloat32 amxC
 
   IO.println s!"  MPS result:"
   for i in [0:8] do
@@ -67,9 +73,9 @@ def testGemmNT : IO Unit := do
   -- Test: A[2, 3] @ B^T[3, 4] = C[2, 4]
   -- B is stored as [4, 3], transposed becomes [3, 4]
 
-  let m : USize := 2
-  let k : USize := 3
-  let n : USize := 4
+  let m : Nat := 2
+  let k : Nat := 3
+  let n : Nat := 4
 
   -- A = [[1, 2, 3], [4, 5, 6]]  (2x3)
   let aData : ByteArray := ByteArray.replicateFloat32 6 0.0
@@ -84,19 +90,17 @@ def testGemmNT : IO Unit := do
     |>.usetFloat32 24 7.0 |>.usetFloat32 28 8.0 |>.usetFloat32 32 9.0
     |>.usetFloat32 36 10.0 |>.usetFloat32 40 11.0 |>.usetFloat32 44 12.0
 
-  let cpuA := CpuBuffer.mk aData
-  let cpuB := CpuBuffer.mk bData
-
-  let gpuA ← cpuA.upload
-  let gpuB ← cpuB.upload
+  let gpuA ← toGpuMatrix m k aData
+  let gpuB ← toGpuMatrix n k bData
+  let gpuBT := GpuTensor.transpose gpuB
 
   -- Run MPS GEMM NT
-  let mpsC ← GpuBuffer.gemmNT gpuA gpuB m k n
-  let mpsCpu ← mpsC.download
+  let mpsC ← GpuTensor.gemm gpuA gpuBT
+  let mpsCpu ← downloadFloat32 mpsC
 
   -- Run AMX GEMM NT
-  let amxC ← GpuBuffer.gemmNT_AMX gpuA gpuB m k n
-  let amxCpu ← amxC.download
+  let amxC ← GpuTensor.gemmNT_AMX gpuA gpuB
+  let amxCpu ← downloadFloat32 amxC
 
   IO.println s!"  MPS result:"
   for i in [0:8] do
@@ -119,9 +123,9 @@ def testGemmTN : IO Unit := do
   -- Test: A^T[2, 3] @ B[3, 4] = C[2, 4]
   -- A is stored as [3, 2]
 
-  let m : USize := 2
-  let k : USize := 3
-  let n : USize := 4
+  let m : Nat := 2
+  let k : Nat := 3
+  let n : Nat := 4
 
   -- A stored as [3, 2] = [[1, 2], [3, 4], [5, 6]]
   -- A^T = [[1, 3, 5], [2, 4, 6]]  (2x3)
@@ -136,19 +140,17 @@ def testGemmTN : IO Unit := do
     |>.usetFloat32 16 5.0 |>.usetFloat32 20 6.0 |>.usetFloat32 24 7.0 |>.usetFloat32 28 8.0
     |>.usetFloat32 32 9.0 |>.usetFloat32 36 10.0 |>.usetFloat32 40 11.0 |>.usetFloat32 44 12.0
 
-  let cpuA := CpuBuffer.mk aData
-  let cpuB := CpuBuffer.mk bData
-
-  let gpuA ← cpuA.upload
-  let gpuB ← cpuB.upload
+  let gpuA := (← toGpuMatrix k m aData)
+  let gpuB ← toGpuMatrix k n bData
+  let gpuAT := GpuTensor.transpose gpuA
 
   -- Run MPS GEMM TN
-  let mpsC ← GpuBuffer.gemmTN gpuA gpuB m k n
-  let mpsCpu ← mpsC.download
+  let mpsC ← GpuTensor.gemm gpuAT gpuB
+  let mpsCpu ← downloadFloat32 mpsC
 
   -- Run AMX GEMM TN
-  let amxC ← GpuBuffer.gemmTN_AMX gpuA gpuB m k n
-  let amxCpu ← amxC.download
+  let amxC ← GpuTensor.gemmTN_AMX gpuA gpuB
+  let amxCpu ← downloadFloat32 amxC
 
   IO.println s!"  MPS result:"
   for i in [0:8] do

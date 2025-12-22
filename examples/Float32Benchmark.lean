@@ -1,8 +1,18 @@
 -- Benchmark Float32 (native) vs Float64 (with conversion) on Metal GPU
 import SciLean.FFI.Metal
 import SciLean.FFI.Float32Array
+import SciLean.Util.Benchmark
 
 open SciLean
+
+def logMs (group : String) (params : List (String × _root_.Wandb.Json.J)) (ms : Float) : IO Unit := do
+  Benchmark.logMetric group "time_ms" ms (unit? := some "ms") (params := params)
+
+def logGflops (group : String) (params : List (String × _root_.Wandb.Json.J)) (gflops : Float) : IO Unit := do
+  Benchmark.logMetric group "gflops" gflops (unit? := some "GFLOP/s") (params := params)
+
+def logSpeedup (group : String) (params : List (String × _root_.Wandb.Json.J)) (speedup : Float) : IO Unit := do
+  Benchmark.logMetric group "speedup" speedup (unit? := some "x") (params := params)
 
 -- Timing helpers that force evaluation by using results
 
@@ -100,6 +110,8 @@ def main : IO Unit := do
     let f64Ms ← timeFloatArray 10 (fun () => Metal.fill size.toUSize 3.14)
     let f32Ms ← timeByteArray 10 (fun () => Metal.Float32.fill size.toUSize (3.14 : Float32))
     IO.println s!"  N={size}: Float64 {f64Ms.toString.take 8}ms, Float32 {f32Ms.toString.take 8}ms  ({formatSpeedup f64Ms f32Ms})"
+    logMs "float32/fill" (params := [Benchmark.paramStr "dtype" "float64", Benchmark.paramNat "n" size]) f64Ms
+    logMs "float32/fill" (params := [Benchmark.paramStr "dtype" "float32", Benchmark.paramNat "n" size]) f32Ms
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -114,6 +126,8 @@ def main : IO Unit := do
     let f64Ms ← timeFloatArray 10 (fun () => Metal.add size.toUSize a64 b64)
     let f32Ms ← timeByteArray 10 (fun () => Metal.Float32.add size.toUSize a32 b32)
     IO.println s!"  N={size}: Float64 {f64Ms.toString.take 8}ms, Float32 {f32Ms.toString.take 8}ms  ({formatSpeedup f64Ms f32Ms})"
+    logMs "float32/add" (params := [Benchmark.paramStr "dtype" "float64", Benchmark.paramNat "n" size]) f64Ms
+    logMs "float32/add" (params := [Benchmark.paramStr "dtype" "float32", Benchmark.paramNat "n" size]) f32Ms
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -126,6 +140,8 @@ def main : IO Unit := do
     let f64Ms ← timeFloat 10 (fun () => Metal.reduceSum size.toUSize data64)
     let f32Ms ← timeFloat32 10 (fun () => Metal.Float32.reduceSum size.toUSize data32)
     IO.println s!"  N={size}: Float64 {f64Ms.toString.take 8}ms, Float32 {f32Ms.toString.take 8}ms  ({formatSpeedup f64Ms f32Ms})"
+    logMs "float32/reduce_sum" (params := [Benchmark.paramStr "dtype" "float64", Benchmark.paramNat "n" size]) f64Ms
+    logMs "float32/reduce_sum" (params := [Benchmark.paramStr "dtype" "float32", Benchmark.paramNat "n" size]) f32Ms
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -143,6 +159,10 @@ def main : IO Unit := do
     let gflops64 := if f64Ms > 0.001 then flops / (f64Ms / 1000.0) else 0.0
     let gflops32 := if f32Ms > 0.001 then flops / (f32Ms / 1000.0) else 0.0
     IO.println s!"  {n}x{n}: Float64 {f64Ms.toString.take 6}ms ({gflops64.toString.take 5} GFLOP/s), Float32 {f32Ms.toString.take 6}ms ({gflops32.toString.take 5} GFLOP/s)"
+    logMs "float32/gemm_naive" (params := [Benchmark.paramStr "dtype" "float64", Benchmark.paramNat "n" n]) f64Ms
+    logMs "float32/gemm_naive" (params := [Benchmark.paramStr "dtype" "float32", Benchmark.paramNat "n" n]) f32Ms
+    logGflops "float32/gemm_naive" (params := [Benchmark.paramStr "dtype" "float64", Benchmark.paramNat "n" n]) gflops64
+    logGflops "float32/gemm_naive" (params := [Benchmark.paramStr "dtype" "float32", Benchmark.paramNat "n" n]) gflops32
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -186,6 +206,21 @@ def main : IO Unit := do
     IO.println s!"    Simd:    {simdMs.toString.take 7}ms  {gflopsSimd.toString.take 6} GFLOP/s  ({simdSpeedup.toString.take 4}x)"
     IO.println s!"    SimdOpt: {simdOptMs.toString.take 7}ms  {gflopsSimdOpt.toString.take 6} GFLOP/s  ({simdOptSpeedup.toString.take 4}x)"
     IO.println s!"    MPS:     {mpsMs.toString.take 7}ms  {gflopsMPS.toString.take 6} GFLOP/s  ({mpsSpeedup.toString.take 4}x)"
+    let baseParams := [Benchmark.paramNat "n" n]
+    logMs "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "naive"]) naiveMs
+    logMs "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "tiled"]) tiledMs
+    logMs "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "simd"]) simdMs
+    logMs "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "simd_opt"]) simdOptMs
+    logMs "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "mps"]) mpsMs
+    logGflops "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "naive"]) gflopsNaive
+    logGflops "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "tiled"]) gflopsTiled
+    logGflops "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "simd"]) gflopsSimd
+    logGflops "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "simd_opt"]) gflopsSimdOpt
+    logGflops "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "mps"]) gflopsMPS
+    logSpeedup "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "tiled"]) tiledSpeedup
+    logSpeedup "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "simd"]) simdSpeedup
+    logSpeedup "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "simd_opt"]) simdOptSpeedup
+    logSpeedup "float32/gemm_kernels" (params := baseParams ++ [Benchmark.paramStr "kernel" "mps"]) mpsSpeedup
     IO.println ""
 
   -- ═══════════════════════════════════════════════════════════
@@ -216,6 +251,13 @@ def main : IO Unit := do
     IO.println s!"    M4:   {m4Ms.toString.take 7}ms  {gflopsM4.toString.take 6} GFLOP/s"
     IO.println s!"    Simd: {simdMs.toString.take 7}ms  {gflopsSimd.toString.take 6} GFLOP/s"
     IO.println s!"    MPS:  {mpsMs.toString.take 7}ms  {gflopsMPS.toString.take 6} GFLOP/s"
+    let baseParams := [Benchmark.paramNat "n" n]
+    logMs "float32/m4_gemm" (params := baseParams ++ [Benchmark.paramStr "kernel" "m4"]) m4Ms
+    logMs "float32/m4_gemm" (params := baseParams ++ [Benchmark.paramStr "kernel" "simd"]) simdMs
+    logMs "float32/m4_gemm" (params := baseParams ++ [Benchmark.paramStr "kernel" "mps"]) mpsMs
+    logGflops "float32/m4_gemm" (params := baseParams ++ [Benchmark.paramStr "kernel" "m4"]) gflopsM4
+    logGflops "float32/m4_gemm" (params := baseParams ++ [Benchmark.paramStr "kernel" "simd"]) gflopsSimd
+    logGflops "float32/m4_gemm" (params := baseParams ++ [Benchmark.paramStr "kernel" "mps"]) gflopsMPS
     IO.println ""
 
   -- ═══════════════════════════════════════════════════════════
@@ -235,6 +277,11 @@ def main : IO Unit := do
     let gflopsMPS := if mpsMs > 0.001 then flops / (mpsMs / 1000.0) else 0.0
 
     IO.println s!"  {n}×{n}: M4 {m4Ms.toString.take 8}ms ({gflopsM4.toString.take 6} GFLOP/s), MPS {mpsMs.toString.take 8}ms ({gflopsMPS.toString.take 6} GFLOP/s)"
+    let baseParams := [Benchmark.paramNat "n" n]
+    logMs "float32/large_gemm" (params := baseParams ++ [Benchmark.paramStr "kernel" "m4"]) m4Ms
+    logMs "float32/large_gemm" (params := baseParams ++ [Benchmark.paramStr "kernel" "mps"]) mpsMs
+    logGflops "float32/large_gemm" (params := baseParams ++ [Benchmark.paramStr "kernel" "m4"]) gflopsM4
+    logGflops "float32/large_gemm" (params := baseParams ++ [Benchmark.paramStr "kernel" "mps"]) gflopsMPS
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -252,6 +299,9 @@ def main : IO Unit := do
     let flops := 2.0 * size.toFloat / 1e9
     let gflops := if axpyMs > 0.001 then flops / (axpyMs / 1000.0) else 0.0
     IO.println s!"  N={size}: {axpyMs.toString.take 8}ms ({gflops.toString.take 6} GFLOP/s)"
+    let params := [Benchmark.paramNat "n" size]
+    logMs "float32/axpy" (params := params) axpyMs
+    logGflops "float32/axpy" (params := params) gflops
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -276,6 +326,11 @@ def main : IO Unit := do
     IO.println s!"    MPS (GPU):          {mpsMs.toString.take 8}ms  {gflopsMPS.toString.take 6} GFLOP/s"
     IO.println s!"    Accelerate (AMX):   {accelMs.toString.take 8}ms  {gflopsAccel.toString.take 6} GFLOP/s"
     IO.println s!"    Winner: {winner}"
+    let baseParams := [Benchmark.paramNat "n" n]
+    logMs "float32/mps_vs_accel" (params := baseParams ++ [Benchmark.paramStr "backend" "mps"]) mpsMs
+    logMs "float32/mps_vs_accel" (params := baseParams ++ [Benchmark.paramStr "backend" "accelerate"]) accelMs
+    logGflops "float32/mps_vs_accel" (params := baseParams ++ [Benchmark.paramStr "backend" "mps"]) gflopsMPS
+    logGflops "float32/mps_vs_accel" (params := baseParams ++ [Benchmark.paramStr "backend" "accelerate"]) gflopsAccel
     IO.println ""
 
   -- ═══════════════════════════════════════════════════════════
@@ -294,6 +349,12 @@ def main : IO Unit := do
       Metal.Float32.flashAttention seqLen.toUSize headDim.toUSize Q K V)
     let gflops := if attnMs > 0.001 then flops / (attnMs / 1000.0) else 0.0
     IO.println s!"  seq={seqLen}, d={headDim}: {attnMs.toString.take 8}ms ({gflops.toString.take 6} GFLOP/s)"
+    let params := [
+      Benchmark.paramNat "seq_len" seqLen,
+      Benchmark.paramNat "head_dim" headDim
+    ]
+    logMs "float32/flash_attn" (params := params) attnMs
+    logGflops "float32/flash_attn" (params := params) gflops
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -310,6 +371,12 @@ def main : IO Unit := do
       Metal.Float32.flashAttentionCausal seqLen.toUSize headDim.toUSize Q K V)
     let gflops := if attnMs > 0.001 then flops / (attnMs / 1000.0) else 0.0
     IO.println s!"  seq={seqLen}, d={headDim}: {attnMs.toString.take 8}ms ({gflops.toString.take 6} GFLOP/s)"
+    let params := [
+      Benchmark.paramNat "seq_len" seqLen,
+      Benchmark.paramNat "head_dim" headDim
+    ]
+    logMs "float32/causal_attn" (params := params) attnMs
+    logGflops "float32/causal_attn" (params := params) gflops
 
   -- ═══════════════════════════════════════════════════════════
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -320,6 +387,7 @@ def main : IO Unit := do
     let data := generateFloat32Data n
     let sftmxMs ← timeByteArray 10 (fun () => Metal.Float32.softmax n.toUSize data)
     IO.println s!"  N={n}: {sftmxMs.toString.take 8}ms"
+    logMs "float32/softmax" (params := [Benchmark.paramNat "n" n]) sftmxMs
 
   IO.println "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   IO.println "Benchmark complete!"

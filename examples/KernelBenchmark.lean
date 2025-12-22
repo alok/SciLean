@@ -3,6 +3,7 @@
   This measures raw throughput of the C kernel for common operations.
 -/
 import SciLean.Kernel.Integration
+import SciLean.Util.Benchmark
 
 open SciLean SciLean.Kernel
 
@@ -37,6 +38,12 @@ def benchmark (ref : IO.Ref Float) (name : String) (n : Nat) (action : IO Float)
 
   let avgUs := totalNs / n / 1000
   IO.println s!"{name}: {avgUs}μs avg over {n} runs"
+  Benchmark.logMetric
+    "kernel"
+    "avg_us"
+    avgUs.toFloat
+    (unit? := some "us")
+    (params := [Benchmark.paramStr "case" name])
 
 def main : IO Unit := do
   IO.println "=== Kernel Performance Benchmark ==="
