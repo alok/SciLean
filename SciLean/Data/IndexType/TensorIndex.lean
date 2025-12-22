@@ -5,7 +5,7 @@ import Mathlib.Logic.Equiv.Fin.Basic
 
 namespace SciLean
 
-/-- The {name}`IndexType` {lean}`I` is a tensor index of rank {lean}`rank`. -/
+/-- IndexType `I` is tensor index of rank `rank` i.e.  -/
 class TensorIndex (I : Type*) (rank : outParam ℕ) {nI} [IndexType I nI] where
   valid : (Fin rank → ℕ) → Prop
   equiv : I ≃ {idx : Fin rank → ℕ // valid idx}

@@ -4,13 +4,10 @@ import SciLean.Data.IndexType.Range
 namespace SciLean
 
 
-/--
-Given {given}`I` and {given}`m`, this is an implementation of a fold over index type {lean}`I` in
-the monad {lean}`m`.
+/-- Implementation of a fold over index type `I` in the monad `m`.
 
-Note: This function is not part of {name}`IndexType` because of the two universe parameters
-{lit}`v` and {lit}`w` which were causing a lot of issues during type class synthesis.
--/
+Note: This function is not part of `IndexType` because of the two universe parameters `v` and `w`
+which were causing lot of issues during type class synthesis. -/
 class FoldM (I : Type u) (m : Type v → Type w) where
   forIn {β} [Monad m] (r : IndexType.Range I) (init : β) (f : I → β → m (ForInStep β)) : m β
 
@@ -18,12 +15,12 @@ class FoldM (I : Type u) (m : Type v → Type w) where
   --       with `IndexType`
 
 /--
-Given {given}`I`, abbreviation for {lean}`FoldM I Id`.
+Abbreviation for `FoldM I Id`
 
-Implementation of a fold over index type {lean}`I`.
+Implementation of a fold over index type `I`.
 
-Warning: This class has a universe parameter {lit}`v` that is not deducible from its parameters.
-Sometimes you might have to specify the universe parameter manually, e.g. {lean}`Fold.{_,0} I`.
+Warning: This class has an universe parameter `v` that is not deducible from the its parameters.
+  Sometimes you might have to specify the universe parameter manually e.g. `Fold.{_,0} I`
 -/
 abbrev Fold.{u,v} (I : Type u) := FoldM.{u,v,v} I Id
 
@@ -43,7 +40,7 @@ def fold {I n β} [IndexType I n] [FoldM I Id]
     (r : IndexType.Range I) (init : β) (f : I → β → β) : β :=
   foldM (m:=Id) r init (fun i x => pure (f i x))
 
-instance {m : Type v → Type w} [Monad m] [FoldM I m] :
+instance {m : Type v → Type w} [FoldM I m] :
     ForIn m (IndexType.Range I) I where
   forIn := forIn
 
@@ -137,7 +134,7 @@ instance {I J n n'}
 -- Instance for `Idx n` ----------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 
-/-- Given {given}`f`, run {lean}`f` for all {lean}`Idx n`. -/
+/-- Run `f` for all `Idx n` -/
 @[inline]
 partial def Idx.forInFull {β} [Monad m]
     (init : β) (f : Idx n → β → m (ForInStep β)) : m β :=
@@ -152,10 +149,7 @@ where
       pure x
 
 
-/--
-Given {given}`a : Idx n`, {given}`b : Idx n`, and {given}`f`, run {lean}`f` starting at
-{lean}`a` up to {lean}`b` (inclusive).
--/
+/-- Run `f` starting at `a` up to `a`(inclusive) -/
 @[inline]
 partial def Idx.forInIntervalUp {β} [Monad m]
     (a b : Idx n) (init : β) (f : Idx n → β → m (ForInStep β)) : m β :=
@@ -170,10 +164,7 @@ where
       pure x
 
 
-/--
-Given {given}`a : Idx n`, {given}`b : Idx n`, and {given}`f`, run {lean}`f` starting at
-{lean}`b` down to {lean}`a` (inclusive) (assuming {lean}`a < b`).
--/
+/-- Run `f` starting at `b` down to `a`(inclusive) (assuming `a<b`)  -/
 @[inline]
 partial def Idx.forInIntervalDown {β} [Monad m]
     (a b : Idx n) (init : β) (f : Idx n → β → m (ForInStep β)) : m β :=
@@ -206,7 +197,7 @@ instance : FoldM (Idx n) m  where
 -- Instance for `Fin n` ----------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 
-/-- Given {given}`f`, run {lean}`f` for all {lean}`Fin n`. -/
+/-- Run `f` for all `Fin n` -/
 @[inline]
 partial def Fin.forInFull {β} [Monad m]
     (init : β) (f : Fin n → β → m (ForInStep β)) : m β :=
@@ -221,10 +212,7 @@ where
       pure x
 
 
-/--
-Given {given}`a : Fin n`, {given}`b : Fin n`, and {given}`f`, run {lean}`f` starting at
-{lean}`a` up to {lean}`b` (inclusive).
--/
+/-- Run `f` starting at `a` up to `a`(inclusive) -/
 @[inline]
 partial def Fin.forInIntervalUp {β} [Monad m]
     (a b : Fin n) (init : β) (f : Fin n → β → m (ForInStep β)) : m β :=
@@ -239,10 +227,7 @@ where
       pure x
 
 
-/--
-Given {given}`a : Fin n`, {given}`b : Fin n`, and {given}`f`, run {lean}`f` starting at
-{lean}`b` down to {lean}`a` (inclusive) (assuming {lean}`a < b`).
--/
+/-- Run `f` starting at `b` down to `a`(inclusive) (assuming `a<b`)  -/
 @[inline]
 partial def Fin.forInIntervalDown {β} [Monad m]
     (a b : Fin n) (init : β) (f : Fin n → β → m (ForInStep β)) : m β :=
@@ -274,7 +259,7 @@ instance : FoldM (Fin n) m  where
 -- Instance for `Idx2 a b` ----------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 
-/-- Given {given}`f`, run {lean}`f` for all {lean}`Idx2 a b`. -/
+/-- Run `f` for all `Idx n` -/
 @[inline]
 partial def Idx2.forInFull {β} [Monad m]
     (init : β) (f : Idx2 a b → β → m (ForInStep β)) : m β :=
@@ -289,10 +274,7 @@ where
       pure x
 
 
-/--
-Given {given}`a : Idx2 c d`, {given}`b : Idx2 c d`, and {given}`f`, run {lean}`f` starting at
-{lean}`a` up to {lean}`b` (inclusive).
--/
+/-- Run `f` starting at `a` up to `a`(inclusive) -/
 @[inline]
 partial def Idx2.forInIntervalUp {β} [Monad m]
     (a b : Idx2 c d) (init : β) (f : Idx2 c d → β → m (ForInStep β)) : m β :=
@@ -307,10 +289,7 @@ where
       pure x
 
 
-/--
-Given {given}`a : Idx2 c d`, {given}`b : Idx2 c d`, and {given}`f`, run {lean}`f` starting at
-{lean}`b` down to {lean}`a` (inclusive) (assuming {lean}`a < b`).
--/
+/-- Run `f` starting at `b` down to `a`(inclusive) (assuming `a<b`)  -/
 @[inline]
 partial def Idx2.forInIntervalDown {β} [Monad m]
     (a b : Idx2 c d) (init : β) (f : Idx2 c d → β → m (ForInStep β)) : m β :=

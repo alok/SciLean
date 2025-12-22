@@ -5,9 +5,9 @@ namespace SciLean
 open IndexType
 
 /--
-{lean}`IndexEquiv I J` is an equivalence between two index types that preserves the linear index.
-In other words, given {given}`i : I` and {lit}`f : IndexEquiv I J`, the linear index
-{lean}`toFin i` / {lean}`toIdx i` is equal to the linear index of {lit}`f i`.
+`IndexEquiv I J` is and equivalence between two index types that preserves the linear index.
+In other works, for `i : I` the linear index `toFin i`/`toIdx i` is equal to the linear index of
+`f i` for `f : IndexEquiv I J`.
 -/
 structure IndexEquiv (I J : Type*) {n} [IndexType I n] [IndexType J n]
   extends I ≃ J

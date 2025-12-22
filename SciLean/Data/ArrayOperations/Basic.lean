@@ -1,5 +1,4 @@
 import Mathlib.Logic.Function.Defs
-import Verso.Code.External
 import SciLean.Meta.SimpAttr
 import SciLean.Lean.Expr
 import SciLean.Util.SorryProof
@@ -7,34 +6,27 @@ import SciLean.Util.SorryProof
 namespace SciLean
 
 
-/-- Abbreviation for {lean}`GetElem coll idx elem (fun _ _ => True)`. -/
+/-- Abbreviation for {lit}`GetElem coll idx elem (fun _ _ => True)` -/
 abbrev GetElem' (coll : Type*) (idx : Type*) (elem : outParam Type*) :=
   GetElem coll idx elem (fun _ _ => True)
 
 open Function
-/--
-Given {given}`coll`, the type {lean}`coll` is fully determined by all its elements accessible with
-index notation {lit}`x[i]`.
+/-- Type {given}`coll` is fully determined by all its elements accessible with index notation {lit}`x[i]`.
 
-This gives us extensionality property {lit}`(∀ i, x[i] = y[i]) → x = y`, which is accessible with
-{lit}`ext` tactic if {lean}`coll` also defines default index type with {lit}`DefaultIndex`.
+This gives us extensionality property {lit}`(∀ i, x[i] = y[i]) → x = y` which is accessible with
+{lit}`ext` tactic if also {given}`coll` defines default index type with {lit}`DefaultIndex`
 -/
 class InjectiveGetElem (coll : Type*) (idx : Type*) {elem : outParam Type*}
     [GetElem coll idx elem (fun _ _ => True)] : Prop where
   getElem_injective : Injective ((getElem · · .intro) : coll → idx → elem)
 
-/--
-Given {given}`coll` and {given}`idx`, the default index type of {lean}`coll` is {lean}`idx`. This
-class is used when elaborating {lit}`x[i]` where the index {lit}`i` has unknown type.
--/
+/-- Default index type of {given}`coll` is {given}`idx`. This class is used when elaborating {lit}`x[i]` where {given}`i`
+has unknown type. -/
 class DefaultIndex (coll : Type*) (idx : outParam Type*) where
 
 class DefaultIndexOfRank (coll : Type*) (r : Nat) (idx : outParam Type*) where
 
-/--
-Given {given}`coll` and {given}`elem`, the index under which we can access {lean}`coll` and get
-elements of type {lean}`elem`.
--/
+/-- Index under which we can access {given}`coll` and get elements of type {given}`elem`. -/
 class ValueIndex (coll elem : Type*) (idx : outParam Type*) where
 
 export InjectiveGetElem (getElem_injective)
@@ -52,7 +44,7 @@ class SetElem (coll : Type u) (idx : Type v) (elem : outParam (Type w))
   setElem_valid {xs : coll} {i j : idx} {v : elem} {hi : valid xs i} :
     valid xs j ↔ valid (setElem xs i v hi) j
 
-/-- Abbreviation for {lean}`SetElem coll idx elem (fun _ _ => True)`. -/
+/-- Abbreviation for {lit}`SetElem coll idx elem (fun _ _ => True)` -/
 abbrev SetElem' (coll : Type*) (idx : Type*) (elem : outParam Type*) :=
   SetElem coll idx elem (fun _ _ => True)
 
@@ -101,12 +93,9 @@ export LawfulOfFn (getElem_ofFn)
 
 attribute [simp, simp_core] getElem_ofFn
 
-/--
-Given {given}`coll`, this class indicates that {lit}`ofFn f` for {lit}`f : idx → elem` should
-create something of type {lean}`coll`.
+/-- This class indicates that {lit}`ofFn f` for {lit}`f : idx → elem` should create something of type {given}`coll`.
 
-This class is used to infer the default type of {lit}`⊞ i => f i` notation.
--/
+This class is used to infer the default type of {lit}`⊞ i => f i` notation. -/
 class DefaultCollection (coll : outParam Type*) (idx : Type*) (elem : Type*) where
 
 theorem ofFn_rightInverse
@@ -145,7 +134,7 @@ theorem getElem_surjective (coll : Type u) (idx : Type v) {elem : outParam (Type
 -- (Un)curry element access ------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 
-/-- Compatibility class saying `x[i,j] = x[i][j]`. -/
+/-- Compatibility class saying {lit}`x[i,j] = x[i][j]`. -/
 class IsGetElemCurry (X : Type*) {Y Z : Type*} (I J : Type*)
     [GetElem' X I Y] [GetElem' X (I×J) Z] [GetElem' Y J Z] : Prop where
   getElem_curry : ∀ (x : X) (ij : I×J), x[ij] = x[ij.1][ij.2]
@@ -227,7 +216,7 @@ instance [OfFn α ι γ] [OfFn β κ γ] :
 instance [GetElem' α ι γ] [GetElem' β κ γ]
     [OfFn α ι γ] [OfFn β κ γ] [LawfulOfFn α ι] [LawfulOfFn β κ] :
     LawfulOfFn (α×β) (ι⊕κ) where
-  getElem_ofFn := by intro f i; cases i <;> simp[getElem]
+  getElem_ofFn := by intro f i; cases i <;> simp[getElem,ofFn]
 
 @[simp, simp_core]
 theorem getElem_prod_inl [GetElem' α ι γ] [GetElem' β κ γ]
@@ -245,10 +234,14 @@ theorem getElem_prod_inr [GetElem' α ι γ] [GetElem' β κ γ]
 open Lean Meta Expr
 /-- Simproc for zetaDelta reduction in very specific case:
 
-Consider that we create an array and then immediately take an element of it:
-{syntax term}`fun i => (let xs := ofFn (fun j => f j); xs[i])`
-we want this to reduce to {syntax term}`fun i => f i`. This simproc does that without the need of turning on
-the zeta/zetaDelta simp options.
+Consider that we create an array and then immediately take an element of it.
+```
+let xs := ⊞ i => f i
+xs[i]
+```
+we want this to reduce to `f i`. This simproc does that without the need of turning on
+`zeta`/`zetaDelta` option of `simp`.
+
  -/
 simproc_decl getElem_ofFn_zetaDelta (getElem _ _ _) := fun e => do
   if e.isAppOfArity' ``getElem 8 then

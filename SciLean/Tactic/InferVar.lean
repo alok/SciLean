@@ -68,7 +68,7 @@ open Qq Lean Meta
 /--
 Assuming that `a` has mvar `m` and `b` is an expression.
 
-Return mvar `m` and value `x` for it such that `a=b` is likely to hold.
+Return mvar `m` and value `x` for it such that `a = b` is likely to hold.
 
 Examples:
 - `a = 4 * ?m + 2`, `b = 2*n` => `(?m, (2*n-2)/4)`

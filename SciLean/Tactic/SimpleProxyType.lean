@@ -257,19 +257,15 @@ If {given}`α` is an inductive type with name {lit}`I`, then as a side effect th
 
 The elaborator makes use of the expected type, so {lit}`(simple_proxy_equiv% _ : _ ≃ α)` works.
 
-For example, given this inductive type
-```
-inductive foo (n : Nat) (α : Type)
-  | a
-  | b : Bool → foo n α
-  | c (x : Fin n) : Fin x → foo n α
-  | d : Bool → α → foo n α
-```
+For example, given this inductive type:
+{lit}``inductive foo (n : Nat) (α : Type)``
+{lit}``  | a``
+{lit}``  | b : Bool → foo n α``
+{lit}``  | c (x : Fin n) : Fin x → foo n α``
+{lit}``  | d : Bool → α → foo n α``
 the proxy type it generates is {lit}`Unit ⊕ Bool ⊕ (x : Fin n) × Fin x ⊕ (_ : Bool) × α` and
 in particular we have that
-```
-simple_proxy_equiv% (foo n α) : Unit ⊕ Bool ⊕ (x : Fin n) × Fin x ⊕ (_ : Bool) × α ≃ foo n α
-```
+{lit}``simple_proxy_equiv% (foo n α) : Unit ⊕ Bool ⊕ (x : Fin n) × Fin x ⊕ (_ : Bool) × α ≃ foo n α``
 -/
 syntax (name := simple_proxy_equiv) "simple_proxy_equiv% " term : term
 

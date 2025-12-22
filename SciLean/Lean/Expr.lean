@@ -177,7 +177,7 @@ where
     | e                => return .yield e
 
 
-/-- Replaces `xᵢ` with `yᵢ`, subterms of e with loose bvars are ignored. -/
+/-- Replaces {given}`xᵢ` with {given}`yᵢ`, subterms of {given}`e` with loose bvars are ignored. -/
 def replaceExprs (e : Expr) (xs ys : Array Expr) : MetaM Expr :=
   e.replaceM (fun e' => do
     if e'.hasLooseBVars then
@@ -188,9 +188,10 @@ def replaceExprs (e : Expr) (xs ys : Array Expr) : MetaM Expr :=
           return .yield y
       return .noMatch)
 
-/-- Replace `nth`-th occurrence of bound variable i in `e` with `v`.
+/-- Replace {given}`nth`-th occurrence of bound variable {given}`i` in {given}`e` with {given}`v`.
 
-Returns `.inl e'` if successfully replaced or `.inr n` if `n` occurrences, `n < nth`, of `i`-th bound variables have been found in `e`.
+Returns {syntax term}`.inl e'` if successfully replaced or {syntax term}`.inr n` if {given}`n` occurrences,
+{syntax term}`n < nth`, of {given}`i`-th bound variables have been found in {given}`e`.
 
 WARNING: Currently it ignores types.
 -/
@@ -231,9 +232,9 @@ def instantiateOnceNth (e v : Expr) (i : Nat) (nth : Nat) : Expr ⊕ Nat :=
   | _ => .inr 0
 
 
-/-- Replace bound variable with index `i` in `e` with `v` only once.
+/-- Replace bound variable with index {given}`i` in {given}`e` with {given}`v` only once.
 
-You can specify that you want to replace `nth`-th occurrence of that bvar.
+You can specify that you want to replace the {given}`nth`-th occurrence of that bvar.
 
 WARNING: Currently it ignores types.
 -/
@@ -302,8 +303,7 @@ def letBodyRec' (e : Expr) : Expr :=
   | e => e
 
 
-/-- Is `e` function type with no dependent types?
--/
+/-- Is {given}`e` a function type with no dependent types? -/
 def isSimpleFunType (e : Expr) : Bool :=
   if ¬e.consumeMData.isForall then false else go e
 where
@@ -319,14 +319,14 @@ where
 
 
 /--
-Apply the given arguments to `f`, introduce let binding for every argument
+Apply the given arguments to {given}`f`, introduce let binding for every argument
 that beta-reduces.
 
-Examples:
-- `betaWithLet (fun x y => t x y) #[]` ==> `fun x y => t x y`
-- `betaWithLet (fun x y => t x y) #[a]` ==> `let x:=a; fun y => t x y`
-- `betaWithLet (fun x y => t x y) #[a, b]` ==> `let x:=a; let y:=b; t x y`
-- `betaWithLet (fun x y => t x y) #[a, b, c, d]` ==> `let x:=a; let y:=b; t x y c d`
+Examples (with {given}`t`, {given}`a`, {given}`b`, {given}`c`):
+- {syntax term}`betaWithLet (fun x y => t x y) #[]` ==> {syntax term}`fun x y => t x y`
+- {syntax term}`betaWithLet (fun x y => t x y) #[a]` ==> {syntax term}`let x:=a; fun y => t x y`
+- {syntax term}`betaWithLet (fun x y => t x y) #[a, b]` ==> {syntax term}`let x:=a; let y:=b; t x y`
+- {syntax term}`betaWithLet (fun x y => t x y) #[a, b, c, d]` ==> {syntax term}`let x:=a; let y:=b; t x y c d`
 
 TODO: maybe introduce let binding only if the variable appears multiple times
 -/
@@ -343,7 +343,7 @@ where
     else
       e
 
-/-- `(fun x => e) a` ==> `e[x/a]`. -/
+/-- {syntax term}`(fun x => e) a` ==> {syntax term}`e[x/a]`. -/
 def headBetaWithLet (e : Expr) : Expr :=
   let f := e.getAppFn
   if f.isHeadBetaTargetFn false then betaWithLet f e.getAppArgs else e

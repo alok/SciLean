@@ -10,12 +10,10 @@ open Function
 
 
 /--
-Given {given}`I` and {given}`n`, the type {lean}`I` is isomorphic to {lean}`Idx n` and
-{lean}`Fin n`.
+Type `I` is isomorphic to `Idx n` and `Fin n`
 
-The isomorphism with {lean}`Idx n` is required only if the size of {lean}`I` is smaller than
-{name}`USize.size`. In applications, we can't work with larger types as they would not fit into
-memory.
+The isomorphism with `Idx n` is required only if the size of `I` is smaller then `USize.size`.
+In applications, we can't work with larger types as they would not fit into memory.
 -/
 class IndexType (I : Type*) (n : outParam Nat) extends Fintype I, Size' I n where
   toIdx : I → Idx n

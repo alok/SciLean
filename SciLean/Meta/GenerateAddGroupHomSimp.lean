@@ -188,13 +188,13 @@ def generateAddGroupHomSimps (isAddGroupHomTheorem : Name) : MetaM Unit := do
 /-- This commands generates simp lemmas for given function preserving addition and subtraction.
 
 The commands is used as
-```
+```lean
 #generate_add_group_hom_simps thrmName
 ```
-where `thrmName` is a name of a theorem that states `IsAddGroupHom f`.
+where {given}`thrmName` is a name of a theorem that states {syntax term}`IsAddGroupHom f`.
 
 The command generates theorems
-```
+```lean
 @[add_push] theorem add_push (x x' : X) : f x + f x' = f (x + x') := ...
 @[add_pull] theorem add_pull (x x' : X) : f (x + x') = f x + f x' := ...
 @[sub_push] theorem sub_push (x x' : X) : f x - f x' = f (x - x') := ...
@@ -204,16 +204,16 @@ The command generates theorems
 @[simp] theorem app_zero : f 0 = 0 := ...
 ```
 All the above attributes are simp attributes. The ideas is that you can propagate
-arithmetic operations by calling `simp` e.g. `simp only [add_pull]`.
+arithmetic operations by calling {tactic}`simp` e.g. {tactic}`simp only [add_pull]`.
 
 
 The command also supports functions jointly linear in two arguments. If we have
-`g : X → Y → Z` and `g_is_linear₂ : IsLinear K fun (x,y) => g x y` then
-```
+{syntax term}`g : X → Y → Z` and {syntax term}`g_is_linear₂ : IsLinear K fun (x,y) => g x y` then
+```lean
 #generate_add_group_hom_simps g_is_linear₂
 ```
 generates theorems like
-```
+```lean
 @[add_push] theorem add_push (x x' : X) (y y' : Y) : g x y + g x' y' = g (x + x') (y + y') := ...
 ...
 ```
