@@ -8,7 +8,7 @@ namespace SciLean
 
 /-- N-dimensional tensor layout with strides for O(1) view operations.
 
-Enables PyTorch-style strided tensors where transpose, slice, permute are O(1)
+Enables PyTorch-style layout-aware tensors where transpose, slice, permute are O(1)
 operations that just modify metadata without copying data.
 
 Row-major (C-style) layout: last dimension is contiguous in memory. -/

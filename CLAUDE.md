@@ -2,7 +2,7 @@
 
 ## Project Philosophy
 **Verification and sorry-free is NOT the point of this repo!** This is a scientific computing library focused on practical functionality. Technical debt via `sorry_proof` is acceptable. Priorities:
-1. Keep up with Lean 4 releases (currently v4.26)
+1. Keep up with Lean 4 releases (currently v4.27)
 2. BLAS benchmarks and performance
 3. Gradient/autodiff tests
 4. Better ML support (see lean-mlir for inspiration)
