@@ -6,7 +6,7 @@ import SciLean.Data.Tensor
 import SciLean.Data.Tensor.Layout
 import SciLean.AD.TensorRevFDeriv
 import SciLean.FFI.Metal
-import SciLean.FFI.Metal.StridedBuffer
+import SciLean.FFI.Metal.GpuBufferView
 import SciLean.Data.ByteArray
 
 open SciLean
@@ -213,7 +213,7 @@ def testGpuTensorBasic : IO Unit := do
   let data := floatsToByteArray [1, 2, 3, 4, 5, 6]
   let gpuBuf ← Metal.GpuBuffer.fromByteArray data
 
-  let tensor : GpuTensor Float (Idx 2 × Idx 3) :=
+  let tensor : Float^[Idx 2 × Idx 3]@metal :=
     GpuTensor.fromContiguousBuffer gpuBuf #[2, 3]
 
   if tensor.shape.toList == [2, 3] then
@@ -243,7 +243,7 @@ def testGpuTranspose : IO Unit := do
   let data := floatsToByteArray [1, 2, 3, 4, 5, 6]
   let gpuBuf ← Metal.GpuBuffer.fromByteArray data
 
-  let tensor : GpuTensor Float (Idx 2 × Idx 3) :=
+  let tensor : Float^[Idx 2 × Idx 3]@metal :=
     GpuTensor.fromContiguousBuffer gpuBuf #[2, 3]
 
   -- Transpose: (2,3) -> (3,2)
@@ -286,9 +286,9 @@ def testGpuGemmContiguous : IO Unit := do
   let aGpu ← Metal.GpuBuffer.fromByteArray aData
   let bGpu ← Metal.GpuBuffer.fromByteArray bData
 
-  let A : GpuTensor Float (Idx 2 × Idx 3) :=
+  let A : Float^[Idx 2 × Idx 3]@metal :=
     GpuTensor.fromContiguousBuffer aGpu #[2, 3]
-  let B : GpuTensor Float (Idx 3 × Idx 2) :=
+  let B : Float^[Idx 3 × Idx 2]@metal :=
     GpuTensor.fromContiguousBuffer bGpu #[3, 2]
 
   let C ← GpuTensor.gemm A B
@@ -327,11 +327,11 @@ def testGpuGemmTransposedB : IO Unit := do
   let aGpu ← Metal.GpuBuffer.fromByteArray aData
   let btGpu ← Metal.GpuBuffer.fromByteArray btData
 
-  let A : GpuTensor Float (Idx 2 × Idx 3) :=
+  let A : Float^[Idx 2 × Idx 3]@metal :=
     GpuTensor.fromContiguousBuffer aGpu #[2, 3]
 
   -- Create B_storage as (2x3), then transpose to get (3x2) view
-  let BStorage : GpuTensor Float (Idx 2 × Idx 3) :=
+  let BStorage : Float^[Idx 2 × Idx 3]@metal :=
     GpuTensor.fromContiguousBuffer btGpu #[2, 3]
   let B := BStorage.transpose  -- Now (3x2) but transposed in layout
 
@@ -376,11 +376,11 @@ def testGpuGemmTransposedA : IO Unit := do
   let bGpu ← Metal.GpuBuffer.fromByteArray bData
 
   -- Create A_storage as (3x2), then transpose to get (2x3) view
-  let AStorage : GpuTensor Float (Idx 3 × Idx 2) :=
+  let AStorage : Float^[Idx 3 × Idx 2]@metal :=
     GpuTensor.fromContiguousBuffer atGpu #[3, 2]
   let A := AStorage.transpose  -- Now (2x3) but transposed
 
-  let B : GpuTensor Float (Idx 3 × Idx 2) :=
+  let B : Float^[Idx 3 × Idx 2]@metal :=
     GpuTensor.fromContiguousBuffer bGpu #[3, 2]
 
   -- Verify A is transposed
@@ -426,11 +426,11 @@ def testGpuGemmBackward : IO Unit := do
   let bGpu ← Metal.GpuBuffer.fromByteArray bData
   let dcGpu ← Metal.GpuBuffer.fromByteArray dcData
 
-  let A : GpuTensor Float (Idx 2 × Idx 3) :=
+  let A : Float^[Idx 2 × Idx 3]@metal :=
     GpuTensor.fromContiguousBuffer aGpu #[2, 3]
-  let B : GpuTensor Float (Idx 3 × Idx 2) :=
+  let B : Float^[Idx 3 × Idx 2]@metal :=
     GpuTensor.fromContiguousBuffer bGpu #[3, 2]
-  let dC : GpuTensor Float (Idx 2 × Idx 2) :=
+  let dC : Float^[Idx 2 × Idx 2]@metal :=
     GpuTensor.fromContiguousBuffer dcGpu #[2, 2]
 
   let (dA, dB) ← GpuTensor.gemmBackward A B dC
@@ -492,7 +492,7 @@ def testBatchTranspose : IO Unit := do
   let data := floatsToByteArray (List.range 24 |>.map (fun i => Float.ofNat i))
   let gpuBuf ← Metal.GpuBuffer.fromByteArray data
 
-  let tensor : GpuTensor Float (Idx 2 × Idx 3 × Idx 4) :=
+  let tensor : Float^[Idx 2 × Idx 3 × Idx 4]@metal :=
     GpuTensor.fromContiguousBuffer gpuBuf #[2, 3, 4]
 
   -- Batch transpose: (2,3,4) -> (2,4,3)
