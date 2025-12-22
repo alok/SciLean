@@ -6,7 +6,7 @@ namespace SciLean
 /--
 Class providing matrix transposition
 
-This takes {given}`A : Y ⊗ X` and produces `Aᵀ : X ⊗ Y`
+This takes `A : Y ⊗ X` and produces `Aᵀ : X ⊗ Y`
  -/
 class TensorProductTranspose
   (R Y X YX XY : Type*) [RCLike R]

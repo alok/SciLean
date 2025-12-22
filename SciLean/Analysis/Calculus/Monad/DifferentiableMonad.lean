@@ -3,14 +3,14 @@ import SciLean.Analysis.Calculus.FwdFDeriv
 namespace SciLean
 
 
-/-- {lean}`DifferentiableMonad K m` states that the monad {given}`m` has the notion of differentiability.
-The rough idea is that if the monad {given}`m` stores some state {given}`S` then a function {given}`f : X → m Y`
-should be also differentiable w.r.t. to the state {given}`S`.
+/-- `DifferentiableMonad K m` states that the monad `m` has the notion of differentiability.
+The rough idea is that if the monad `m` stores some state `S` then a function `f : X → m Y`
+should be also differentiable w.r.t. to the state `S`.
 
-This class provides proposition {lean}`DifferentiableM K f` which is monadic generalization of
+This class provides proposition `DifferentiableM K f` which is monadic generalization of
 differentiability.
 
-For {lean}`StateM S` the {name}`DifferentiableM` is:
+For `StateM S` the `DifferentiableM` is:
 
     DifferentiableM K f
     =
@@ -19,7 +19,7 @@ For {lean}`StateM S` the {name}`DifferentiableM` is:
 class DifferentiableMonad (K : Type) [RCLike K] (m : Type → Type) [Monad m] where
   /-- Differentiability of monadic functions.
 
-  For state monad, {lean}`m = StateM S`, this predicate says that the function is also differentiable
+  For state monad, `m = StateM S`, this predicate says that the function is also differentiable
   w.r.t. to the state variable.
 
       DifferentiableM K f
@@ -66,8 +66,8 @@ variable
 
 open DifferentiableMonad
 
-/-- Monadic differentiable value. For example, in case of state monad the value {given}`x : StateM S X`
-is a function in {given}`S` and it makes sense to ask about differentiability. -/
+/-- Monadic differentiable value. For example, in case of state monad the value `x : StateM S X`
+is a function in `S` and it makes sense to ask about differentiability. -/
 def DifferentiableValM (x : m X) : Prop :=
   DifferentiableM K (fun _ : Unit => x)
 
