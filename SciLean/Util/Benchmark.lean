@@ -1,3 +1,4 @@
+import Lean
 import Wandb.Json
 import Wandb.Local
 
@@ -71,14 +72,40 @@ def platformName : String :=
   else
     "linux"
 
+def optField (key : String) (value? : Option String) : List (String × _root_.Wandb.Json.J) :=
+  match value? with
+  | some v => [(key, _root_.Wandb.Json.str v)]
+  | none => []
+
 def initRun : IO _root_.Wandb.Local.LocalRun := do
   let run ← _root_.Wandb.Local.init
   let program ← IO.appPath
-  let metadata := _root_.Wandb.Json.obj [
+  let leanVersion := Lean.versionString
+  let leanGithash := Lean.githash
+  let toolchain ← IO.getEnv "LEAN_TOOLCHAIN"
+  let sysroot ← IO.getEnv "LEAN_SYSROOT"
+  let leanPath ← IO.getEnv "LEAN_PATH"
+  let lake ← IO.getEnv "LAKE"
+  let lakeEnv ← IO.getEnv "LAKE_ENV"
+  let scileanCommit ← IO.getEnv "SCILEAN_GIT_COMMIT"
+  let scileanBranch ← IO.getEnv "SCILEAN_GIT_BRANCH"
+  let baseFields : List (String × _root_.Wandb.Json.J) := [
     ("program", _root_.Wandb.Json.str program.toString),
     ("os", _root_.Wandb.Json.str platformName),
-    ("scilean_benchmark", _root_.Wandb.Json.bool true)
+    ("scilean_benchmark", _root_.Wandb.Json.bool true),
+    ("lean_version", _root_.Wandb.Json.str leanVersion),
+    ("lean_githash", _root_.Wandb.Json.str leanGithash)
   ]
+  let metadataFields :=
+    baseFields
+    ++ optField "lean_toolchain" toolchain
+    ++ optField "lean_sysroot" sysroot
+    ++ optField "lean_path" leanPath
+    ++ optField "lake" lake
+    ++ optField "lake_env" lakeEnv
+    ++ optField "scilean_git_commit" scileanCommit
+    ++ optField "scilean_git_branch" scileanBranch
+  let metadata := _root_.Wandb.Json.obj metadataFields
   _root_.Wandb.Local.writeMetadata run.paths metadata
   _root_.Wandb.Local.writeConfig run.paths [("scilean_benchmark", _root_.Wandb.Json.bool true)]
   _root_.Wandb.Local.writeSummary run.paths (_root_.Wandb.Json.obj [])

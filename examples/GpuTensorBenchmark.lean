@@ -31,7 +31,7 @@ def toGpuMatrix (m k : Nat) (data : ByteArray) : IO (Float^[Idx m × Idx k]@meta
   return GpuTensor.fromContiguousBuffer (ι:=Idx m × Idx k) gpuBuf #[m, k]
 
 /-- Format float as string with limited digits -/
-def fmt (f : Float) : String := f.toString.take 7
+def fmt (f : Float) : String := (f.toString.take 7).toString
 
 /-- Benchmark: Multiple GEMM with ByteArray (copies every call) -/
 def benchGemmByteArray (m k n : Nat) (iters : Nat) : IO Float := do
