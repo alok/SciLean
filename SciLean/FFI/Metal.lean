@@ -103,15 +103,15 @@ opaque free (buf : GpuBuffer) : IO Unit
 @[extern "scilean_gpu_slice_f32"]
 opaque slice (src : @& GpuBuffer) (offsetFloats countFloats : USize) : IO GpuBuffer
 
-/-- Copy strided data to contiguous buffer.
+/-- Copy layout data to contiguous buffer.
     Copies elements from src using the given strides/offset layout to a new
     contiguous buffer in standard row-major order.
     - shape: dimensions of the tensor
     - strides: stride for each dimension (in elements)
     - offset: starting offset in src (in elements)
-    Used by StridedGpuBuffer.contiguous to materialize transposed views. -/
-@[extern "scilean_gpu_copy_strided_f32"]
-opaque copyStrided (src : @& GpuBuffer) (shape strides : @& Array USize) (offset : USize) : IO GpuBuffer
+    Used by GpuBufferView.contiguous to materialize transposed views. -/
+@[extern "scilean_gpu_copy_layout_f32"]
+opaque copyLayout (src : @& GpuBuffer) (shape strides : @& Array USize) (offset : USize) : IO GpuBuffer
 
 /-! ### GPU-to-GPU Operations (no CPU copies!) -/
 
