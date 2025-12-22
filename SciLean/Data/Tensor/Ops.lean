@@ -11,14 +11,14 @@ namespace SciLean
 /-!
 # Device-Polymorphic Tensor Operations
 
-{name}`TensorOps` is a typeclass providing device-polymorphic tensor operations.
+{lit}`TensorOps` is a typeclass providing device-polymorphic tensor operations.
 Different instances handle CPU (BLAS) and GPU (Metal) implementations transparently.
 
 The operations are defined for {name}`Float` tensors as this is the common case for ML.
 -/
 
-variable {ι : Type*} {n : ℕ} [IndexType ι n]
-variable {κ : Type*} {m : ℕ} [IndexType κ m]
+variable {ι : Type} {n : ℕ} [IndexType ι n]
+variable {κ : Type} {m : ℕ} [IndexType κ m]
 
 /-! ## CPU Operations -/
 
@@ -90,19 +90,13 @@ def softmax (a : GpuTensor Float (Idx m × Idx n)) : IO (GpuTensor Float (Idx m 
   return GpuTensor.fromContiguousBuffer (ι:=Idx m × Idx n) result #[m, n]
 
 /-- GELU activation on GPU using fused bias+gelu with zero bias.
-    For performance, prefer {name}`biasGelu` when adding bias anyway. -/
+    For performance, prefer {lit}`biasGelu` when adding bias anyway. -/
 def gelu (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
   -- Use biasGelu with zero bias - the kernel handles this efficiently
   let a ← ensureContiguous a
   let zeroBias ← Metal.CpuBuffer.zeros n |>.upload
   let result ← Metal.GpuBuffer.biasGelu a.data.buffer zeroBias n.toUSize n.toUSize
   return GpuTensor.fromContiguousBuffer (ι:=Idx n) result #[n]
-
-/-- Matrix multiply on GPU.
-    Shapes: A {lean}`Idx m × Idx k`, B {lean}`Idx k × Idx n`, returns {lean}`Idx m × Idx n`. -/
-def gemm (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx k × Idx n)) :
-    IO (GpuTensor Float (Idx m × Idx n)) := do
-  GpuTensor.gemm A B
 
 /-- GEMM with A transposed.
     A is stored as {lean}`Idx k × Idx m`, B as {lean}`Idx k × Idx n`,
@@ -122,12 +116,14 @@ def gemmNT (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx n ×
 
 /-! ### Element-wise Operations -/
 
-/-- Element-wise subtraction on GPU -/
-def sub (a b : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+/-- Element-wise subtraction on GPU (any shape). -/
+def sub {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
+    (a b : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
   let a ← ensureContiguous a
   let b ← ensureContiguous b
-  let result ← Metal.GpuBuffer.sub a.data.buffer b.data.buffer n.toUSize
-  return GpuTensor.fromContiguousBuffer (ι:=Idx n) result #[n]
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.sub a.data.buffer b.data.buffer total.toUSize
+  return GpuTensor.fromContiguousBuffer (ι:=ι) result (IndexTypeShape.shape (ι:=ι))
 
 /-- Scalar multiplication on GPU. -/
 def scale (alpha : Float) (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
@@ -139,12 +135,14 @@ def scale (alpha : Float) (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (I
 def neg (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) :=
   scale (-1.0) a
 
-/-- AXPY on GPU (scaled sum). -/
-def axpy (alpha : Float) (x y : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+/-- AXPY on GPU (scaled sum, any shape). -/
+def axpy {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
+    (alpha : Float) (x y : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
   let x ← ensureContiguous x
   let y ← ensureContiguous y
-  let result ← Metal.GpuBuffer.axpy n.toUSize alpha x.data.buffer y.data.buffer
-  return GpuTensor.fromContiguousBuffer (ι:=Idx n) result #[n]
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.axpy total.toUSize alpha x.data.buffer y.data.buffer
+  return GpuTensor.fromContiguousBuffer (ι:=ι) result (IndexTypeShape.shape (ι:=ι))
 
 /-! ### Reduction Operations -/
 
@@ -220,6 +218,15 @@ def biasGelu (x : GpuTensor Float (Idx m × Idx n)) (bias : GpuTensor Float (Idx
       totalElements.toUSize n.toUSize
   return GpuTensor.fromContiguousBuffer (ι:=Idx m × Idx n) result #[m, n]
 
+/-- GELU backward on GPU (element-wise, any shape). -/
+def geluBackward {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
+    (input gradOutput : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
+  let input ← ensureContiguous input
+  let gradOutput ← ensureContiguous gradOutput
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.geluBackward input.data.buffer gradOutput.data.buffer total.toUSize
+  return GpuTensor.fromContiguousBuffer (ι:=ι) result (IndexTypeShape.shape (ι:=ι))
+
 /-- Bias add (no activation) on GPU.
     Input {lean}`x` has shape {lean}`Idx m × Idx n`, bias has shape {lean}`Idx n`. -/
 def biasAdd (x : GpuTensor Float (Idx m × Idx n)) (bias : GpuTensor Float (Idx n)) :
@@ -288,19 +295,6 @@ def conv2d {batch inCh outCh inH inW kH kW strideH strideW padH padW : ℕ}
     result #[batch, outCh, (inH + 2*padH - kH) / strideH + 1, (inW + 2*padW - kW) / strideW + 1]
 
 /-! ### Attention Operations -/
-
-/-- Flash Attention on GPU.
-    Inputs have shape {lean}`Idx seqLen × Idx headDim`, returns {lean}`Idx seqLen × Idx headDim`. -/
-def flashAttention (Q K V : GpuTensor Float (Idx seqLen × Idx headDim)) :
-    IO (GpuTensor Float (Idx seqLen × Idx headDim)) := do
-  StridedGpuTensor.flashAttention Q K V
-
-/-- Flash Attention with causal mask on GPU.
-    Each position can only attend to earlier positions (autoregressive).
-    Inputs have shape {lean}`Idx seqLen × Idx headDim`, returns {lean}`Idx seqLen × Idx headDim`. -/
-def flashAttentionCausal (Q K V : GpuTensor Float (Idx seqLen × Idx headDim)) :
-    IO (GpuTensor Float (Idx seqLen × Idx headDim)) := do
-  StridedGpuTensor.flashAttentionCausal Q K V
 
 /-! ### Buffer Operations -/
 

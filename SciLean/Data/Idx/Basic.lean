@@ -6,34 +6,37 @@ import SciLean.Data.IndexType.Init
 namespace SciLean
 
 /--
-`Idx n` is a natural number `i` with the constraint that `0 ≤ i < n`.
+Given {given}`n`, {lean}`Idx n` is a natural number {given}`i` with the constraint {lean}`0 ≤ i`
+and {lean}`i < n`.
 
-Same as `Fin n` but uses `USize` to represent its value. In some applications, mainly when indexing
-arrays, the use of arbitrary sized `Nat` is too expensive and using `Idx n` can be significantly
-faster.
+Same as {lean}`Fin n` but uses {name}`USize` to represent its value. In some applications, mainly
+when indexing arrays, the use of arbitrary sized {name}`Nat` is too expensive and using
+{lean}`Idx n` can be significantly faster.
 
-Warning: This type is sometimes used in inconsistent way! It is treated identically as `Fin n`
-         thus for `n > USize.size` some theorems are no longer true.
-         For example `Idx m × Ind n ≃ Idx (m*n)` is not true for any `m n : Nat`, but we will
-         state such theorem anyway.
+Warning: This type is sometimes used in inconsistent way! It is treated identically as
+{lean}`Fin n`, thus for {lean}`n > USize.size` some theorems are no longer true. For example,
+given {given}`m` and {given}`n`, the statement {lean}`Idx m × Idx n ≃ Idx (m * n)` is not true in
+general, but we will state such theorem anyway.
 
-         In applications, this type is never use with `n > USize.size` but assuming `n < USize.size`
-         would be too cumbersome. At some point we will attempt to recover formal consistency by
-         adding `n < USize.size` assumption everywhere where necessary and in applications panicking
-         if not satisfied. Note that not satisfying `n < USize.size` will mean running out of memory
-         and at that point programs have very limited capability of recovering anyway.
+In applications, this type is never used with {lean}`n > USize.size` but assuming
+{lean}`n < USize.size` would be too cumbersome. At some point we will attempt to recover formal
+consistency by adding {lean}`n < USize.size` assumptions everywhere where necessary and in
+applications panicking if not satisfied. Note that not satisfying {lean}`n < USize.size` will mean
+running out of memory and at that point programs have very limited capability of recovering anyway.
 
-         Another way to deal with this problem is to make this type completely opaque, add an
-         axiom that it is isomorphic to `Fin n` and panic at runtime on overflow. This would
-         prevent us from stating inconsistent theorems that could be exploited to prove `False`.
+Another way to deal with this problem is to make this type completely opaque, add an axiom that it
+is isomorphic to {lean}`Fin n` and panic at runtime on overflow. This would prevent us from stating
+inconsistent theorems that could be exploited to prove {name}`False`.
 -/
 structure Idx (n : ℕ) where
-  /-- Creates a `Idx n` from `i : USize` and a proof that `i.toNat < n`. -/
+  /-- Creates an {lean}`Idx n` from {given}`i : USize` and a proof that {lean}`i.toNat < n`. -/
   mk ::
-  /-- If `i : Idx n`, then `i.val : USize` is the described number. It can also be
-  written as `i.1` or just `i` when the target type is known. -/
+  /--
+  Given {given}`i : Idx n`, {lean}`i.val` is the described number. It can also be written as
+  {lean}`i.1` or just {lean}`i` when the target type is known.
+  -/
   val  : USize
-  /-- If `i : Idx n`, then `i.2` is a proof that `i.1.toNat < n`. -/
+  /-- Given {given}`i : Idx n`, {lean}`i.2` is a proof that {lean}`i.1.toNat < n`. -/
   isLt : val.toNat < n
 
 
@@ -75,9 +78,10 @@ instance Idx.decLe {n} (a b : Idx n) : Decidable (LE.le a b) :=  -- Nat.decLe ..
 
 
 /--
-`Idx n` is equivalent to `Fin n`
+{lean}`Idx n` is equivalent to {lean}`Fin n`.
 
-This is blatanly false but we treat `Idx n` as `Fin n`, see documentation of `Idx n`.
+This is blatantly false but we treat {lean}`Idx n` as {lean}`Fin n`; see documentation of
+{lean}`Idx n`.
 -/
 def Idx.finEquiv (n : Nat) : Idx n ≃ Fin n where
   toFun x := ⟨x.1.toNat, sorry_proof⟩
@@ -98,7 +102,8 @@ def toFin (i : Idx n) : Fin n := ⟨i.1.toNat, sorry_proof⟩
 def _root_.Fin.toIdx (i : Fin n) : Idx n := ⟨i.1.toUSize, sorry_proof⟩
 
 /--
-From the empty type `Idx 0`, any desired result `α` can be derived. This is similar to `Empty.elim`.
+From the empty type {lean}`Idx 0`, any desired result {lean}`α` can be derived. This is similar to
+{name}`Empty.elim`.
 -/
 def elim0.{u} {α : Sort u} : Idx 0 → α
   | ⟨_, h⟩ => absurd h (by omega)
@@ -106,14 +111,8 @@ def elim0.{u} {α : Sort u} : Idx 0 → α
 /--
 Returns the successor of the argument.
 
-The bound in the result type is increased:
-```
-(2 : Idx 3).succ = (3 : Idx 4)
-```
-This differs from addition, which wraps around:
-```
-(2 : Idx 3) + 1 = (0 : Idx 3)
-```
+The bound in the result type is increased, e.g. {lit}`(2 : Idx 3).succ = (3 : Idx 4)`.
+This differs from addition, which wraps around, e.g. {lit}`(2 : Idx 3) + 1 = (0 : Idx 3)`.
 -/
 def succ : Idx n → Idx (n + 1)
   | ⟨i, h⟩ => ⟨i+1, by sorry_proof⟩
@@ -122,17 +121,17 @@ variable {n : Nat}
 
 
 /--
-Returns `a` modulo `n` as a `Idx n`.
+Returns {lean}`a` modulo {lean}`n` as a {lean}`Idx n`.
 
-The assumption `NeZero n` ensures that `Idx n` is nonempty.
+The assumption {lean}`NeZero n` ensures that {lean}`Idx n` is nonempty.
 -/
 protected def ofNat (n : Nat) [NeZero n] (a : Nat) : Idx n :=
   ⟨a.toUSize % n, by sorry_proof⟩
 
 /--
-Returns `a` modulo `n` as a `Idx n`.
+Returns {lean}`a` modulo {lean}`n` as a {lean}`Idx n`.
 
-The assumption `NeZero n` ensures that `Idx n` is nonempty.
+The assumption {lean}`NeZero n` ensures that {lean}`Idx n` is nonempty.
 -/
 protected def ofUSize (n : Nat) [NeZero n] (a : USize) : Idx n :=
   ⟨a % n, by sorry_proof⟩
@@ -144,20 +143,20 @@ private theorem mlt {b : Nat} : {a : Nat} → a < n → b % n < n
     Nat.mod_lt _ this
 
 /--
-Override default instance of `HMod USize Nat USize` because it is implementex as `Fin.modn x.val n`
-which does the operations with `Nat` rather than with `USize` which is bad.
- -/
+Override the default instance of {lean}`HMod USize Nat USize` because it is implemented via
+{name}`Fin.modn`, which does the operations with {name}`Nat` rather than with {name}`USize`.
+-/
 instance (priority:=high) instHModUSizeNatFast : HMod USize Nat USize := ⟨fun x y => x % y.toUSize⟩
 
-/-- Addition modulo `n` -/
+/-- Addition modulo {lean}`n`. -/
 @[inline] protected def add : Idx n → Idx n → Idx n
   | ⟨a, h⟩, ⟨b, _⟩ => ⟨(a + b) % n, by sorry_proof⟩
 
-/-- Multiplication modulo `n` -/
+/-- Multiplication modulo {lean}`n`. -/
 @[inline] protected def mul : Idx n → Idx n → Idx n
   | ⟨a, h⟩, ⟨b, _⟩ => ⟨(a * b) % n.toUSize, by sorry_proof⟩
 
-/-- Subtraction modulo `n` -/
+/-- Subtraction modulo {lean}`n`. -/
 @[inline] protected def sub : Idx n → Idx n → Idx n
   /-
   The deidxition of `Idx.sub` has been updated to improve performance.
@@ -254,44 +253,47 @@ theorem val_ne_of_ne {i j : Idx n} (h : i ≠ j) : val i ≠ val j :=
 -- theorem val_lt_of_le (i : Idx b) (h : b ≤ n) : i.val < n :=
 --   Nat.lt_of_lt_of_le i.isLt h
 
-/-- If you actually have an element of `Idx n`, then the `n` is always positive -/
+/-- If you actually have an element of {lean}`Idx n`, then {lean}`n` is always positive. -/
 protected theorem pos (i : Idx n) : 0 < n :=
   Nat.lt_of_le_of_lt (Nat.zero_le _) i.2
 
-/-- The greatest value of `Idx (n+1)`. -/
+/-- The greatest value of {lean}`Idx (n.toNat + 1)`. -/
 @[inline] def last (n : USize) : Idx (n.toNat + 1) := ⟨n, sorry_proof⟩
 
-/-- `castLT i h` embeds `i` into a `Idx` where `h` proves it belongs into.  -/
+/-- {name}`castLT` embeds an {lean}`Idx m` into an {lean}`Idx n` given a proof that it fits. -/
 @[inline] def castLT (i : Idx m) (h : i.1.toNat < n) : Idx n := ⟨i.1, h⟩
 
-/-- `castLE h i` embeds `i` into a larger `Idx` type.  -/
+/-- {name}`castLE` embeds an {lean}`Idx n` into a larger {lean}`Idx m` type. -/
 @[inline] def castLE (h : n ≤ m) (i : Idx n) : Idx m := ⟨i, Nat.lt_of_lt_of_le i.2 h⟩
 
-/-- `cast eq i` embeds `i` into an equal `Idx` type. -/
+/-- {name}`cast` embeds an {lean}`Idx n` into an equal {lean}`Idx m` type. -/
 @[inline] protected def cast (eq : n = m) (i : Idx n) : Idx m := ⟨i, eq ▸ i.2⟩
 
-/-- `castAdd m i` embeds `i : Idx n` in `Idx (n+m)`. See also `Idx.natAdd` and `Idx.addNat`. -/
+/--
+{name}`castAdd` embeds an {lean}`Idx n` in {lean}`Idx (n + m)`. See also {lit}`Idx.natAdd` and
+{lit}`Idx.addNat`.
+-/
 @[inline] def castAdd (m) : Idx n → Idx (n + m) :=
   castLE <| Nat.le_add_right n m
 
-/-- `castSucc i` embeds `i : Idx n` in `Idx (n+1)`. -/
+/-- {name}`castSucc` embeds an {lean}`Idx n` in {lean}`Idx (n + 1)`. -/
 @[inline] def castSucc : Idx n → Idx (n + 1) := castAdd 1
 
-/-- `addNat m i` adds `m` to `i`, generalizes `Idx.succ`. -/
+/-- {name}`addNat` adds a natural number to an {lean}`Idx n`, generalizing {name}`Idx.succ`. -/
 def addNat (i : Idx n) (m) : Idx (n + m) := ⟨i + m.toUSize, sorry_proof⟩
 
-/-- `natAdd n i` adds `n` to `i` "on the left". -/
+/-- {name}`natAdd` adds a natural number to an {lean}`Idx m` on the left. -/
 def natAdd (n) (i : Idx m) : Idx (n + m) := ⟨n.toUSize + i, sorry_proof⟩
 
-/-- Maps `0` to `n-1`, `1` to `n-2`, ..., `n-1` to `0`. -/
+/-- Maps {lean}`0` to {lean}`n - 1`, {lean}`1` to {lean}`n - 2`, ..., {lean}`n - 1` to {lean}`0`. -/
 @[inline] def rev (i : Idx n) : Idx n := ⟨n.toUSize - (i + 1), sorry_proof⟩
 
 set_option linter.unusedVariables false in
-/-- `subNat i h` subtracts `m` from `i`, generalizes `Idx.pred`. -/
+/-- {name}`subNat` subtracts a natural number, generalizing {lit}`Idx.pred`. -/
 @[inline] def subNat (m) (i : Idx (n + m)) (h : m ≤ i.1.toNat) : Idx n :=
   ⟨i - m.toUSize, sorry_proof⟩
 
-/-- Predecessor of a nonzero element of `Idx (n+1)`. -/
+/-- Predecessor of a nonzero element of {lean}`Idx (n + 1)`. -/
 @[inline] def pred {n : Nat} (i : Idx (n + 1)) (h : i ≠ 0) : Idx n :=
   subNat 1 i (by apply Nat.pos_of_ne_zero; apply mt (by sorry_proof) h)
 

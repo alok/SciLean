@@ -14,11 +14,11 @@ namespace SciLean
 Type-safe transfers between {name}`CpuTensor` and {name}`GpuTensor`. The device is tracked in the type,
 so transfers are explicit and visible in function signatures.
 
-Usage: call {name}`CpuTensor.toGpu` to upload, do GPU computation, then {name}`GpuTensor.toCpu` to download.
+Usage: call {lit}`CpuTensor.toGpu` to upload, do GPU computation, then {lit}`GpuTensor.toCpu` to download.
 -/
 
-variable {α : Type*} [PlainDataType α]
-variable {ι : Type*} {n : ℕ} [IndexType ι n]
+variable {α : Type} [PlainDataType α]
+variable {ι : Type} {n : ℕ} [IndexType ι n]
 
 /-! ## CPU → GPU Transfer -/
 
@@ -44,7 +44,7 @@ class ToGpu (T : Type) (G : outParam Type) where
   toGpu : T → IO G
 
 instance [IndexTypeShape ι n] : ToGpu (CpuTensor α ι) (GpuTensor α ι) where
-  toGpu := CpuTensor.toGpu
+  toGpu t := CpuTensor.toGpu (ι:=ι) t
 
 instance : ToGpu (GpuTensor α ι) (GpuTensor α ι) where
   toGpu t := pure t
@@ -70,7 +70,7 @@ def withGpu (input : CpuTensor α ι) [IndexTypeShape ι n]
   gpuOut.toCpu
 
 /-- Run a GPU computation on CPU data with a different output shape. -/
-def withGpu' {β : Type*} [PlainDataType β] {κ : Type*} {m : ℕ} [IndexType κ m]
+def withGpu' {β : Type} [PlainDataType β] {κ : Type} {m : ℕ} [IndexType κ m]
     (input : CpuTensor α ι) [IndexTypeShape ι n]
     (f : GpuTensor α ι → IO (GpuTensor β κ))
     : IO (CpuTensor β κ) := do

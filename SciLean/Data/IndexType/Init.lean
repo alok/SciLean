@@ -1,4 +1,5 @@
 import Mathlib.Data.Int.Interval
+import Verso.Code.External
 
 import SciLean.Meta.SimpAttr
 
@@ -94,13 +95,9 @@ class FirstLast {α : Sort u} (a : α) (β : outParam (Type v)) where
   /-- The first and the last element of a value or a type
 
   This function can be called on values
-  ```
-  firstLast? [1,2,3,4] = .some (1,4)
-  ```
+  {syntax term}``firstLast? [1, 2, 3, 4] = .some (1, 4)``
   and on types
-  ```
-  firstLast? (Fin n) = .some (⟨0,⋯⟩, ⟨n-1,⋯⟩)
-  ```
+  {syntax term}``firstLast? (Fin n) = .some (⟨0, ⋯⟩, ⟨n-1, ⋯⟩)``
   -/
   firstLast? : Option (β×β)
 
@@ -109,13 +106,9 @@ export FirstLast (firstLast?)
 /-- The first element of of a value or a type.
 
 This function can be called on values
-```
-first? [1,2,3,4] = .some 0
-```
+{syntax term}``first? [1, 2, 3, 4] = .some 0``
 and on types
-```
-first? (Fin n) = .some ⟨0,⋯⟩
-```
+{syntax term}``first? (Fin n) = .some ⟨0, ⋯⟩``
 -/
 def first? {α : Sort u} (a : α) [FirstLast a β] : Option β :=
   match FirstLast.firstLast? a with
@@ -126,13 +119,9 @@ def first? {α : Sort u} (a : α) [FirstLast a β] : Option β :=
 /-- The last element of of a value or a type.
 
 This function can be called on values
-```
-last? [1,2,3,4] = .some 4
-```
+{syntax term}``last? [1, 2, 3, 4] = .some 4``
 and on types
-```
-last? (Fin n) = .some ⟨n-1,⋯⟩
-```
+{syntax term}``last? (Fin n) = .some ⟨n-1, ⋯⟩``
 -/
 def last? {α : Sort u} (a : α) [FirstLast a β] : Option β :=
   match FirstLast.firstLast? a with

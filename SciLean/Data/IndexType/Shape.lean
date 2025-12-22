@@ -8,7 +8,7 @@ import SciLean.Util.SorryProof
 
 namespace SciLean
 
-/-- Shape metadata for index types, used to construct strided tensor layouts. -/
+/-- Shape metadata for index types, used to construct tensor layouts. -/
 class IndexTypeShape (ι : Type*) (n : outParam Nat) [IndexType ι n] where
   /-- Shape as an {name}`Array` of dimension sizes. -/
   shape : Array Nat
