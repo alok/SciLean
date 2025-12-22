@@ -552,7 +552,7 @@ This is morphism composition. The face `f` is a morphism `Q → P` and `g` is a 
       : (f.comp g h).toPrism = g.toPrism
       := sorry_proof
 
-    /--  -/
+    /-- The original prism of a face is preserved by composition. -/
     @[simp]
     theorem comp_ofPrism (f g : FaceRepr) (h)
       : (f.comp g h).ofPrism = f.ofPrism

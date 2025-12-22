@@ -369,7 +369,7 @@ axiom assume_almost_disjoint {X} [MeasurableSpace X]
 axiom assume_almost_disjoint_list {X} [MeasurableSpace X]
   (As : List (Set X)) (μ : Measure X) : AlmostDisjointList As μ
 
-/--  -/
+/-- Tactic that assumes `AlmostDisjoint` or `AlmostDisjointList` when requested. -/
 syntax (name:=assumeAlmostDiscjointStx) "assume_almost_disjoint" : tactic
 
 

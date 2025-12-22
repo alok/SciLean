@@ -23,7 +23,8 @@ structure LetNormalizeConfig where
   removeNumConst := true
 deriving Inhabited, BEq, Repr
 
-/-- Is `e` in the form `p₁ (...(pₙ x))` where `pᵢ` are projections and `x` free variable?
+/-- Is {syntax term}`e` in the form {syntax term}`p₁ (...(pₙ x))`
+where {syntax term}`pᵢ` are projections and {syntax term}`x` is a free variable?
 -/
 def isProjectionOfFVar (e : Expr) : MetaM Bool := do
   match e with

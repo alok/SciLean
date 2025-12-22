@@ -108,27 +108,28 @@ private partial def instantiate1AndPostImpl (e : Expr) (i : Nat) (val : Expr) (p
   | e => return .done e
 
 
-/-- Replaces free variable `fvar` with `val`. After replacement `post` is called
-successively on the expressions with replaced fvar as long as it keeps returning
-`ReplacePost.yield`
+/-- Replaces free variable {given}`fvar` with {given}`val`. After replacement {given}`post` is called
+successively on the expressions with replaced {given}`fvar` as long as it keeps returning
+{name}`ReplacePost.yield`.
 
-Example use: replace `x` with `(a,b,c)` in `fun y => x.1 + x.2.1 + y` and use
-`post` to reduce projections resulting in `fun y => a + b + y`
-
+Example use: replace {given}`x` with {syntax term}`(a,b,c)` in
+{syntax term}`fun y => x.1 + x.2.1 + y` and use {given}`post` to reduce projections,
+resulting in {syntax term}`fun y => a + b + y`.
 -/
 def replaceFVarAndPost (e : Expr) (fvar : FVarId) (val : Expr) (post : Expr → MetaM ReplacePost)
   : MetaM Expr := do pure (← replaceFVarAndPostImpl e fvar val post).val
 
 
-/-- Instantiates the 0-th loose bound variable with `val`. After replacement `post` is called
+/-- Instantiates the 0-th loose bound variable with {given}`val`. After replacement {given}`post` is called
 successively on the expressions with replaced fvar as long as it keeps returning
-`ReplacePost.yield`
+{name}`ReplacePost.yield`.
 
-Example use: replace `#0` with `(a,b,c)` in `fun y => #0.1 + #0.2.1 + y` and use
-`post` to reduce projections resulting in `fun y => a + b + y`
+Example use: replace {syntax term}`#0` with {syntax term}`(a,b,c)` in
+{syntax term}`fun y => #0.1 + #0.2.1 + y` and use {given}`post` to reduce projections,
+resulting in {syntax term}`fun y => a + b + y`.
 
-Unlike `replaceFVarAndPost` this function can call `post e'` with `e'` containing
-loose bounda variables
+Unlike {name}`replaceFVarAndPost` this function can call {syntax term}`post e'` with {syntax term}`e'`
+containing loose bound variables.
 -/
 def instantiate1AndPost (e : Expr) (val : Expr) (post : Expr → MetaM ReplacePost)
   : MetaM Expr := do pure (← instantiate1AndPostImpl e 0 val post).val
@@ -136,7 +137,7 @@ def instantiate1AndPost (e : Expr) (val : Expr) (post : Expr → MetaM ReplacePo
 
 
 /--
-Replaces all subexpressions in `e` that satisfy `f` with free variables.
+Replaces all subexpressions in {given}`e` that satisfy {given}`f` with free variables.
 
 This function replaces only subexpressions that have no bound variables. -/
 def replaceWithFVarsNoBVars (e : Expr) (f : Expr → MetaM Bool)

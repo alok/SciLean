@@ -11,7 +11,7 @@ namespace Attr
 syntax (name := gtrans) "gtrans" (ppSpace prio)? : attr
 
 
-/-- Initialization of `funProp` attribute -/
+/-- Initialization of the {name}`gtrans` attribute for funProp rules. -/
 initialize funPropAttr : Unit ←
   registerBuiltinAttribute {
     name  := `gtrans

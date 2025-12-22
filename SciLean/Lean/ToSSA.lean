@@ -58,11 +58,11 @@ where
         return (mkAppN fn args, lets)
 
 
-/-- Converts an expression to single static assignment form w.r.t. bound variables and free variables {given}`fvars`
+/-- Converts an expression to single static assignment form w.r.t. bound variables and free variables {given}`fvars`.
 
-Examples:
-- `x*x + x` ==> `let a := x*x; a + x`
-- `fun y => x*y + x*x` ==> `fun y => let a := x*y; let a_1 := x*x; a + a_1`
+Examples (with {given}`x`, {given}`y`):
+- {syntax term}`x*x + x` ==> {syntax term}`let a := x*x; a + x`
+- {syntax term}`fun y => x*y + x*x` ==> {syntax term}`fun y => let a := x*y; let a_1 := x*x; a + a_1`
 -/
 def toSSA (e : Expr) (fvars : Array Expr) : MetaM Expr := do
   (toSSACore e fvars).runInMeta fun (e',lets) => do
@@ -74,7 +74,7 @@ def toSSA (e : Expr) (fvars : Array Expr) : MetaM Expr := do
 
 open Parser.Tactic in
 -- todo: add option that ssa form should be done w.r.t. to particular variables
-/-- `to_ssa` converts expression to single static assignment form -/
+/-- {syntax conv}`to_ssa` converts expression to single static assignment form. -/
 syntax (name:=to_ssa_conv) "to_ssa" : conv
 
 open Lean Meta Elab Tactic

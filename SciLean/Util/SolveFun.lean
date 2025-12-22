@@ -26,9 +26,10 @@ structure HasSolution {F Xs} [UncurryAll F Xs Prop] (P : F) : Prop where
 structure HasUniqueSolution {F Xs} [UncurryAll F Xs Prop] (P : F) : Prop extends HasSolution P where
   uniq : ∀ xs xs', uncurryAll P xs → uncurryAll P xs' → xs = xs'
 
-/-- Finds unique {lit}`(x₁, ..., xₙ)` such that {lit}`P x₁ ... xₙ` holds.
+/-- Finds unique {syntax term}`(x₁, ..., xₙ)` such that {syntax term}`P x₁ ... xₙ` holds.
 
-TODO: Can we return a solution if it exists and it not necessarily unique? I'm not sure if we would be able to prove `decomposeSolution` then.
+TODO: Can we return a solution if it exists and it not necessarily unique? I'm not sure if we would be able to prove
+{name}`decomposeSolution` then.
 
 TODO: This is related to mathlib's `Classical.epsilon` i.e. the Hilbert epsilon function. Maybe redefine this function using it.
 -/

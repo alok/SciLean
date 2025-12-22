@@ -165,16 +165,16 @@ def DataSynthTheorem.getProof (thm : GeneralTheorem) : MetaM Expr := do
   mkConstWithFreshMVarLevels thm.thmName
 
 
-/-- -/
+/-- State storing data synthesis theorems. -/
 structure DataSynthTheorems where
-  /-- -/
+  /-- Discrimination tree of data synthesis theorems. -/
   theorems     : RefinedDiscrTree GeneralTheorem := {}
   deriving Inhabited
 
-/-- -/
+/-- Environment extension for data synthesis theorems. -/
 abbrev DataSynthTheoremsExt := SimpleScopedEnvExtension GeneralTheorem DataSynthTheorems
 
-/-- -/
+/-- Register the data synthesis theorem extension. -/
 initialize dataSynthTheoremsExt : DataSynthTheoremsExt ←
   registerSimpleScopedEnvExtension {
     name     := by exact decl_name%

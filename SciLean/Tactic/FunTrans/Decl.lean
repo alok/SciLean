@@ -42,16 +42,16 @@ structure FunTransDecl where
   funArgId : Nat
   deriving Inhabited, BEq
 
-/-- -/
+/-- State storing registered function transformations. -/
 structure FunTransDecls where
   /-- discriminatory tree for function transformations -/
   decls : DiscrTree FunTransDecl := {}
   deriving Inhabited
 
-/-- -/
+/-- Environment extension for function transformation declarations. -/
 abbrev FunTransDeclsExt := SimpleScopedEnvExtension FunTransDecl FunTransDecls
 
-/-- -/
+/-- Register the function transformation extension. -/
 initialize funTransDeclsExt : FunTransDeclsExt ←
   registerSimpleScopedEnvExtension {
     name := by exact decl_name%
@@ -60,7 +60,7 @@ initialize funTransDeclsExt : FunTransDeclsExt ←
       {d with decls := d.decls.insertCore e.path e}
   }
 
-/-- -/
+/-- Register a function transformation declaration. -/
 def addFunTransDecl (declName : Name) : MetaM Unit := do
 
   let info ← getConstInfo declName
@@ -92,7 +92,7 @@ def addFunTransDecl (declName : Name) : MetaM Unit := do
     "added new function property `{declName}`\nlook up pattern is `{path}`"
 
 
-/-- -/
+/-- Match an expression against registered function transformations. -/
 def getFunTrans? (e : Expr) : MetaM (Option (FunTransDecl × Expr)) := do
   unless e.isApp do return .none
 
@@ -116,7 +116,7 @@ fun_trans bug: expression {← ppExpr e} matches multiple function transformatio
 
   return (decl,f)
 
-/-- -/
+/-- Check whether an expression is a registered function transformation. -/
 def isFunTrans (e : Expr) : MetaM Bool := do return (← getFunTrans? e).isSome
 
 /-- Returns function property transformation from {lit}`e = T f`. -/

@@ -31,18 +31,18 @@ def GTransTheorem.getProof (thm : GTransTheorem) : MetaM Expr := do
 
 
 open Mathlib.Meta.FunProp in
-/-- -/
+/-- State storing generalized transformation theorems. -/
 structure GTransTheorems where
-  /-- -/
+  /-- Discrimination tree of generalized transformation theorems. -/
   theorems     : RefinedDiscrTree GTransTheorem := {}
   deriving Inhabited
 
-/-- -/
+/-- Environment extension for generalized transformation theorems. -/
 abbrev GTransTheoremsExt := SimpleScopedEnvExtension GTransTheorem GTransTheorems
 
 
 open Mathlib.Meta.FunProp in
-/-- -/
+/-- Register the generalized transformation theorem extension. -/
 initialize gtransTheoremsExt : GTransTheoremsExt ←
   registerSimpleScopedEnvExtension {
     name     := by exact decl_name%

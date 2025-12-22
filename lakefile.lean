@@ -34,7 +34,7 @@ def inclArgs :=
 package scilean {
   -- Global link args should be minimal; Metal frameworks are added per-executable.
   moreLinkArgs := linkArgs
-  leanOptions := #[⟨`doc.verso, true⟩]
+  leanOptions := #[⟨`doc.verso, true⟩, ⟨`experimental.module, true⟩]
 }
 
 

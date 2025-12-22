@@ -19,39 +19,37 @@ inductive ArgGuard where
   | notId
   /-- Argument can't be constant function -/
   | notConst
-  /-- Argument can't be application of {given}`name` -/
+  /-- Argument cannot be an application of the given name. -/
   | notAppOf (name : Name)
   deriving Inhabited, BEq, Repr
 
 
 /-- Same as {name}`SimpTheorem` but works with {name}`RefinedDiscrTree` rather than with normal {lit}`DiscrTree`.
 
-It has one additional feature and that is argument guard. For example, you can say that do not apply
-this theorem if theorem argument {given}`f` unifies to identity function.
+It has one additional feature: an argument guard. For example, you can say not to apply this theorem
+if an argument unifies to the identity function.
 -/
 structure RefinedSimpTheorem where
   keys        : List (RefinedDiscrTree.Key × RefinedDiscrTree.LazyEntry) := []
   /--
     It stores universe parameter names for universe polymorphic proofs.
     Recall that it is non-empty only when we elaborate an expression provided by the user.
-    When {given}`proof` is just a constant, we can use the universe parameter names stored in the declaration.
+    When the proof is just a constant, we can use the universe parameter names stored in the declaration.
    -/
   levelParams : Array Name := #[]
   proof       : Expr
   priority    : Nat  := eval_prio default
   post        : Bool := true
-  /-- {given}`perm` is true if lhs and rhs are identical modulo permutation of variables. -/
+  /-- perm is true if lhs and rhs are identical modulo permutation of variables. -/
   perm        : Bool := false
   /--
-    {given}`origin` is mainly relevant for producing trace messages.
-    It is also viewed as an {lit}`id` used to "erase" {lit}`simp` theorems from {name}`SimpTheorems`.
+    origin is mainly relevant for producing trace messages.
+    It is also viewed as an id used to "erase" simp theorems from {name}`SimpTheorems`.
   -/
   origin      : Origin
-  /-- {given}`rfl` is true if {given}`proof` is by {name}`Eq.refl` or {lit}`rfl`. -/
+  /-- rfl is true if the proof is by {name}`Eq.refl` or rfl. -/
   rfl         : Bool
-  /-- Array of {lit}`(theorem argument id, argument guard)` specifying additional constraints on when
-  to apply this theorem. For example, if the theorem has argument {lit}`(f : X → X)` with index {lit}`3` then
-  {lit}`guards := #[(3,.notId)]` will stop applying this theorem if {given}`f` unifies to identity function. -/
+  /-- Additional constraints on when to apply this theorem. -/
   guards      : Array (Nat × ArgGuard) := #[]
   deriving Inhabited
 
@@ -88,7 +86,7 @@ structure RefinedSimpTheorems where
   deriving Inhabited
 
 
-/-- -/
+/-- Register the refined simp theorems extension. -/
 initialize refinedSimpTheoremsExt : SimpleScopedEnvExtension RefinedSimpTheorem RefinedSimpTheorems ←
   registerSimpleScopedEnvExtension {
     name     := by exact decl_name%
@@ -130,8 +128,7 @@ def addTheorem (declName : Name) (attrKind : AttributeKind := .global)
   refinedSimpTheoremsExt.add thm attrKind
 
 
-/-- Check if {given}`thm` can be applied to {given}`e` and if the theorem argument {lit}`A : W → Set X` is not
-a constant function. -/
+/-- Check if a theorem can be applied to an expression and whether guarded arguments are admissible. -/
 def theoremGuard (e : Expr) (thm : RefinedSimpTheorem) : MetaM Bool := do
   if thm.guards.size = 0 then return true
 

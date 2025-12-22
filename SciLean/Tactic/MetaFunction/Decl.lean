@@ -61,17 +61,17 @@ These meta-functions can be evaluated only on meta programming level by syntacti
 their arguments.
 
 For example:
-```
+```lean
 variable {α : Type} [LinearOrder α] [Inhabited α]
 
 meta_fun_decl bounds (x : α) : α×α
 satisfying
   bounds.1 ≤ x ∧ x ≤ bounds.2
 ```
-defines a function `bounds (x : α) : α×α` which returns lower and upper bound of `x`.
+defines a function {lit}`bounds (x : α) : α×α` which returns lower and upper bound of {given}`x`.
 
 There can be many bounds and the idea behing this meta-function is that it will return the best
-effort bounds based on the syntactic structure of `x`.
+effort bounds based on the syntactic structure of {given}`x`.
 
 -/
 

@@ -40,28 +40,18 @@ private def splitAddOfTypeImpl (e E : Expr) (negate : Bool) : MetaM (Array Expr)
 
 
 
-/-- Take an expression of the form `a₁ + ... + aₙ` and return array `#[a₁, ..., aₙ]`. It ensures that all `aᵢ` have the type `E`, this is to prevent splitting unexpected heterogenous addition.
+/-- Take an expression of the form `a₁ + ... + aₙ` and return array `#[a₁, ..., aₙ]`. It ensures that all `aᵢ` have the type {given}`E`, this is to prevent splitting unexpected heterogenous addition.
 
-The term `e` can also contain negation, subtraction and arbitrary bracketing.
+The term {given}`e` can also contain negation, subtraction and arbitrary bracketing.
 
-For example, calling this function on
-
-```
-  a₁ - (a₂ - a₃) + a₄
-```
-
-will return
-
-```
-  #[a₁,-a₂,a₃,a₄]
-```
+For example, calling this function on `a₁ - (a₂ - a₃) + a₄` will return `#[a₁,-a₂,a₃,a₄]`.
 -/
 def splitAddOfType (e E : Expr): MetaM (Array Expr) := splitAddOfTypeImpl e E false
 
 
-/-- `move x y terms_to_lhs` moves all terms with `x` and `y` to the left hand side of an equality
+/-- `move x y terms_to_lhs` moves all terms with {given}`x` and {given}`y` to the left hand side of an equality.
 
-WARNING: this tactic uses sorry TODO: implement proof generation
+WARNING: this tactic uses sorry. TODO: implement proof generation.
 -/
 syntax (name := move_terms_to) "move" ident+ "terms_to_lhs" : conv
 

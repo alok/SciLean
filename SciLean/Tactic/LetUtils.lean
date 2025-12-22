@@ -71,25 +71,14 @@ def convLetUnfold1 : Tactic
 macro " let_unfold1 " id:ident n:(num)? : tactic => `(tactic| conv => let_unfold1 $id $[$n]?)
 
 
-/-- Moves let binding upwards, maximum by `n?` positions. Returns none if there is no such let binding.
+/-- Moves let binding upwards, maximum by {given}`n?` positions. Returns none if there is no such let binding.
 
-For example for the following expression
-```
-  let x := ..
-  let y := ..
-  let z := ..
-  f x y z
-```
-calling ``letMoveUp e (fun n => n == `z) (some 1)`` will produce
-```
-  let x := ..
-  let z := ..
-  let y := ..
-  f x y z
-```
-but only if the value of `y` does not depend on `z`.
+For example for the following expression `let x := ..; let y := ..; let z := ..; f x y z`,
+calling {name}`letMoveUp` `e (fun n => n == \`z) (some 1)` will produce
+`let x := ..; let z := ..; let y := ..; f x y z`
+but only if the value of {given}`y` does not depend on {given}`z`.
 
-Changing `(some 1)` to `(some 2)` or `none`, `let z := ...` will be move to the top.
+Changing `(some 1)` to `(some 2)` or {given}`none`, `let z := ...` will be moved to the top.
 -/
 def letMoveUp (e : Expr) (p : Name → Bool) (n? : Option Nat) : Option Expr := do
   run e |>.map λ (e, _) => e
