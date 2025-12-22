@@ -7,15 +7,15 @@ import Mathlib.Tactic.Basic
 import SciLean.Lean.Meta.Structure
 
 /-!
-# The {name}`lift_lets` tactic
+# The `lift_lets` tactic
 
-This module defines a tactic {name}`lift_lets` that can be used to pull {lean}`let` bindings as far out
+This module defines a tactic `lift_lets` that can be used to pull `let` bindings as far out
 of an expression as possible.
 -/
 
 open Lean Elab Parser Meta Tactic
 
-/-- Configuration for {name}`Lean.Expr.liftLets` and the {name}`lift_lets` tactic. -/
+/-- Configuration for `Lean.Expr.liftLets` and the `lift_lets` tactic. -/
 structure Lean.Expr.LiftLets2Config where
   /-- Whether to lift lets out of proofs. The default is not to. -/
   proofs : Bool := false
@@ -123,13 +123,13 @@ where
 
 variable [MonadControlT MetaM n] [Monad n]
 
-/-- Take all the {lean}`let`s in an expression and move them outwards as far as possible.
-All top-level {lean}`let`s are added to the local context, and then {given}`f` is called with the list
+/-- Take all the `let`s in an expression and move them outwards as far as possible.
+All top-level `let`s are added to the local context, and then {given}`f` is called with the list
 of local bindings (each an fvar) and the new expression.
 
 Let bindings are merged if they have the same type and value.
 
-Use {lean}`e.liftLets mkLetFVars` to get a defeq expression with all {lean}`let`s lifted as far as possible. -/
+Use `e.liftLets mkLetFVars` to get a defeq expression with all `let`s lifted as far as possible. -/
 def Lean.Expr.liftLets2 {α} (e : Expr) (f : Array Expr → Expr → n α)
     (config : LiftLets2Config := {}) : n α :=
   map2MetaM (fun k => e.liftLets2Aux config #[] k) f
