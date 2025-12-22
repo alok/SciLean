@@ -12,11 +12,11 @@ opaque ByteArray.ugetFloatAtByte (a : @& ByteArray) (i : USize) (hi : i.toNat + 
 
 /-- Ensure that {name}`ByteArray` has reference counter one.
 
-The reason for the `uniqueName` argument is that we have to fight the common subexpression
-optimization. If we write `let b := a.mkExclusive; let c := a.mkExclusive`, then `b` and `c`
+The reason for the {given}`uniqueName` argument is that we have to fight the common subexpression
+optimization. If we write {lit}`let b := a.mkExclusive; let c := a.mkExclusive`, then {lit}`b` and {lit}`c`
 point to the same object which is not what we want! Instead write
-`let b := a.mkExclusive `b; let c := a.mkExclusive `c` so common subexpression optimization
-can't collapse those two calls into one.
+{lit}`let b := a.mkExclusive (Name.mkSimple \"b\"); let c := a.mkExclusive (Name.mkSimple \"c\")`
+so common subexpression optimization can't collapse those two calls into one.
 
 TODO: Is there a more robust way to avoid common subexpression optimization?
 -/

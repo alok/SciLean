@@ -1,13 +1,15 @@
+import Verso.Code.External
+
 namespace SciLean
 
-/-- `holdLet` is just identity function with a special support from some tactics.
+/-- {lit}``holdLet`` is just identity function with a special support from some tactics.
 
-Tactics like `autodiff`, `lsimp`, `lfun_trans` inline let bindings of functions. For example,
-`let f := fun x => x*x; f 2` would get simplified to `2*2` even with option `zeta:=false`.
-This reduction is important for reverse mode AD.
+Tactics like {lit}``autodiff``, {lit}``lsimp``, {lit}``lfun_trans`` inline let bindings of functions.
+For example, {lit}``let f := fun x => x*x; f 2`` would get simplified to {lit}``2*2`` even with
+option {lit}``zeta:=false``. This reduction is important for reverse mode AD.
 
-Function `holdLet` is useful for preventing this reduction. Adding `holdLet`:
-`let f := holdLet <| fun x => x*x; f 2` will prevent `lsimp` from removing the let.
+Function {lit}``holdLet`` is useful for preventing this reduction. Adding {lit}``holdLet``:
+{lit}``let f := holdLet <| fun x => x*x; f 2`` will prevent {lit}``lsimp`` from removing the let.
 -/
 @[inline]
 def holdLet {α : Type u} (a : α) := a

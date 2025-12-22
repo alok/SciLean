@@ -1,4 +1,5 @@
 import SorryProof
+import Verso.Code.External
 
 /-! Re-exports sorry_proof and sorry_data from standalone SorryProof package. -/
 

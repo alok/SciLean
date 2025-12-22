@@ -9,11 +9,11 @@ This provides direct memory access without Nat conversion overhead.
 -- UInt16 FFI
 -- ============================================================================
 
-/-- Read a UInt16 from ByteArray at byte offset `i`. -/
+/-- Read a UInt16 from ByteArray at byte offset {given}`i`. -/
 @[extern "scilean_byte_array_uget_uint16"]
 opaque ByteArray.ugetUInt16 (a : @& ByteArray) (i : USize) : UInt16
 
-/-- Set a UInt16 in ByteArray at byte offset `i`. Unsafe: no bounds checking. -/
+/-- Set a UInt16 in ByteArray at byte offset {given}`i`. Unsafe: no bounds checking. -/
 @[extern "scilean_byte_array_uset_uint16"]
 unsafe opaque ByteArray.usetUInt16Unsafe (a : ByteArray) (i : USize) (v : UInt16) : ByteArray
 
@@ -25,11 +25,11 @@ opaque ByteArray.usetUInt16 (a : ByteArray) (i : USize) (v : UInt16) : ByteArray
 -- UInt32 FFI
 -- ============================================================================
 
-/-- Read a UInt32 from ByteArray at byte offset `i`. -/
+/-- Read a UInt32 from ByteArray at byte offset {given}`i`. -/
 @[extern "scilean_byte_array_uget_uint32"]
 opaque ByteArray.ugetUInt32 (a : @& ByteArray) (i : USize) : UInt32
 
-/-- Set a UInt32 in ByteArray at byte offset `i`. Unsafe: no bounds checking. -/
+/-- Set a UInt32 in ByteArray at byte offset {given}`i`. Unsafe: no bounds checking. -/
 @[extern "scilean_byte_array_uset_uint32"]
 unsafe opaque ByteArray.usetUInt32Unsafe (a : ByteArray) (i : USize) (v : UInt32) : ByteArray
 
@@ -41,11 +41,11 @@ opaque ByteArray.usetUInt32 (a : ByteArray) (i : USize) (v : UInt32) : ByteArray
 -- Int32 FFI
 -- ============================================================================
 
-/-- Read an Int32 from ByteArray at byte offset `i`. -/
+/-- Read an Int32 from ByteArray at byte offset {given}`i`. -/
 @[extern "scilean_byte_array_uget_int32"]
 opaque ByteArray.ugetInt32 (a : @& ByteArray) (i : USize) : Int32
 
-/-- Set an Int32 in ByteArray at byte offset `i`. Unsafe: no bounds checking. -/
+/-- Set an Int32 in ByteArray at byte offset {given}`i`. Unsafe: no bounds checking. -/
 @[extern "scilean_byte_array_uset_int32"]
 unsafe opaque ByteArray.usetInt32Unsafe (a : ByteArray) (i : USize) (v : Int32) : ByteArray
 
@@ -57,11 +57,11 @@ opaque ByteArray.usetInt32 (a : ByteArray) (i : USize) (v : Int32) : ByteArray :
 -- UInt64 FFI
 -- ============================================================================
 
-/-- Read a UInt64 from ByteArray at byte offset `i`. -/
+/-- Read a UInt64 from ByteArray at byte offset {given}`i`. -/
 @[extern "scilean_byte_array_uget_uint64"]
 opaque ByteArray.ugetUInt64 (a : @& ByteArray) (i : USize) : UInt64
 
-/-- Set a UInt64 in ByteArray at byte offset `i`. Unsafe: no bounds checking. -/
+/-- Set a UInt64 in ByteArray at byte offset {given}`i`. Unsafe: no bounds checking. -/
 @[extern "scilean_byte_array_uset_uint64"]
 unsafe opaque ByteArray.usetUInt64Unsafe (a : ByteArray) (i : USize) (v : UInt64) : ByteArray
 
@@ -73,11 +73,11 @@ opaque ByteArray.usetUInt64 (a : ByteArray) (i : USize) (v : UInt64) : ByteArray
 -- Int64 FFI
 -- ============================================================================
 
-/-- Read an Int64 from ByteArray at byte offset `i`. -/
+/-- Read an Int64 from ByteArray at byte offset {given}`i`. -/
 @[extern "scilean_byte_array_uget_int64"]
 opaque ByteArray.ugetInt64 (a : @& ByteArray) (i : USize) : Int64
 
-/-- Set an Int64 in ByteArray at byte offset `i`. Unsafe: no bounds checking. -/
+/-- Set an Int64 in ByteArray at byte offset {given}`i`. Unsafe: no bounds checking. -/
 @[extern "scilean_byte_array_uset_int64"]
 unsafe opaque ByteArray.usetInt64Unsafe (a : ByteArray) (i : USize) (v : Int64) : ByteArray
 

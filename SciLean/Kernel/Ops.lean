@@ -26,22 +26,22 @@ opaque copy (dst : ByteArray) (src : @& ByteArray) (n : USize) (dt : UInt8) : By
 -- Tier 1: Elementwise Binary Operations
 -- ============================================================================
 
-/-- Elementwise addition: dst = a + b -/
+/-- Elementwise addition: {lit}`dst = a + b`. -/
 @[extern "k_add"]
 opaque add (dst : ByteArray) (a : @& ByteArray) (b : @& ByteArray)
            (n : USize) (dt : UInt8) : ByteArray
 
-/-- Elementwise subtraction: dst = a - b -/
+/-- Elementwise subtraction: {lit}`dst = a - b`. -/
 @[extern "k_sub"]
 opaque sub (dst : ByteArray) (a : @& ByteArray) (b : @& ByteArray)
            (n : USize) (dt : UInt8) : ByteArray
 
-/-- Elementwise multiplication: dst = a * b -/
+/-- Elementwise multiplication: {lit}`dst = a * b`. -/
 @[extern "k_mul"]
 opaque mul (dst : ByteArray) (a : @& ByteArray) (b : @& ByteArray)
            (n : USize) (dt : UInt8) : ByteArray
 
-/-- Elementwise division: dst = a / b -/
+/-- Elementwise division: {lit}`dst = a / b`. -/
 @[extern "k_div"]
 opaque div (dst : ByteArray) (a : @& ByteArray) (b : @& ByteArray)
            (n : USize) (dt : UInt8) : ByteArray
@@ -50,27 +50,27 @@ opaque div (dst : ByteArray) (a : @& ByteArray) (b : @& ByteArray)
 -- Tier 2: Elementwise Unary Operations
 -- ============================================================================
 
-/-- Elementwise negation: dst = -x -/
+/-- Elementwise negation: {lit}`dst = -x`. -/
 @[extern "k_neg"]
 opaque neg (dst : ByteArray) (x : @& ByteArray) (n : USize) (dt : UInt8) : ByteArray
 
-/-- Elementwise absolute value: dst = |x| -/
+/-- Elementwise absolute value: {lit}`dst = |x|`. -/
 @[extern "k_abs"]
 opaque abs (dst : ByteArray) (x : @& ByteArray) (n : USize) (dt : UInt8) : ByteArray
 
-/-- Elementwise exponential: dst = exp(x) -/
+/-- Elementwise exponential: {lit}`dst = exp(x)`. -/
 @[extern "k_exp"]
 opaque exp (dst : ByteArray) (x : @& ByteArray) (n : USize) (dt : UInt8) : ByteArray
 
-/-- Elementwise logarithm: dst = log(x) -/
+/-- Elementwise logarithm: {lit}`dst = log(x)`. -/
 @[extern "k_log"]
 opaque log (dst : ByteArray) (x : @& ByteArray) (n : USize) (dt : UInt8) : ByteArray
 
-/-- Elementwise square root: dst = sqrt(x) -/
+/-- Elementwise square root: {lit}`dst = sqrt(x)`. -/
 @[extern "k_sqrt"]
 opaque sqrt (dst : ByteArray) (x : @& ByteArray) (n : USize) (dt : UInt8) : ByteArray
 
-/-- Elementwise hyperbolic tangent: dst = tanh(x) -/
+/-- Elementwise hyperbolic tangent: {lit}`dst = tanh(x)`. -/
 @[extern "k_tanh"]
 opaque tanh (dst : ByteArray) (x : @& ByteArray) (n : USize) (dt : UInt8) : ByteArray
 
@@ -94,13 +94,13 @@ opaque argmax (x : @& ByteArray) (n : USize) (dt : UInt8) : USize
 -- Tier 4: Contractions (THE hot path)
 -- ============================================================================
 
-/-- General matrix multiply: C[m,n] = alpha * A[m,k] @ B[k,n] + beta * C[m,n]
+/-- General matrix multiply: {lit}`C[m,n] = alpha * A[m,k] @ B[k,n] + beta * C[m,n]`.
     Row-major layout, contiguous arrays. -/
 @[extern "k_gemm"]
 opaque gemm (C : ByteArray) (A : @& ByteArray) (B : @& ByteArray)
             (m k n : USize) (alpha beta : Float) (dt : UInt8) : ByteArray
 
-/-- Matrix-vector multiply: y[m] = A[m,n] @ x[n] -/
+/-- Matrix-vector multiply: {lit}`y[m] = A[m,n] @ x[n]`. -/
 @[extern "k_gemv"]
 opaque gemv (y : ByteArray) (A : @& ByteArray) (x : @& ByteArray)
             (m n : USize) (dt : UInt8) : ByteArray
@@ -109,11 +109,11 @@ opaque gemv (y : ByteArray) (A : @& ByteArray) (x : @& ByteArray)
 -- Tier 5: Fused Operations
 -- ============================================================================
 
-/-- Numerically stable softmax: dst[i] = exp(x[i] - max(x)) / sum(exp(x - max(x))) -/
+/-- Numerically stable softmax: {lit}`dst[i] = exp(x[i] - max(x)) / sum(exp(x - max(x)))`. -/
 @[extern "k_softmax"]
 opaque softmax (dst : ByteArray) (x : @& ByteArray) (n : USize) (dt : UInt8) : ByteArray
 
-/-- Fused scaled addition: y = alpha*x + beta*y -/
+/-- Fused scaled addition: {lit}`y = alpha*x + beta*y`. -/
 @[extern "k_axpby"]
 opaque axpby (y : ByteArray) (alpha : Float) (x : @& ByteArray)
              (beta : Float) (n : USize) (dt : UInt8) : ByteArray
@@ -122,12 +122,12 @@ opaque axpby (y : ByteArray) (alpha : Float) (x : @& ByteArray)
 -- Tier 6: Index Permutation
 -- ============================================================================
 
-/-- Transpose 2D matrix: dst[j,i] = src[i,j] -/
+/-- Transpose 2D matrix: {lit}`dst[j,i] = src[i,j]`. -/
 @[extern "k_transpose"]
 opaque transpose (dst : ByteArray) (src : @& ByteArray)
                  (rows cols : USize) (dt : UInt8) : ByteArray
 
-/-- General axis permutation: perm[i] = which src axis becomes dst axis i -/
+/-- General axis permutation: {lit}`perm[i] = which src axis becomes dst axis i`. -/
 @[extern "k_permute"]
 opaque permute (dst : ByteArray) (src : @& ByteArray)
                (ndim : USize) (shape : @& ByteArray) (perm : @& ByteArray)
@@ -141,7 +141,7 @@ opaque permute (dst : ByteArray) (src : @& ByteArray)
 @[extern "k_rng_seed"]
 opaque rngSeed (seed : UInt64) : Unit
 
-/-- Fill buffer with uniform random in [0, 1). -/
+/-- Fill buffer with uniform random in {lit}`[0, 1)`. -/
 @[extern "k_rand_uniform"]
 opaque randUniform (dst : ByteArray) (n : USize) (dt : UInt8) : ByteArray
 
@@ -219,12 +219,12 @@ def argmax (dt : DType) (x : ByteArray) : Nat :=
   let n := x.size / dt.bytes
   (Kernel.argmax x n.toUSize dt.toUInt8).toNat
 
-/-- Matrix multiply: C = A @ B where A is [m,k] and B is [k,n]. -/
+/-- Matrix multiply: {lit}`C = A @ B where A is [m,k] and B is [k,n]`. -/
 def gemm (dt : DType) (A B : ByteArray) (m k n : Nat) : ByteArray :=
   let C := alloc dt (m * n)
   Kernel.gemm C A B m.toUSize k.toUSize n.toUSize 1.0 0.0 dt.toUInt8
 
-/-- Matrix-vector multiply: y = A @ x where A is [m,n]. -/
+/-- Matrix-vector multiply: {lit}`y = A @ x where A is [m,n]`. -/
 def gemv (dt : DType) (A x : ByteArray) (m n : Nat) : ByteArray :=
   let y := alloc dt m
   Kernel.gemv y A x m.toUSize n.toUSize dt.toUInt8
@@ -239,7 +239,7 @@ def transpose (dt : DType) (src : ByteArray) (rows cols : Nat) : ByteArray :=
   let dst := alloc dt (rows * cols)
   Kernel.transpose dst src rows.toUSize cols.toUSize dt.toUInt8
 
-/-- Fill with uniform random [0, 1). -/
+/-- Fill with uniform random {lit}`[0, 1)`. -/
 def randUniform (dt : DType) (n : Nat) : ByteArray :=
   Kernel.randUniform (alloc dt n) n.toUSize dt.toUInt8
 
@@ -247,7 +247,7 @@ def randUniform (dt : DType) (n : Nat) : ByteArray :=
 def randNormal (dt : DType) (n : Nat) : ByteArray :=
   Kernel.randNormal (alloc dt n) n.toUSize dt.toUInt8
 
-/-- Scaled vector addition: y = alpha*x + beta*y -/
+/-- Scaled vector addition: {lit}`y = alpha*x + beta*y`. -/
 def axpby (dt : DType) (alpha : Float) (x : ByteArray) (beta : Float) (y : ByteArray) : ByteArray :=
   let n := x.size / dt.bytes
   Kernel.axpby y alpha x beta n.toUSize dt.toUInt8

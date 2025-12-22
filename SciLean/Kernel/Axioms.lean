@@ -19,8 +19,8 @@ the same thing as the mathematical specification (modulo floating-point).
 ## Design
 
 The axioms follow this pattern:
-1. {lean}`interpret dt bytes` - Convert ByteArray to mathematical representation
-2. {lean}`toByteArray dt vals` - Convert mathematical representation to ByteArray
+1. {lit}`interpret dt bytes` - Convert ByteArray to mathematical representation
+2. {lit}`toByteArray dt vals` - Convert mathematical representation to ByteArray
 3. {lit}`kernel_op_correct` - Axiom that kernel op = spec composed with interpretation
 
 This allows proofs to work with the clean {lit}`Spec.*` definitions while
@@ -137,10 +137,10 @@ end CoreAxioms
 -- ============================================================================
 
 /-!
-## How to Use These Axioms
+# How to Use These Axioms
 
 1. **Proving kernel properties**: Use spec theorems + correctness axioms
-   ```lean
+   ```lean +error
    theorem kernel_gemm_assoc : ... := by
      rw [gemm_correct, gemm_correct, Spec.gemm_spec_assoc]
    ```

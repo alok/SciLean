@@ -38,9 +38,9 @@ section ForwardMode
 
 variable (dt : DType)
 
-/-! ### Linear Operations (trivial derivatives) -/
+/-! # Linear Operations (trivial derivatives) -/
 
-/-- Forward derivative of add: d(a + b) = da + db -/
+/-- Forward derivative of add: {lit}`d(a + b) = da + db`. -/
 theorem add_fwdDeriv (a b da db : ByteArray) (n : Nat) :
     Typed.add dt (Typed.add dt a b) (Typed.add dt da db) =
     Typed.add dt (Typed.add dt a da) (Typed.add dt b db) := by
@@ -68,77 +68,77 @@ section ReverseMode
 
 variable (dt : DType)
 
-/-! ### Elementwise Operation Adjoints -/
+/-! # Elementwise Operation Adjoints -/
 
-/-- Adjoint of add: ∇_{a,b} ⟨a+b, dy⟩ = (dy, dy) -/
+/-- Adjoint of add: {lit}`∇_{a,b} ⟨a+b, dy⟩ = (dy, dy)`. -/
 theorem add_adjoint (dy : ByteArray) :
     -- The adjoint of addition broadcasts dy to both inputs
     True := trivial
 
-/-- Adjoint of mul: ∇_{a,b} ⟨a*b, dy⟩ = (b*dy, a*dy) -/
+/-- Adjoint of mul: {lit}`∇_{a,b} ⟨a*b, dy⟩ = (b*dy, a*dy)`. -/
 theorem mul_adjoint (a b dy : ByteArray) (n : Nat) :
     -- ∂L/∂a = b * dy, ∂L/∂b = a * dy
     let da := Typed.mul dt b dy
     let db := Typed.mul dt a dy
     True := trivial
 
-/-- Adjoint of exp: ∇_x ⟨exp(x), dy⟩ = exp(x) * dy -/
+/-- Adjoint of exp: {lit}`∇_x ⟨exp(x), dy⟩ = exp(x) * dy`. -/
 theorem exp_adjoint (x dy : ByteArray) (n : Nat) :
     let y := Typed.exp dt x
     let dx := Typed.mul dt y dy  -- exp'(x) = exp(x)
     True := trivial
 
-/-- Adjoint of tanh: ∇_x ⟨tanh(x), dy⟩ = (1 - tanh²(x)) * dy -/
+/-- Adjoint of tanh: {lit}`∇_x ⟨tanh(x), dy⟩ = (1 - tanh²(x)) * dy`. -/
 theorem tanh_adjoint (x dy : ByteArray) (n : Nat) :
     let y := Typed.tanh dt x
     let y_sq := Typed.mul dt y y
     -- dx = (1 - y²) * dy, but we don't have scalar sub yet
     True := trivial
 
-/-- Adjoint of sqrt: ∇_x ⟨sqrt(x), dy⟩ = dy / (2 * sqrt(x)) -/
+/-- Adjoint of sqrt: {lit}`∇_x ⟨sqrt(x), dy⟩ = dy / (2 * sqrt(x))`. -/
 theorem sqrt_adjoint (x dy : ByteArray) (n : Nat) :
     let y := Typed.sqrt dt x
     -- dx = dy / (2 * y)
     True := trivial
 
-/-- Adjoint of log: ∇_x ⟨log(x), dy⟩ = dy / x -/
+/-- Adjoint of log: {lit}`∇_x ⟨log(x), dy⟩ = dy / x`. -/
 theorem log_adjoint (x dy : ByteArray) (n : Nat) :
     let dx := Typed.div dt dy x
     True := trivial
 
-/-! ### Contraction Adjoints (the important ones) -/
+/-! # Contraction Adjoints (the important ones) -/
 
-/-- Adjoint of gemv: ∇_x ⟨A @ x, dy⟩ = Aᵀ @ dy -/
+/-- Adjoint of gemv: {lit}`∇_x ⟨A @ x, dy⟩ = Aᵀ @ dy`. -/
 theorem gemv_adjoint_x (A x dy : ByteArray) (m n : Nat) :
     -- dx = Aᵀ @ dy
     let At := Typed.transpose dt A m n  -- A is m×n, Aᵀ is n×m
     let dx := Typed.gemv dt At dy n m   -- Aᵀ[n,m] @ dy[m] = dx[n]
     True := trivial
 
-/-- Adjoint of gemv w.r.t. A: ∇_A ⟨A @ x, dy⟩ = dy ⊗ x (outer product) -/
+/-- Adjoint of gemv w.r.t. A: {lit}`∇_A ⟨A @ x, dy⟩ = dy ⊗ x` (outer product). -/
 theorem gemv_adjoint_A (A x dy : ByteArray) (m n : Nat) :
     -- dA = dy ⊗ x = dy * xᵀ (outer product, m×n matrix)
     -- In kernel terms: dA[i,j] = dy[i] * x[j]
     True := trivial
 
-/-- Adjoint of gemm w.r.t. first arg: ∇_A ⟨A @ B, dC⟩ = dC @ Bᵀ -/
+/-- Adjoint of gemm w.r.t. first arg: {lit}`∇_A ⟨A @ B, dC⟩ = dC @ Bᵀ`. -/
 theorem gemm_adjoint_A (A B dC : ByteArray) (m k n : Nat) :
     -- dA[m,k] = dC[m,n] @ B[k,n]ᵀ = dC @ Bᵀ
     let Bt := Typed.transpose dt B k n  -- B is k×n, Bᵀ is n×k
     let dA := Typed.gemm dt dC Bt m n k  -- dC[m,n] @ Bᵀ[n,k] = dA[m,k]
     True := trivial
 
-/-- Adjoint of gemm w.r.t. second arg: ∇_B ⟨A @ B, dC⟩ = Aᵀ @ dC -/
+/-- Adjoint of gemm w.r.t. second arg: {lit}`∇_B ⟨A @ B, dC⟩ = Aᵀ @ dC`. -/
 theorem gemm_adjoint_B (A B dC : ByteArray) (m k n : Nat) :
     -- dB[k,n] = A[m,k]ᵀ @ dC[m,n] = Aᵀ @ dC
     let At := Typed.transpose dt A m k  -- A is m×k, Aᵀ is k×m
     let dB := Typed.gemm dt At dC k m n  -- Aᵀ[k,m] @ dC[m,n] = dB[k,n]
     True := trivial
 
-/-! ### Softmax Adjoint -/
+/-! # Softmax Adjoint -/
 
 /-- Adjoint of softmax (the famous Jacobian-vector product).
-    ∇_x ⟨softmax(x), dy⟩ = softmax(x) * (dy - ⟨softmax(x), dy⟩)
+    {lit}`∇_x ⟨softmax(x), dy⟩ = softmax(x) * (dy - ⟨softmax(x), dy⟩)`.
     This is the "softmax backward" formula. -/
 theorem softmax_adjoint (x dy : ByteArray) (n : Nat) :
     let y := Typed.softmax dt x  -- y = softmax(x)
@@ -154,17 +154,17 @@ end ReverseMode
 -- ============================================================================
 
 /-!
-## Integration with SciLean AD System
+# Integration with SciLean AD System
 
 The rules above describe the mathematical relationships. To integrate with
-SciLean's `fun_trans` and `data_synth` automation, we need to:
+SciLean's {attr}`fun_trans` and {attr}`data_synth` automation, we need to:
 
-1. Define the kernel ops as functions on a typed wrapper (not raw ByteArray)
-2. Register `HasFwdFDeriv` and `HasRevFDeriv` instances
-3. Use `@[data_synth]` attributes for automatic rule application
+1. Define the kernel ops as functions on a typed wrapper (not raw {name}`ByteArray`)
+2. Register {name}`HasFwdFDeriv` and {name}`HasRevFDeriv` instances
+3. Use {lit}`@[data_synth]` attributes for automatic rule application
 
-This requires integration with the DataArrayN type system, which is done
-in the Kernel/Integration.lean module.
+This requires integration with the {name}`DataArrayN` type system, which is done
+in the {lit}`Kernel/Integration.lean` module.
 -/
 
 -- ============================================================================
@@ -175,16 +175,16 @@ namespace Composed
 
 variable (dt : DType)
 
-/-- Dot product: ⟨x, y⟩ = sum(x * y) -/
+/-- Dot product: {lit}`⟨x, y⟩ = sum(x * y)`. -/
 def dot (x y : ByteArray) : Float :=
   Typed.sum dt (Typed.mul dt x y)
 
-/-- Squared L2 norm: ‖x‖² = ⟨x, x⟩ -/
+/-- Squared L2 norm: {lit}`‖x‖² = ⟨x, x⟩`. -/
 def normSq (x : ByteArray) : Float :=
   dot dt x x
 
-/-- Outer product: x ⊗ y where x[m], y[n] → result[m,n]
-    result[i,j] = x[i] * y[j]
+/-- Outer product: {lit}`x ⊗ y` where {lit}`x[m]`, {lit}`y[n]` → {lit}`result[m,n]`.
+    {lit}`result[i,j] = x[i] * y[j]`.
     Implemented via broadcast + mul (TODO: optimize) -/
 def outer (x y : ByteArray) (m n : Nat) : ByteArray :=
   -- Naive implementation: replicate and multiply
@@ -200,7 +200,7 @@ def outer (x y : ByteArray) (m n : Nat) : ByteArray :=
   Typed.alloc dt (m * n)  -- placeholder
 
 /-- Matrix-vector multiply with bias and activation.
-    y = activation(A @ x + b)
+    {lit}`y = activation(A @ x + b)`.
     Common pattern in neural networks. -/
 def linearLayer (A x b : ByteArray) (m n : Nat)
     (activation : ByteArray → ByteArray := id) : ByteArray :=
@@ -208,7 +208,7 @@ def linearLayer (A x b : ByteArray) (m n : Nat)
   let y_biased := Typed.add dt y b
   activation y_biased
 
-/-- ReLU activation: max(0, x) -/
+/-- ReLU activation: {lit}`max(0, x)`. -/
 def relu (x : ByteArray) : ByteArray :=
   -- ReLU can be implemented as: x * (x > 0)
   -- For now, use the sign of x to create mask
@@ -217,7 +217,7 @@ def relu (x : ByteArray) : ByteArray :=
   -- max(x, 0) - need element-wise max in kernel
   x  -- placeholder
 
-/-- Sigmoid activation: 1 / (1 + exp(-x)) -/
+/-- Sigmoid activation: {lit}`1 / (1 + exp(-x))`. -/
 def sigmoid (x : ByteArray) : ByteArray :=
   let neg_x := Typed.neg dt x
   let exp_neg_x := Typed.exp dt neg_x
@@ -235,15 +235,15 @@ namespace Backward
 variable (dt : DType)
 
 /-- Compute gradient of loss w.r.t. linear layer input.
-    Given: y = A @ x, and dy (gradient w.r.t. y)
-    Returns: dx = Aᵀ @ dy -/
+    Given: {lit}`y = A @ x`, and {lit}`dy` (gradient w.r.t. {lit}`y`).
+    Returns: {lit}`dx = Aᵀ @ dy`. -/
 def linearBackwardX (A dy : ByteArray) (m n : Nat) : ByteArray :=
   let At := Typed.transpose dt A m n
   Typed.gemv dt At dy n m
 
 /-- Compute gradient of loss w.r.t. linear layer weights.
-    Given: y = A @ x, and dy (gradient w.r.t. y)
-    Returns: dA = dy ⊗ x (outer product) -/
+    Given: {lit}`y = A @ x`, and {lit}`dy` (gradient w.r.t. {lit}`y`).
+    Returns: {lit}`dA = dy ⊗ x` (outer product). -/
 def linearBackwardA (x dy : ByteArray) (m n : Nat) : ByteArray :=
   -- dA[i,j] = dy[i] * x[j]
   -- This is outer product: reshape dy to [m,1], x to [1,n], then broadcast mul
@@ -251,8 +251,8 @@ def linearBackwardA (x dy : ByteArray) (m n : Nat) : ByteArray :=
   -- dy[m] as [m,1] @ x[n] as [1,n] = [m,n]
   Typed.gemm dt dy x m 1 n
 
-/-- Combined backward pass for y = A @ x.
-    Returns (dA, dx) given dy. -/
+/-- Combined backward pass for {lit}`y = A @ x`.
+    Returns {lit}`(dA, dx)` given {lit}`dy`. -/
 def gemvBackward (A x dy : ByteArray) (m n : Nat) : ByteArray × ByteArray :=
   let dx := linearBackwardX dt A dy m n
   let dA := linearBackwardA dt x dy m n

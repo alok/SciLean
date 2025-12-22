@@ -21,16 +21,18 @@ open SciLean
 # Kernel ↔ DataArrayN Integration
 
 This module bridges the byte-level kernel operations with SciLean's typed
-`DataArrayN` interface. It provides:
+{name}`DataArrayN` interface. It provides:
 
-1. **DType ↔ PlainDataType mapping** - Connect runtime dtype to compile-time types
-2. **Typed kernel operations** - GEMM, GEMV, etc. on `Float^[m,n]`
-3. **AD rule registration** - `@[data_synth]` instances for `HasRevFDeriv`
+1. **DType ↔ PlainDataType mapping** - Connect runtime {name}`DType` to compile-time
+   {name}`PlainDataType`
+2. **Typed kernel operations** - GEMM, GEMV, etc. on {lit}`Float^[m,n]`
+3. **AD rule registration** - {lit}`@[data_synth]` instances for {name}`HasRevFDeriv`
 
 ## Design
 
-The kernel operates on `ByteArray` with `DType` tags. DataArrayN uses
-`PlainDataType` for byte representation. This module connects them:
+The kernel operates on {name}`ByteArray` with {name}`DType` tags.
+{name}`DataArrayN` uses {name}`PlainDataType` for byte representation.
+This module connects them:
 
 ```
 Float^[m,n] ───extract───→ ByteArray ───kernel op───→ ByteArray ───wrap───→ Float^[p,q]
@@ -61,8 +63,8 @@ def getDType (α : Type*) [PlainDataType α] [HasDType α] : DType :=
 -- Kernel Operations on DataArrayN
 -- ============================================================================
 
-/-! Typed kernel operations on DataArrayN.
-    Use `ArrayOps.add`, `ArrayOps.gemm`, etc. -/
+/-! Typed kernel operations on {name}`DataArrayN`.
+    Use {lit}`ArrayOps.add`, {lit}`ArrayOps.gemm`, etc. -/
 namespace ArrayOps
 
 variable {α : Type*} [PlainDataType α] [HasDType α]
@@ -141,27 +143,27 @@ def softmax {n : ℕ} (a : α^[Idx n]) : α^[Idx n] :=
   let dt := getDType α
   wrapResult (Typed.softmax dt (getBytes a))
 
-/-- Matrix-vector multiply: y = A @ x
-    A : α^[Idx m, Idx k], x : α^[Idx k] → y : α^[Idx m] -/
+/-- Matrix-vector multiply: {lit}`y = A @ x`.
+    {lit}`A : α^[Idx m, Idx k]`, {lit}`x : α^[Idx k]` → {lit}`y : α^[Idx m]`. -/
 @[inline]
 def gemv {m k : ℕ} (A : α^[Idx m, Idx k]) (x : α^[Idx k]) : α^[Idx m] :=
   let dt := getDType α
   wrapResult (Typed.gemv dt (getBytes A) (getBytes x) m k)
 
-/-- Matrix multiply: C = A @ B
-    A : α^[Idx m, Idx k], B : α^[Idx k, Idx n] → C : α^[Idx m, Idx n] -/
+/-- Matrix multiply: {lit}`C = A @ B`.
+    {lit}`A : α^[Idx m, Idx k]`, {lit}`B : α^[Idx k, Idx n]` → {lit}`C : α^[Idx m, Idx n]`. -/
 @[inline]
 def gemm {m k n : ℕ} (A : α^[Idx m, Idx k]) (B : α^[Idx k, Idx n]) : α^[Idx m, Idx n] :=
   let dt := getDType α
   wrapResult (Typed.gemm dt (getBytes A) (getBytes B) m k n)
 
-/-- Matrix transpose: Bᵀ[j,i] = B[i,j] -/
+/-- Matrix transpose: {lit}`Bᵀ[j,i] = B[i,j]`. -/
 @[inline]
 def transpose {m n : ℕ} (A : α^[Idx m, Idx n]) : α^[Idx n, Idx m] :=
   let dt := getDType α
   wrapResult (Typed.transpose dt (getBytes A) m n)
 
-/-- Scaled vector addition: y = α*x + β*y -/
+/-- Scaled vector addition: {lit}`y = α*x + β*y`. -/
 @[inline]
 def axpby {n : ℕ} (alpha : Float) (x : α^[Idx n]) (beta : Float) (y : α^[Idx n]) : α^[Idx n] :=
   let dt := getDType α
@@ -170,7 +172,7 @@ def axpby {n : ℕ} (alpha : Float) (x : α^[Idx n]) (beta : Float) (y : α^[Idx
 /-- Seed the RNG. -/
 def seedRng (s : UInt64) : Unit := rngSeed s
 
-/-- Create array filled with uniform random values in [0, 1). -/
+/-- Create array filled with uniform random values in {lit}`[0, 1)`. -/
 @[inline]
 def randUniform {ι : Type*} {n : ℕ} [Size' ι n] : α^[ι] :=
   let dt := getDType α
@@ -189,63 +191,63 @@ end ArrayOps
 -- ============================================================================
 
 /-!
-## AD Integration Notes
+# AD Integration Notes
 
-The full AD rules require integration with SciLean's `HasRevFDeriv` which uses
-`RCLike K` (typically ℝ). The typed kernel operations work on `Float^[n]` which
-doesn't directly satisfy `RCLike`.
+The full AD rules require integration with SciLean's {name}`HasRevFDeriv`,
+which uses {name}`RCLike` (typically ℝ). The typed kernel operations work on
+{lit}`Float^[n]`, which doesn't directly satisfy {name}`RCLike`.
 
-For now, AD rules are specified in `Kernel/AD.lean` at the byte level.
-Full integration with `data_synth` requires:
+For now, AD rules are specified in {lit}`Kernel/AD.lean` at the byte level.
+Full integration with {lit}`@[data_synth]` requires:
 
-1. Proving `Float^[n]` forms an `AdjointSpace` over ℝ
+1. Proving {lit}`Float^[n]` forms an {name}`AdjointSpace` over ℝ
 2. Connecting kernel ops to the mathematical specs
-3. Deriving `HasRevFDeriv` from the byte-level adjoints
+3. Deriving {name}`HasRevFDeriv` from the byte-level adjoints
 
-This is left for future work. The key insight is that the AD rules in AD.lean
-describe the correct mathematical relationships; they just need to be lifted
-to the typed interface.
+This is left for future work. The key insight is that the AD rules in
+{lit}`AD.lean` describe the correct mathematical relationships; they just need
+to be lifted to the typed interface.
 -/
 
 section ADHelpers
 
 variable {α : Type*} [PlainDataType α] [HasDType α]
 
-/-- Backward pass for y = A @ x (matrix-vector multiply).
-    Given dy, returns dx = Aᵀ @ dy -/
+/-- Backward pass for {lit}`y = A @ x` (matrix-vector multiply).
+    Given {lit}`dy`, returns {lit}`dx = Aᵀ @ dy`. -/
 @[inline]
 def gemv_backward_x {m k : ℕ} (A : α^[Idx m, Idx k]) (dy : α^[Idx m]) : α^[Idx k] :=
   let At := ArrayOps.transpose A
   ArrayOps.gemv At dy
 
-/-- Backward pass for C = A @ B (matrix multiply) w.r.t. A.
-    Given dC, returns dA = dC @ Bᵀ -/
+/-- Backward pass for {lit}`C = A @ B` (matrix multiply) w.r.t. {lit}`A`.
+    Given {lit}`dC`, returns {lit}`dA = dC @ Bᵀ`. -/
 @[inline]
 def gemm_backward_A {m k n : ℕ} (B : α^[Idx k, Idx n]) (dC : α^[Idx m, Idx n]) : α^[Idx m, Idx k] :=
   let Bt := ArrayOps.transpose B
   ArrayOps.gemm dC Bt
 
-/-- Backward pass for C = A @ B (matrix multiply) w.r.t. B.
-    Given dC, returns dB = Aᵀ @ dC -/
+/-- Backward pass for {lit}`C = A @ B` (matrix multiply) w.r.t. {lit}`B`.
+    Given {lit}`dC`, returns {lit}`dB = Aᵀ @ dC`. -/
 @[inline]
 def gemm_backward_B {m k n : ℕ} (A : α^[Idx m, Idx k]) (dC : α^[Idx m, Idx n]) : α^[Idx k, Idx n] :=
   let At := ArrayOps.transpose A
   ArrayOps.gemm At dC
 
-/-- Backward pass for elementwise exp.
-    Given y = exp(x) and dy, returns dx = y * dy -/
+/-- Backward pass for elementwise {lit}`exp`.
+    Given {lit}`y = exp(x)` and {lit}`dy`, returns {lit}`dx = y * dy`. -/
 @[inline]
 def exp_backward {ι : Type*} {n : ℕ} [IndexType ι n] (y dy : α^[ι]) : α^[ι] :=
   ArrayOps.mul y dy
 
-/-- Backward pass for elementwise log.
-    Given x and dy, returns dx = dy / x -/
+/-- Backward pass for elementwise {lit}`log`.
+    Given {lit}`x` and {lit}`dy`, returns {lit}`dx = dy / x`. -/
 @[inline]
 def log_backward {ι : Type*} {n : ℕ} [IndexType ι n] (x dy : α^[ι]) : α^[ι] :=
   ArrayOps.div dy x
 
-/-- Backward pass for elementwise tanh.
-    Given y = tanh(x) and dy, returns dx = (1 - y²) * dy -/
+/-- Backward pass for elementwise {lit}`tanh`.
+    Given {lit}`y = tanh(x)` and {lit}`dy`, returns {lit}`dx = (1 - y²) * dy`. -/
 @[inline]
 def tanh_backward {ι : Type*} {n : ℕ} [IndexType ι n] (y dy : α^[ι]) : α^[ι] :=
   let y_sq := ArrayOps.mul y y
