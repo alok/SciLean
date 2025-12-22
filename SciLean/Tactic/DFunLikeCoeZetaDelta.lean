@@ -8,10 +8,10 @@ namespace Scilean
 open Lean Meta in
 /-- Zeta delta reduction for bundled morphisms/{name}`DFunLike.coe`.
 
-Expressions of the form `DFunLike.coe fVar x` where {given}`fVar` is free variable with value {given}`fVal` are
-replaced with `DFunLike.coe fVal x`.
+Expressions of the form {lit}`DFunLike.coe fVar x` where {given}`fVar` is free variable with value {given}`fVal` are
+replaced with {lit}`DFunLike.coe fVal x`.
 
-For examples, `let f : R →*+ R := Ring.id; ⇑f x` reduces to `⇑Ring.id x`.
+For examples, {lit}`let f : R →*+ R := Ring.id; ⇑f x` reduces to {lit}`⇑Ring.id x`.
 -/
 simproc_decl dfunlike_coe_zetaDelta (DFunLike.coe _ _) := fun e => do
   let x := e.appArg!
