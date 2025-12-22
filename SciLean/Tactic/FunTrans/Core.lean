@@ -52,7 +52,7 @@ private def ppOrigin' (origin : FunProp.Origin) : MetaM String := do
 
 
 -- TODO: remove this once updated to newer version of mathlib
-/-- Is {given}`e` a {lit}`fun_prop` goal? For example {lit}`∀ y z, Continuous fun x => f x y z` -/
+/-- Is the expression a {lit}`fun_prop` goal? For example {lit}`∀ y z, Continuous fun x => f x y z`. -/
 private def FunProp.isFunPropGoal (e : Expr) : MetaM Bool := do
   forallTelescope e fun _ b =>
   return (← FunProp.getFunProp? b).isSome
@@ -523,7 +523,7 @@ def fvarAppCase (funTransDecl : FunTransDecl) (e : Expr) (fData : FunProp.Functi
 
     return none
 
-/-- Prevend applying morphism theorems to `fun fx => ⇑(Prod.fst fx) (Prod.snd fx)` -/
+/-- Prevend applying morphism theorems to {lit}``fun fx => ⇑(Prod.fst fx) (Prod.snd fx)``. -/
 def morphismGuard (fData : FunProp.FunctionData) : MetaM Bool := do
 
   trace[Meta.Tactic.fun_trans] "running guard on {← ppExpr (←fData.toExpr)}"
@@ -584,7 +584,7 @@ local instance {ε} : ExceptToEmoji ε (Simp.Step) :=
     | .ok _ => checkEmoji
     | .error _ => bombEmoji⟩
 
-/-- Main `funProp` function. Returns proof of `e`. -/
+/-- Main {name}``FunProp.funProp`` function. Returns proof of {lit}``e``. -/
 partial def funTrans (e : Expr) : SimpM Simp.Step := do
 
   let e ← instantiateMVars e

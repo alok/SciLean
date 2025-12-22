@@ -6,7 +6,7 @@ namespace SciLean
 
 open RCLike ComplexConjugate
 
-/-- Square of L₂ norm over the field `K` -/
+/-- Square of L₂ norm over the field {lit}`K`. -/
 class Norm2 (K X : Type _) where
   norm2 : X → K
 

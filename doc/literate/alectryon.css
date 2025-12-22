@@ -79,7 +79,7 @@ SOFTWARE.
 .alectryon-toggle-label, .alectryon-banner {
     font-family: "Source Code Pro", Consolas, "Ubuntu Mono", Menlo, "DejaVu Sans Mono", monospace, monospace !important;
     font-size: 0.875em;
-    font-feature-settings: "COQX" 1 /* Coq ligatures */, "XV00" 1 /* Legacy */, "calt" 1 /* Fallback */;
+    font-feature-settings: "COQX" 1 /* Coq ligatures */, "XV00" 1 /* Old */, "calt" 1 /* Fallback */;
     line-height: initial;
 }
 

@@ -29,13 +29,13 @@ theorem pull_if_from_app {α β} (c : Prop) [Decidable c] (t e : α) (f : α →
     f (if c then t else e) = if c then f t else f e := by
   if h : c then simp[h] else simp[h]
 
-/-- Decide if `v` should kept as a let binding or should be reduced.
+/-- Decide if {lean}`v` should kept as a let binding or should be reduced.
 
-This is refined version of `zeta` option in vanila simp. It allows you decide if let binding should
+This is a refined version of the {lit}`zeta` option in vanilla simp. It allows you to decide if a let binding should
 be kept or reduced based on the value of the let binding.
 
-For example `fun x => let y := x; y` should be reduced to `fun x => x` and the let binding
-`let y := x` is completely pointless.
+For example {lean}`fun x => let y := x; y` should be reduced to {lean}`fun x => x` and the let binding
+{lit}`let y := x` is completely pointless.
 
 -/
 def keepAsLetValue (v : Expr) : LSimpM Bool := do
@@ -89,24 +89,17 @@ partial def maybeLetBind (e : Expr) (name := `x) : LSimpM Result :=  do
     return { expr := e }
 
 
-/-- Introduce a new let binding if `r.expr` is complicated enough i.e. `keepAsLetValue r.expr` is true.
-```
-  { expr := v, vars := xs }.maybeLetBind
-  =
-  { expr := x, vars := xs.push x}
-```
-where `x := v` is the new local declaration.
+/-- Introduce a new let binding if the expression is complicated enough (i.e. if
+{name}`keepAsLetValue` returns true). Example:
+{lit}`{ expr := v, vars := xs }.maybeLetBind = { expr := x, vars := xs.push x }`
+where {lit}`x := v` is the new local declaration.
 
-Structure constructors might get split into multiple let bindings.
-```
-  { expr := (u,v) }.maybeLetBind
-  =
-  { expr := (x,y), vars := #[x,y] }
-```
-where `x := u` and `y := v` are new local declarations. The variable `x` gets introduces if `u`
-passes `keepAsLetValue` and similarly for `y` and `v`.
+Structure constructors might get split into multiple let bindings. Example:
+{lit}`{ expr := (u,v) }.maybeLetBind = { expr := (x,y), vars := #[x,y] }`
+where {lit}`x := u` and {lit}`y := v` are new local declarations. The variable {lit}`x` gets introduced if {lit}`u`
+passes {name}`keepAsLetValue` and similarly for {lit}`y` and {lit}`v`.
 
-NOTE: currently only `Prod` gets split into multiple let bindings. -/
+NOTE: currently only {name}`Prod` gets split into multiple let bindings. -/
 def Result.maybeLetBind (r : Result) (name := `x) : LSimpM Result :=timeThis "let binding" do
   let r' ← LSimp.maybeLetBind r.expr name
   return ← r.mkEqTrans r'
@@ -137,7 +130,7 @@ def project? (e : Expr) (i : Nat) : MetaM (Option Expr) := do
   projectCore? (← whnf e) i
   -- projectCore? (← whnf e) i
 
-/-- Reduce kernel projection `Expr.proj ..` expression. -/
+/-- Reduce kernel projection expressions (for {name}`Expr.proj`). -/
 def reduceProj? (e : Expr) : MetaM (Option Expr) := do
   match e with
   | .proj _ i c => project? c i -- config
@@ -229,9 +222,7 @@ where
       let f := e.getAppFn
       f.isConst && isMatcherCore env f.constName!
 
-/--
-Try to unfold `e`.
--/
+/-- Try to unfold the expression. -/
 private def unfold? (e : Expr) : LSimpM (Option Expr) := do
   let f := e.getAppFn
   if !f.isConst then
@@ -671,7 +662,7 @@ partial def processCongrHypothesis (h : Expr) : LSimpM Bool := do
       -/
       return r.proof?.isSome || (xs.size > 0 && lhs != r.expr)
 
-/-- Try to rewrite `e` children using the given congruence theorem -/
+/-- Try to rewrite children of the expression using the given congruence theorem. -/
 partial def trySimpCongrTheorem? (c : SimpCongrTheorem) (e : Expr) : LSimpM (Option Result) :=
   -- Looks like that `withNewMCtxDepth` does not work well with `MetaLCtxM` so we need to
   -- add `withoutModifyingLCtx`
@@ -825,7 +816,7 @@ where
 initialize lsimpRef.set lsimpImpl
 
 
-/-- Local implementation of `withSimpContext` since the private version was removed.
+/-- Local implementation of {lit}`withSimpContext` since the private version was removed.
 Sets up the Meta config and runs the computation. -/
 def withSimpContextImpl (ctx : Simp.Context) (x : MetaM α) : MetaM α := do
   let cfg := ctx.config
@@ -837,9 +828,8 @@ def withSimpContextImpl (ctx : Simp.Context) (x : MetaM α) : MetaM α := do
     zetaDelta := cfg.zetaDelta
   }) x
 
-/-- Run `lsimp` on `e` and process result with `k r` where `k` is executed in modified local context
-where all `r.vars` are valid free vars.
--/
+/-- Run {lit}`lsimp` on the expression and process the result with a callback executed in the
+modified local context where all result variables are valid free vars. -/
 def main (e : Expr) (k : Result → MetaM α)
     (ctx : Simp.Context)
     (stats : Simp.Stats := {})

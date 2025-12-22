@@ -35,12 +35,12 @@ inductive LambdaTheoremArgs
   | apply
   /-- Composition theorem e.g. `fderiv ℝ fun x => f (g x) = ...`
 
-  The numbers {given}`fArgId` and {given}`gArgId` store the argument index for {given}`f` and {given}`g` in the composition
+  The numbers {lit}`fArgId` and {lit}`gArgId` store the argument index for {lit}`f` and {lit}`g` in the composition
   theorem. -/
   | comp (fArgId gArgId : Nat)
   /-- Let composition theorem e.g. `fderiv ℝ fun x => let y := g x; f x y = ...`
 
-  The numbers {given}`fArgId` and {given}`gArgId` store the argument index for {given}`f` and {given}`g` in the composition
+  The numbers {lit}`fArgId` and {lit}`gArgId` store the argument index for {lit}`f` and {lit}`g` in the composition
   theorem. -/
   | letE (fArgId gArgId : Nat)
 
@@ -74,7 +74,7 @@ def LambdaTheoremArgs.type (t : LambdaTheoremArgs) : LambdaTheoremType :=
   | .apply  => .apply
   | .pi .. => .pi
 
-/-- Decides whether {given}`f` is a function corresponding to one of the lambda theorems. -/
+/-- Decides whether {lit}`f` is a function corresponding to one of the lambda theorems. -/
 def detectLambdaTheoremArgs (f : Expr) (ctxVars : Array Expr) :
     MetaM (Option LambdaTheoremArgs) := do
 
@@ -141,9 +141,9 @@ initialize lambdaTheoremsExt : LambdaTheoremsExt ←
          d.theorems.insert (e.funTransName, e.thmArgs.type) (es.push e)}
   }
 
-/-- Return lambda theorems of type {given}`type` for function transformation {given}`funTransName`
+/-- Return lambda theorems of type {lit}`type` for function transformation {lit}`funTransName`
 
-Theorems are filtered and sorted based on the optional argument {given}`nargs`. It specifies the number of
+Theorems are filtered and sorted based on the optional argument {lit}`nargs`. It specifies the number of
 arguments of the expression we want to transform.
 
 For example when transforming {lit}`deriv (fun x => x * sin x)` we do not want to use composition
@@ -329,7 +329,7 @@ Examples:
       ContDiff 𝕜 n fun x => (f x) (g x)
   theorem clm_linear {f : E →L[𝕜] F} : IsLinearMap 𝕜 f
 ```
-- transition - the conclusion has to be in the form {lit}`P f` where {given}`f` is a free variable
+- transition - the conclusion has to be in the form {lit}`P f` where {lit}`f` is a free variable
 ```
   theorem linear_is_continuous [FiniteDimensional ℝ E] {f : E → F} (hf : IsLinearMap 𝕜 f) :
       Continuous f

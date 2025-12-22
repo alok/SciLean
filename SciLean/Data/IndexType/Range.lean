@@ -8,15 +8,15 @@ namespace SciLean.IndexType
 -- TODO: consider adding reverse versions `revfull` `revinterval
 --       such that `.interval 5 0` is empty and should be represented by `revinterval 5 0`
 --       also interval is closed on both sides
-/-- Range specifying an interval of `I` that we can iterate over using `Stream` -/
+/-- Range specifying an interval of {lit}``I`` that we can iterate over using {lit}``Stream``. -/
 inductive Range (I : Type u)
   /-- Empty range. -/
   | empty
   /-- Range over all elements. -/
   | full
-  /-- Range starting from `a` and ending with `b` inclusive.
+  /-- Range starting from {lit}``a`` and ending with {lit}``b`` inclusive.
 
-  In case `a` is larger then `b` then this range should run in reverse ordering. -/
+  In case {lit}``a`` is larger then {lit}``b`` then this range should run in reverse ordering. -/
   | interval (a b : I)
 
 

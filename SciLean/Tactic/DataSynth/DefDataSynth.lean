@@ -14,10 +14,10 @@ elab "data_synth_variable " bs:bracketedBinder* : command => do
   dataSynthVariableBinders.set bs
 
 
-/-- For function `f` return `HasRevFDerivUpdate` statement in specified arguments `args`.
+/-- For function {lit}`f` return {lit}`HasRevFDerivUpdate` statement in specified arguments {lit}`args`.
 
-The result `(e,n,lvls)` is an expression `e` of the statement where the first `n` arguments are
-considered as inputs and rest as output. `lvls` is list of universe parameter names.
+The result {lit}`(e,n,lvls)` is an expression {lit}`e` of the statement where the first {lit}`n` arguments are
+considered as inputs and the rest as output. {lit}`lvls` is a list of universe parameter names.
 -/
 def getSimpleGoal' (dataSynthStatement : TSyntax `term) (fId : Name) (argNames : Array Name)
     (extra : TSyntaxArray `Lean.Parser.Term.bracketedBinder) :

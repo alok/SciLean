@@ -79,13 +79,13 @@ def jacobianMat (f : X → Y) (x : X) : Y⊗X :=
   (vecFwdFDeriv 𝕜 X f x (𝐈[𝕜,X])).2
 
 /--
-Express `jacobianMat` with vector forward mode AD `vecFwdFDeriv`
+Express {name}`jacobianMat` with vector forward mode AD {name}`vecFwdFDeriv`.
 -/
 theorem jacobian_vector_mode (f : X → Y) :
   jacobianMat 𝕜 f = fun x => (vecFwdFDeriv 𝕜 X f x (𝐈[𝕜,X])).2 := by rfl
 
 /--
-Express `jacobianMat` with reverse mode AD `revFDeriv`
+Express {name}`jacobianMat` with reverse mode AD {name}`revFDeriv`.
 -/
 theorem jacobian_reverse_mode (f : X → 𝕜) :
   jacobianMat 𝕜 f = fun x => (revFDeriv 𝕜 f x).2 1 := by sorry_proof

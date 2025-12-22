@@ -706,6 +706,10 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_tn_f32(
         float* c_ptr = (float*)[C contents];
 
         // A is stored as [k, m], transposed to [m, k]
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
         cblas_sgemm(CblasRowMajor,
                     CblasTrans,        // A transposed
                     CblasNoTrans,
@@ -715,6 +719,9 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_tn_f32(
                     b_ptr, (int)n,
                     0.0f,
                     c_ptr, (int)n);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
         return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
     }
@@ -750,6 +757,10 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_nt_f32(
         float* c_ptr = (float*)[C contents];
 
         // B is stored as [n, k], transposed to [k, n]
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
         cblas_sgemm(CblasRowMajor,
                     CblasNoTrans,
                     CblasTrans,        // B transposed
@@ -759,6 +770,9 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_nt_f32(
                     b_ptr, (int)k,     // ldb = k for transposed
                     0.0f,
                     c_ptr, (int)n);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
         return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
     }
@@ -5968,14 +5982,14 @@ LEAN_EXPORT lean_obj_res scilean_gpu_row_sum_f32(
 }
 
 // ============================================================
-// Strided Copy - materialize strided view into contiguous buffer
+// Layout Copy - materialize layout view into contiguous buffer
 // ============================================================
 
-// Copy strided data to contiguous buffer.
-// This is used by StridedGpuBuffer.contiguous() to materialize transposed views.
+// Copy layout data to contiguous buffer.
+// This is used by GpuBufferView.contiguous() to materialize transposed views.
 // Input: src buffer, shape array, strides array, offset
 // Output: new contiguous buffer in row-major order
-LEAN_EXPORT lean_obj_res scilean_gpu_copy_strided_f32(
+LEAN_EXPORT lean_obj_res scilean_gpu_copy_layout_f32(
     b_lean_obj_arg src_buf,
     b_lean_obj_arg shape_arr,    // Array USize
     b_lean_obj_arg strides_arr,  // Array USize
@@ -6038,7 +6052,7 @@ LEAN_EXPORT lean_obj_res scilean_gpu_copy_strided_f32(
             // Dispatch to GPU or CPU based on size
             if (numel > CPU_THRESHOLD_ELEMENTS) {
                 // Use Metal shader for large tensors
-                id<MTLComputePipelineState> pipeline = get_pipeline(@"strided_copy_2d");
+                id<MTLComputePipelineState> pipeline = get_pipeline(@"layout_copy_2d");
                 if (pipeline) {
                     uint32_t params[5] = {
                         (uint32_t)rows, (uint32_t)cols,
@@ -6076,7 +6090,7 @@ LEAN_EXPORT lean_obj_res scilean_gpu_copy_strided_f32(
                 }
             }
 
-            // CPU fallback (or no shader): direct strided copy
+            // CPU fallback (or no shader): direct layout copy
             for (size_t i = 0; i < rows; i++) {
                 for (size_t j = 0; j < cols; j++) {
                     size_t src_idx = offset + i * stride0 + j * stride1;
@@ -6095,7 +6109,7 @@ LEAN_EXPORT lean_obj_res scilean_gpu_copy_strided_f32(
         // Iterate through all elements using multi-dimensional indices
         std::vector<size_t> indices(rank, 0);
         for (size_t flat_idx = 0; flat_idx < numel; flat_idx++) {
-            // Compute strided source index
+            // Compute layout source index
             size_t src_idx = offset;
             for (size_t d = 0; d < rank; d++) {
                 src_idx += indices[d] * strides[d];

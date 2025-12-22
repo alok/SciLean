@@ -93,9 +93,9 @@ instance : SeminormedRing Float where
 
 instance : StarRing Float where
   star := fun x => x
-  star_involutive := by simp[Function.Involutive]
-  star_mul := by simp[Function.Involutive, mul_comm]
-  star_add := by simp[Function.Involutive]
+  star_involutive := by intro x; rfl
+  star_mul := by intro x y; simp [mul_comm]
+  star_add := by intro x y; rfl
 
 instance : DenselyNormedField Float where
   eq_of_dist_eq_zero := sorry_proof

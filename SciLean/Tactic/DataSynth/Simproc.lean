@@ -4,7 +4,8 @@ namespace SciLean
 
 open Lean Meta
 
-/-- Make simproc out of a theorem of the form `P → x = y` where `P` is `data_synth` goal.
+/-- Make simproc out of a theorem of the form {lit}`P → x = y` where {lit}`P`, {lit}`x`, and
+{lit}`y` are variables, and {lit}`P` is a {lit}`data_synth` goal.
 
 An example of such theorem is:
 ```
@@ -12,7 +13,7 @@ theorem revFDeriv_from_hasRevFDeriv {f f'}
     (hf : HasRevFDeriv K f f') : revFDeriv K f = f' := ...
 ```
 
-Warning: Currently it is assumed that the `data_synth` goal is the last argument of the theorem!
+Warning: Currently it is assumed that the {lit}`data_synth` goal is the last argument of the theorem!
 -/
 def mkDataSynthSimproc (simprocName : Name) (thm : Name) : Simp.Simproc := fun e => do
   let thmExpr ← mkConstWithFreshMVarLevels thm

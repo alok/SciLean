@@ -5,7 +5,7 @@ open Lean Parser.Term
 /-- Variant of let binding for product pattern that does not desugar into match but into
 bunch of other let bindings and projections.
 
-For example, `let' (x,y) := v; b` expands into `let p := v; let x := p.1; let y := p.2; b`.
+For example, {lit}`let' (x,y) := v; b` expands into {lit}`let p := v; let x := p.1; let y := p.2; b`.
 -/
 
 syntax (name:=let'_syntax) withPosition("let'" "(" ident,* ")" ":=" term) optSemicolon(term) : term
@@ -117,11 +117,11 @@ macro_rules (kind :=let'_syntax'')
 
 /-- Let binding that deconstructs structure into its fields.
 
-The notation `let ⟨..⟩ := s; b` expands to `let ⟨x₁,...,xₙ⟩ := s; b`
-where `x₁` are field names of struct `s`.
+The notation {lit}`let ⟨..⟩ := s; b` expands to {lit}`let ⟨x₁,...,xₙ⟩ := s; b`
+where {given}`x₁` are field names of struct {given}`s`.
 
 For example, {name}`Prod` has field {name (full := MProd.fst)}`fst` and {name (full := MProd.snd)}`snd` therefore
-`let ⟨..⟩ := (1,2); fst + snd` expands to `let ⟨fst,snd⟩ := (1,2); fst + snd`.
+{lit}`let ⟨..⟩ := (1,2); fst + snd` expands to {lit}`let ⟨fst,snd⟩ := (1,2); fst + snd`.
  -/
 syntax (name:=let_struct_syntax) withPosition("let" "⟨..⟩" ":=" term) optSemicolon(term) : term
 

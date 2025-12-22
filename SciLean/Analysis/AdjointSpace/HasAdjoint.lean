@@ -161,7 +161,7 @@ theorem pi_rule {I : Type*} {n} [IndexType I n] [Fold.{_,u'} I] [Fold.{_,u} I]
   case adjoint =>
     intro x y
     have h := fun i => (hf i).adjoint 0
-    simp[Inner.inner, h]
+    simp[Inner.inner]
     sorry_proof
   case is_linear => apply IsContinuousLinearMap.pi_rule _ (fun i => (hf i).is_linear)
 
@@ -252,8 +252,7 @@ theorem pi_rule {I : Type*} {n} [IndexType I n] [Fold.{_,u'} I] [Fold.{_,u} I]
   constructor
   case adjoint =>
     intro x y
-    have h := fun i => (hf i).adjoint
-    simp[Inner.inner, h]
+    simp[Inner.inner]
     sorry_proof
   case is_linear => apply IsContinuousLinearMap.pi_rule _ (fun i => (hf i).is_linear)
 
@@ -376,7 +375,7 @@ theorem HAdd.hAdd.arg_a0a1.HasAdjoint_simple_rule :
       (fun x : X×X => x.1 + x.2)
       (fun x => (x,x)) := by
   constructor
-  case adjoint => simp[AdjointSpace.inner_prod_split, AdjointSpace.inner_add_left, AdjointSpace.inner_add_right]
+  case adjoint => simp[AdjointSpace.inner_prod_split, AdjointSpace.inner_add_left]
   case is_linear => fun_prop
 
 @[data_synth]
@@ -396,7 +395,7 @@ theorem HSub.hSub.arg_a0a1.HasAdjoint_simple_rule :
       (fun x : X×X => x.1 - x.2)
       (fun x => (x, -x)) := by
   constructor
-  case adjoint => simp[AdjointSpace.inner_prod_split, AdjointSpace.inner_add_left, AdjointSpace.inner_add_right,sub_eq_add_neg]
+  case adjoint => simp[AdjointSpace.inner_prod_split, AdjointSpace.inner_add_left,sub_eq_add_neg]
   case is_linear => fun_prop
 
 @[data_synth]
@@ -480,7 +479,7 @@ theorem HSMul.hSMul.arg_a1.HasAdjoint_simple_rule_nat (n : ℕ) :
   case adjoint =>
     intro x y;
     simp [← Nat.cast_smul_eq_nsmul (R:=K),AdjointSpace.inner_smul_left,
-          AdjointSpace.inner_smul_right,AdjointSpace.inner_add_right]
+          AdjointSpace.inner_smul_right]
   case is_linear =>
     simp [← Nat.cast_smul_eq_nsmul (R:=K)]; fun_prop
 
@@ -507,7 +506,7 @@ theorem HSMul.hSMul.arg_a1.HasAdjointUpdate_simple_rule_nat (n : ℕ) :
     case adjoint =>
       intro x y;
       simp [← Int.cast_smul_eq_zsmul (R:=K),AdjointSpace.inner_smul_left,
-            AdjointSpace.inner_smul_right,AdjointSpace.inner_add_right]
+            AdjointSpace.inner_smul_right]
     case is_linear =>
       simp [← Int.cast_smul_eq_zsmul (R:=K)]; fun_prop
 
@@ -763,7 +762,7 @@ theorem Inner.inner.arg_a0.HasAdjoint_simple_rule_real
   constructor
   case adjoint =>
     intro x k
-    simp[AdjointSpace.inner_smul_right,ScalarInner.inner_eq_inner_re_im]
+    simp[ScalarInner.inner_eq_inner_re_im]
     -- lhs has complex inner product and rhs has real inner product
     -- it should work out
     sorry_proof

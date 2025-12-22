@@ -466,7 +466,7 @@ def tryTheorem? (e : Expr) (thm : Theorem) (hintPre hintPost : Array (Nat×Expr)
 
   return some thmProof
 
-/-- Same as `tryTheorem?` but post hints are lazily evaluated only after unification succeded! -/
+/-- Same as {name}`tryTheorem?` but post hints are lazily evaluated only after unification succeded! -/
 def tryTheorem?' (e : Expr) (thm : Theorem)
     (hintPre : Array (Nat×Expr)) (hintPost : DataSynthM (Option (Array (Nat×Expr)))) : DataSynthM (Option Expr) := do
 
@@ -619,7 +619,7 @@ def Goal.getInputFun? (g : Goal) : MetaM (Option Expr) := do
 --------------------------------------------------------------------------------------------------
 
 
-/-- Given goal for composition `f∘g` and given `f` and `g` return corresponding goals for `f` and `g` -/
+/-- Given goal for composition {lit}`f∘g` and given {lit}`f` and {lit}`g` return corresponding goals for {lit}`f` and {lit}`g`. -/
 def compGoals (thm : LambdaTheorem) (fgGoal : Goal) (f g : Expr) : DataSynthM (Option (LambdaTheorem×Goal×Goal)) := do
   withProfileTrace "compGoals" do
   -- for thm in thms do
@@ -667,14 +667,15 @@ def compGoals (thm : LambdaTheorem) (fgGoal : Goal) (f g : Expr) : DataSynthM (O
   -- return none
 
 
-/-- Given result for `f` and `g` return result for `f∘g` -/
+/-- Given result for {lit}`f` and {lit}`g` return result for {lit}`f∘g`. -/
 def compResults (fgGoal : Goal) (thm : LambdaTheorem) (f g : Expr) (hf hg : Result) : DataSynthM (Option Result) := do
   withProfileTrace "compResults" do
     let (hintPre, hintPost) ← thm.getHint #[g,f,hg.proof,hf.proof]
     fgGoal.tryTheorem? thm.toTheorem hintPre hintPost
 
 
-/-- Given goal for composition `fun x => let y:=g x; f y x` and given `f` and `g` return corresponding goals for `↿f` and `g` -/
+/-- Given goal for composition {lit}`fun x => let y:=g x; f y x` and given {lit}`f` and {lit}`g`
+return corresponding goals for {lit}`↿f` and {lit}`g`. -/
 def letGoals (thm : LambdaTheorem) (fgGoal : Goal) (f g  : Expr) : DataSynthM (Option (Goal×Goal)) := do
   withProfileTrace "letGoals" do
   let .letE gId fId hgId hfId := thm.data | throwError m!"invalid let theorem {thm.thmName}"
@@ -723,13 +724,16 @@ def letGoals (thm : LambdaTheorem) (fgGoal : Goal) (f g  : Expr) : DataSynthM (O
   return (fgoal, ggoal)
 
 
-/-- Given result for `↿f` and `g` return result for `fun x => let y:=g x; f y x` -/
+/-- Given result for {syntax term}`↿f` and {lit}`g`, return result for {syntax term}`fun x => let y := g x; f y x`. -/
 def letResults (fgGoal : Goal) (thm : LambdaTheorem) (f g : Expr) (hf hg : Result) : DataSynthM (Option Result) := do
   withProfileTrace "letResults" do
     let (hintPre,hintPost) ← thm.getHint #[g,f,hg.proof,hf.proof]
     fgGoal.tryTheorem? thm.toTheorem hintPre hintPost
 
-/-- Given goal for composition `fun x => let y:=g x; f y x` and given `f` and `g` return corresponding goal for `(f y ·)` -/
+/--
+Given goal for composition {syntax term}`fun x => let y := g x; f y x` and given {lit}`f` and
+{lit}`g`, return the corresponding goal for {syntax term}`(f y ·)`.
+-/
 def letSkipGoals (thm : LambdaTheorem) (fgGoal : Goal) (f g  : Expr) (y : Expr) : DataSynthM (Option Goal) := do
   withProfileTrace "letSkipGoals" do
   let .letSkip gId fId hfId := thm.data | throwError m!"invalid let theorem {thm.thmName}"
@@ -773,14 +777,14 @@ def letSkipGoals (thm : LambdaTheorem) (fgGoal : Goal) (f g  : Expr) (y : Expr) 
   let some fgoal ← isDataSynthGoal? hf | return none
   return fgoal
 
-/-- Given result for `(f y ·)` return result for `fun x => let y:=g x; f y x` -/
+/-- Given result for {syntax term}`(f y ·)`, return result for {syntax term}`fun x => let y := g x; f y x`. -/
 def letSkipResults (fgGoal : Goal) (thm : LambdaTheorem) (f g y : Expr) (hfy : Result) : DataSynthM (Option Result) := do
   withProfileTrace "letSkipResults" do
     let (hintPre,hintPost) ← thm.getHint #[g,f, (← mkLambdaFVars #[y] hfy.proof)]
     fgGoal.tryTheorem? thm.toTheorem hintPre hintPost
 
 set_option linter.unusedVariables false in
-/-- Given goal for `fun x i => f x i` return goal for `fun x => f x i` -/
+/-- Given goal for {syntax term}`fun x i => f x i`, return goal for {syntax term}`fun x => f x i`. -/
 def piGoal (fGoal : Goal) (f : Expr) (i : Expr) : DataSynthM (Option (LambdaTheorem×Goal)) :=
   withProfileTrace "piGoals" do
 
@@ -819,7 +823,7 @@ def piGoal (fGoal : Goal) (f : Expr) (i : Expr) : DataSynthM (Option (LambdaTheo
   return none
 
 set_option linter.unusedVariables false in
-/-- Given result for `(f · i)` and free variable `i` return result for `f`-/
+/-- Given result for {syntax term}`(f · i)` and free variable {lit}`i`, return result for {lit}`f`. -/
 def piResult (fGoal : Goal) (thm : LambdaTheorem) (f : Expr) (i : Expr) (hfi : Result) :
     DataSynthM (Option Result) :=
   withProfileTrace "piResults" do
@@ -864,7 +868,7 @@ def projGoals (thm : LambdaTheorem) (fGoal : Goal) (f g p₁ p₂ q : Expr) : Da
   let some ggoal ← isDataSynthGoal? hg | return none
   return some (thm,ggoal)
 
-/-- Given result for `↿f` and `g` return result for `fun x => let y:=g x; f y x` -/
+/-- Given result for {syntax term}`↿f` and {lit}`g`, return result for {syntax term}`fun x => let y := g x; f y x`. -/
 def projResults (fGoal : Goal) (thm : LambdaTheorem) (f g p₁ p₂ q : Expr) (hg : Result) : DataSynthM (Option Result) := do
   withProfileTrace "projResults" do
     let (hintPre, hintPost) ← thm.getHint #[f,g,p₁,p₂,q,hg.proof]
@@ -999,7 +1003,7 @@ def lamCase (goal : Goal) (f : FunData) : DataSynthM (Option Result) := do
     return r
 
 
-/-- Similar to `dataSynth` but driven by function. -/
+/-- Similar to {name}`dataSynth` but driven by the function. -/
 partial def mainFun (goal : Goal) (f : FunData) : DataSynthM (Option Result) := do
   withIncRecDepth do
   withProfileTrace "mainFun" do

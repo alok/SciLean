@@ -64,9 +64,9 @@ require sorryproof from ".." / "SorryProof"
 -- makes executables link successfully.
 target libleanblasc : FilePath := do
   let ws ← getWorkspace
-  let some leanblasPkg := ws.findPackage? `leanblas
+  let some leanblasPkg := ws.findPackageByName? `leanblas
     | error "SciLean: dependency package `leanblas` not found in workspace."
-  let depJob : Job (CustomData `leanblas `libleanblasc) ← fetch <| leanblasPkg.target `libleanblasc
+  let depJob ← fetch <| leanblasPkg.target `libleanblasc
   let libPath := leanblasPkg.sharedLibDir / nameToStaticLib "leanblasc"
   depJob.mapM (sync := true) fun _ => pure libPath
 
@@ -83,7 +83,8 @@ target libscileanc pkg : FilePath := do
   let mut oFiles : Array (Job FilePath) := #[]
   for file in (← (pkg.dir / "C").readDir) do
     if file.path.extension == some "c" then
-      let oFile := pkg.buildDir / "c" / (file.fileName.stripSuffix ".c" ++ ".o")
+      let baseName := (file.fileName.dropSuffix ".c").toString
+      let oFile := pkg.buildDir / "c" / (baseName ++ ".o")
       let srcJob ← inputTextFile file.path
       let weakArgs := #["-I", (← getLeanIncludeDir).toString] ++ inclArgs
       let cFlags := #["-fPIC", "-O3", "-DNDEBUG"] ++ cFlagsOSX
@@ -331,8 +332,8 @@ lean_exe AttentionTest where
   root := `examples.AttentionTest
   moreLinkArgs := metalLinkArgs
 
-lean_exe GpuBufferBenchmark where
-  root := `examples.GpuBufferBenchmark
+lean_exe GpuTensorBenchmark where
+  root := `examples.GpuTensorBenchmark
   moreLinkArgs := metalLinkArgs
 
 lean_exe KernelTest where

@@ -22,8 +22,8 @@ def NormM := StateM NormCache
 -------------------------------------------------
 
 structure Goal where
-  /-- Expression for `fun (x₁ : X₁) ... (xₙ : Xₙ) → P` for some `P : Prop`
-  The goal is to find `x₁`, ..., `xₙ` and proof of `P x₁ ... xₙ` -/
+  /-- Expression for {lit}`fun (x₁ : X₁) ... (xₙ : Xₙ) → P` for some {lit}`P : Prop`.
+  The goal is to find {lit}`x₁`, ..., {lit}`xₙ` and a proof of {lit}`P x₁ ... xₙ`. -/
   goal : Expr
   dataSynthDecl : DataSynthDecl
 deriving Hashable, BEq
@@ -45,7 +45,7 @@ end Goal
 
 /-- Result of data synthesization.
 
-Synthesized data `xs = #[x₁, ..., xₙ]` and proof `proof` of `goal x₁ ... xₙ`. -/
+Synthesized data {lit}`xs = #[x₁, ..., xₙ]` and proof {lit}`proof` of {lit}`goal x₁ ... xₙ`. -/
 structure Result where
   xs : Array Expr
   proof : Expr
@@ -56,10 +56,10 @@ namespace Result
 
 def getSolvedGoal (r : Result) : Expr := r.goal.goal.beta r.xs
 
-/-- Given result for `g` and alternative data `xs` that is propositional to the data of the result `hs`. Proof `hs[i]` can be none if
-`r.xs[i]` and `xs[i]` are defeq.
+/-- Given result for {lit}`g` and alternative data {lit}`xs` that is propositional to the data of
+the result {lit}`hs`. Proof {lit}`hs[i]` can be none if {lit}`r.xs[i]` and {lit}`xs[i]` are defeq.
 
-Return result with `xs` data. -/
+Return result with {lit}`xs` data. -/
 def congr (r : Result) (rs : Array Simp.Result) : MetaM Result := do
   let goal := r.goal.goal
 
@@ -83,7 +83,7 @@ def congr (r : Result) (rs : Array Simp.Result) : MetaM Result := do
 end Result
 
 
-/-- For a `Goal` and its proof extract `Result` from it. -/
+/-- For a {name}`Goal` and its proof extract {name}`Result` from it. -/
 def Goal.getResultFrom (g : Goal) (proof : Expr) : MetaM Result := do
 
   -- todo: maybe add same sanity checks that we are doing reasonable things
@@ -137,9 +137,9 @@ structure State where
 
 abbrev DataSynthM := ReaderT Context $ MonadCacheT ExprStructEq Expr $ StateRefT State Simp.SimpM
 
-/-- Run `DataSynthM` in `SimpM` with default context and config
+/-- Run {name}`DataSynthM` in {name}`SimpM` with default context and config.
 
-TODO: Add a mechanism to specify `DataSynth.Config`  -/
+TODO: Add a mechanism to specify {name}`Config`. -/
 def DataSynthM.runInSimpM (e : DataSynthM α) : SimpM α := do
   let disch? := (← Simp.getMethods).discharge?
   let r := e { discharge := disch? } (← ST.mkRef {}) (← ST.mkRef {})
@@ -172,16 +172,12 @@ def dataSynth (g : Goal) : DataSynthM (Option Result) := do (← dataSynthRef.ge
 
 ----
 
-/-- Structure representing function of the form
+/-- Structure representing a function of the form
+{lit}`let y₁ := ..; ...; let yₘ := ...; fun (x₁,...,xₙ) => b`,
+where {lit}`leadingLets := #[y₁,...,yₘ]`, {lit}`xs := #[x₁,...,xₙ]` and {lit}`body := b`.
 
-```
-let y₁ := ..; ...; let yₘ := ...;
-fun (x₁,...,xₙ) => b
-```
-where `leadingLets := #[y₁,...,yₘ]`, `xs := #[x₁,...,xₙ]` and `body := b`
-
-`body` is an expression containing free/let variables `y₁,...,yₘ,x₁,...,xₙ` which are well
-defined in the local context `lctx` and `insts`.
+{lit}`body` is an expression containing free/let variables {lit}`y₁,...,yₘ,x₁,...,xₙ` which are well
+defined in the local context {lit}`lctx` and {lit}`insts`.
 -/
 structure FunData where
   lctx : LocalContext
@@ -192,9 +188,8 @@ structure FunData where
   deriving Inhabited
 
 
-/-- Size of product type, assuming it is right associated
-i.e. `prodSize (A×B×C) = 3` but `prodSize ((A×B)×C) = 2`
- -/
+/-- Size of product type, assuming it is right associated.
+i.e. {lit}`prodSize (A×B×C) = 3` but {lit}`prodSize ((A×B)×C) = 2`. -/
 private def prodSize (e : Expr) : Nat :=
   go e 1
 where
@@ -238,14 +233,14 @@ def pp (f : FunData) : MetaM String :=
     return s!"fun {binder} => {← ppExpr f.body}"
 
 
-/-- Return `fun ((x₁,x₂,...,xₙ) : X₁×X₂×...×Xₙ) => f x₁ ... xₙ)` -/
+/-- Return {lit}`fun ((x₁,x₂,...,xₙ) : X₁×X₂×...×Xₙ) => f x₁ ... xₙ)`. -/
 def toExpr (f : FunData) : MetaM Expr :=
   withLCtx f.lctx f.insts do
     mkUncurryLambdaFVars f.xs f.body (withLet:=false)
     >>=
     mkLambdaFVars f.leadingLets
 
-/-- Returnns `(fun (x₁ : X₁) ((x₂,...,xₙ) : X₂×...×Xₙ) => f x₁ ... xₙ)` -/
+/-- Returns {lit}`fun (x₁ : X₁) ((x₂,...,xₙ) : X₂×...×Xₙ) => f x₁ ... xₙ)`. -/
 def toExprCurry1 (f : FunData) : MetaM Expr :=
   withLCtx f.lctx f.insts do
     mkLambdaFVars #[f.xs[0]!] (← mkUncurryLambdaFVars f.xs[1:] f.body (withLet:=false))
@@ -277,9 +272,11 @@ def funHead (f : FunData) : MetaM FunHead :=
     withLCtx f.lctx f.insts do
       throwError "invalid function body, ctor:{f.body.ctorName}\n{← ppExpr f.body}"
 
-/-- For function `f` representing `fun ((x₁,x₂,...,xₙ) : X₁×X₂×...×Xₙ) (y : Y) => f x₁ ... xₙ) y`
-    return `y` as free variables and `fun ((x₁,x₂,...,xₙ) : X₁×X₂×...×Xₙ) => f x₁ ... xₙ) y`
-    i.e. removes `y` binder in the body. -/
+/-- For a function {lit}`f` representing
+{lit}`fun ((x₁,x₂,...,xₙ) : X₁×X₂×...×Xₙ) (y : Y) => f x₁ ... xₙ) y`,
+return {lit}`y` as free variables and
+{lit}`fun ((x₁,x₂,...,xₙ) : X₁×X₂×...×Xₙ) => f x₁ ... xₙ) y`,
+i.e. remove the {lit}`y` binder in the body. -/
 def bodyLambdaTelescope1 (f : FunData) (k : Expr → FunData → DataSynthM α) : DataSynthM α := do
   withLCtx f.lctx f.insts do
     let .lam n t b bi  := f.body
@@ -309,35 +306,19 @@ def lambdaTelescope1 (f : FunData) (k : Expr → FunData → DataSynthM α) : Da
 /-- If function body has leading let binding we distinguish three cases. -/
 inductive BodyLetCase where
 /-- Function is in the form
-```
-fun x =>
-  let y := g x
-  f y
-```
-i.e. body of let does not depend on `x`-/
+{lit}`fun x => let y := g x; f y`,
+i.e. the body of the let does not depend on {lit}`x`. -/
 | comp (f g : FunData)
 /-- Function is in the form
-```
-fun x =>
-  let y := g x
-  f y x
-```
+{lit}`fun x => let y := g x; f y x`,
 let binding in its generality.
 
-Returned `f` is a function in `y,x₁,...,xₙ` for `x = (x₁,...,xₙ)`. -/
+Returned {lit}`f` is a function in {lit}`y,x₁,...,xₙ` for {lit}`x = (x₁,...,xₙ)`. -/
 | letE (f g : FunData)
 /-- Function is in the form
-```
-fun x =>
-  let y := v
-  f y x
-```
+{lit}`fun x => let y := v; f y x`
 or
-```
-fun x =>
-  let y := v
-  f x
-```
+{lit}`fun x => let y := v; f x`,
 i.e. value of let binding does not depend on the function argument or body of let does not depend on the let value
 -/
 | simple (f : FunData)
@@ -435,8 +416,8 @@ def getBodyLetCase (f : FunData) : MetaM BodyLetCase := do
 --       return .letE f g
 
 
-/-- Given a function `f : X → Y` find
-`p₁ : X → X₁`, `p₂ : X → X₂` and `q : X₁ → X₂`  and `g : X₁ → Y`  -/
+/-- Given a function {lit}`f : X → Y` find
+{lit}`p₁ : X → X₁`, {lit}`p₂ : X → X₂`, {lit}`q : X₁ → X₂`, and {lit}`g : X₁ → Y`. -/
 def decomposeDomain? (f : FunData) : MetaM (Option (Expr × Expr × Expr × FunData)) := do
   withLCtx f.lctx f.insts do
 
@@ -464,7 +445,7 @@ def decomposeDomain? (f : FunData) : MetaM (Option (Expr × Expr × Expr × FunD
     return some (p₁,p₂,q,g)
 
 
-/-- Tries to write function `fun (x₁,...,xₙ) => f x₁ ... x₂` as composition of two non-trivial functions. -/
+/-- Tries to write function {lit}`fun (x₁,...,xₙ) => f x₁ ... x₂` as composition of two non-trivial functions. -/
 def nontrivialAppDecomposition (fData : FunData) : MetaM (Option (FunData × FunData)) := do
   withLCtx fData.lctx fData.insts do
   match fData.body with
@@ -551,7 +532,7 @@ end FunData
 initialize dataSynthFunRef : IO.Ref (Goal → FunData → DataSynthM (Option Result)) ←
   IO.mkRef (fun _ _ => return none)
 
-/-- Tactic `data_synth` driven by a input function `f` -/
+/-- Tactic {lit}`data_synth` driven by an input function {lit}`f`. -/
 def dataSynthFun (e : Goal) (f : FunData) : DataSynthM (Option Result) := do
   (← dataSynthFunRef.get) e f
 

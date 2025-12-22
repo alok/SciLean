@@ -3043,12 +3043,12 @@ kernel void gemm_nt(
 }
 
 // ============================================================
-// Strided Copy - materialize 2D strided view to contiguous
+// Layout Copy - materialize 2D view to contiguous
 // ============================================================
 
-// Copy 2D strided data to contiguous row-major buffer
+// Copy 2D layout data to contiguous row-major buffer
 // params[0] = rows, params[1] = cols, params[2] = stride0, params[3] = stride1, params[4] = offset
-kernel void strided_copy_2d(
+kernel void layout_copy_2d(
     device const float* src [[buffer(0)]],
     device float* dst [[buffer(1)]],
     constant uint* params [[buffer(2)]],

@@ -23,59 +23,50 @@ inductive LambdaTheoremData where
   /-- Composition theorem
 
   The theorem should have roughly the following form
-  ```
-  (g : X → Y) (f : Y → Z) (hg : P g g') (hf : P f f') → P (f∘g) fg'
-  ```
-  and `gId`, `fId`, `hgId`, `hfId` are indices of corresponding arguments in the theorem `thmName`
+  {syntax term}``(g : X → Y) (f : Y → Z) (hg : P g g') (hf : P f f') → P (f∘g) fg'``
+  and {lit}`gId`, {lit}`fId`, {lit}`hgId`, {lit}`hfId` are indices of corresponding arguments
+  in the theorem {lit}`thmName`
    -/
   | comp (gId fId hgId hfId : Nat)
   /-- Let binding theorem
 
   The theorem should have roughly the following form
-  ```
-  (g : X → Y) (f : Y → X → Z) (hg : P g g') (hf : P f f') → P (fun x => let y := g x; f y x) fg'
-  ```
-  and `gId`, `fId`, `hgId`, `hfId` are indices of corresponding arguments in the theorem `thmName`
+  {syntax term}``(g : X → Y) (f : Y → X → Z) (hg : P g g') (hf : P f f') → P (fun x => let y := g x; f y x) fg'``
+  and {lit}`gId`, {lit}`fId`, {lit}`hgId`, {lit}`hfId` are indices of corresponding arguments
+  in the theorem {lit}`thmName`
   -/
   | letE (gId fId hgId hfId : Nat)
   /-- Let binding theorem where we skip let binding
 
-  This theorem can be used on functions like `fun x => let y := let n := ⌊x⌋; x + n` which is
+  This theorem can be used on functions like {lit}`fun x => let y := let n := ⌊x⌋; x + n` which is
   differentiable everywhere except integers.
 
   The theorem should have roughly the following form
-  ```
-  (g : X → Y) (f : Y → X → Z) (hf : ∀ y, P (f y) (f' y)) → P (fun x => let y := g x; f y x) fg'
-  ```
-  and `gId`, `fId`,  `hfId` are indices of corresponding arguments in the theorem `thmName`
+  {syntax term}``(g : X → Y) (f : Y → X → Z) (hf : ∀ y, P (f y) (f' y)) → P (fun x => let y := g x; f y x) fg'``
+  and {lit}`gId`, {lit}`fId`, {lit}`hfId` are indices of corresponding arguments
+  in the theorem {lit}`thmName`
   -/
   | letSkip (gId fId hfId : Nat)
   /-- Pi theorem
 
   The theorem should have roughly the following form
-  ```
-  (f : X → I → Y) (hf : ∀ i, P (f · i) (f' i)) → P (fun x i => f x i) f'
-  ```
-  and `fId`, `hfId` are indices of corresponding arguments in the theorem `thmName`
+  {syntax term}``(f : X → I → Y) (hf : ∀ i, P (f · i) (f' i)) → P (fun x i => f x i) f'``
+  and {lit}`fId`, {lit}`hfId` are indices of corresponding arguments in the theorem {lit}`thmName`
   -/
   | pi (fId hfId : Nat)
   /-- Constant theorem
 
   The theorem should have roughly the following form
-  ```
-  (y : Y) → P (fun x => y) c'
-  ```
+  {syntax term}``(y : Y) → P (fun x => y) c'``
   -/
   | const
   /-- Projection theorem
 
-  This theorem says that if we can restrict `f : X → Y` to a smaller domain `X₁` and we know how
-  to transform this restriction then we know how to transform `f`.
+  This theorem says that if we can restrict {lit}`f` (with type {lit}`X → Y`) to a smaller domain
+  {lit}`X₁` and we know how to transform this restriction then we know how to transform {lit}`f`.
 
   The theorem should have roughly the following form
-  ```
-  (f : X → Y) (g : X₁ → Y) (p₁ : X → X₁) (p₂ : X → X₂) (q : X₁ → X₂ → X) (hg : P g g') → P f f'
-  ```
+  {syntax term}``(f : X → Y) (g : X₁ → Y) (p₁ : X → X₁) (p₂ : X → X₂) (q : X₁ → X₂ → X) (hg : P g g') → P f f'``
 
   TODO: There has to be some condition on p₁,p₂,q that they really form a decomposition.
   -/
@@ -93,7 +84,7 @@ structure LambdaTheorem extends Theorem where
 def LambdaTheorem.getProof (thm : LambdaTheorem) : MetaM Expr :=
   thm.toTheorem.getProof
 
-/-- Returns hints that should be applied before and after unification in `tryTheorem?` -/
+/-- Returns hints that should be applied before and after unification in {name}``Simp.tryTheorem?``. -/
 def LambdaTheorem.getHint (thm : LambdaTheorem) (args : Array Expr) :
     MetaM (Array (Nat×Expr) × Array (Nat×Expr)) :=
   match thm.data with

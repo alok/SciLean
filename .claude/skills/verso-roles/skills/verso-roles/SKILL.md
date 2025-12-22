@@ -1,6 +1,6 @@
 ---
 name: verso-roles
-description: Use Verso roles correctly in Lean doc comments to avoid warnings.
+description: Use when writing or fixing Lean doc comments, especially to resolve Verso role warnings about unresolved identifiers or roles.
 ---
 
 # Verso Roles (Lean Doc Comments)

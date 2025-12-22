@@ -23,18 +23,18 @@ namespace SciLean.Tactic.LSimp
 ----------------------------------------------------------------------------------------------------
 
 
-/-- Result of `lsimp` -/
+/-- Result of {lit}`lsimp`. -/
 structure Result where
   /-- Result of simplification  -/
   expr : Expr
-  /-- Proof that the result is propositionally equal to the original expression. It is `none` if
+  /-- Proof that the result is propositionally equal to the original expression. It is {name}`none` if
   it is defeq to the original. -/
   proof? : Option Expr := none
   /-- This array keeps track of the newly introduced free variables that appear in the result.
-  We run `lsimp` in `MetaLCtxM` which allows modifying the local context by adding new free
+  We run {lit}`lsimp` in {name}`MetaLCtxM` which allows modifying the local context by adding new free
   variables.
 
-  See `Result.bindVars` which is a function that takes the result and the proof and binds all
+  See {lit}`Result.bindVars` which is a function that takes the result and the proof and binds all
   these newly introduced free variables such that the result is valid in the original context
   of the expression we are simplifying. -/
   vars : Array Expr := #[]
@@ -85,10 +85,10 @@ def mkImpCongr (src : Expr) (r₁ r₂ : Result) : MetaLCtxM Result := do
 
 
 /-- Binds all variables to the result expression and proof. Useful when returning result to a context
-where `r.vars` are no longer valid.
+where {lean}`r.vars` are no longer valid.
 
-This is useful when running `MetaLCtxM.runInMeta` or `LSimpM.runInMeta` and you want make the
-result valid in the original context. E.g. `(lsimp x).runInMeta (fun r => r.binVars)`   -/
+This is useful when running {name}`MetaLCtxM.runInMeta` or {lit}`LSimpM.runInMeta` and you want make the
+result valid in the original context. For example {lit}`(lsimp x).runInMeta (fun r => r.binVars)`. -/
 def Result.bindVars (r : Result) : MetaM Result := do
   return { r with expr := ← mkLambdaFVars r.vars r.expr
                   proof? := ← r.proof?.mapM (fun h => mkLambdaFVars r.vars h)
@@ -98,12 +98,12 @@ def Result.bindVars (r : Result) : MetaM Result := do
 -- LSimpM ------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 
-/-- `lsimp`'s cache is a stack of caches. This allows us to run `lsimp` and easiliy discart all
+/-- {lit}`lsimp`'s cache is a stack of caches. This allows us to run {lit}`lsimp` and easiliy discart all
 changes to the cache by simply increasing the cache stack depth.  -/
 abbrev Cache := List (ExprMap Result)
 
 structure State where
-  /-- Cache storing lsimp results. -/
+  /-- Cache storing {lit}`lsimp` results. -/
   cache : IO.Ref Cache
   simpState : IO.Ref Simp.State
   timings : Batteries.RBMap String Aesop.Nanos compare := {}
@@ -114,12 +114,12 @@ instance : MonadLift SimpM LSimpM where
   monadLift x := fun m c s => do return (← x m.toMethodsRef c s.simpState, s)
 
 
-/-- Run `x : LSimpM X` without modifying the local context.
+/-- Run the computation without modifying the local context.
 
-This effectively runs `x : LSimpM X`, modifies the local context and then reverts the context back.
-The function `k` is evaluated on the result of `x` in the modified context before the context is
-reverted back. It is user's responsibility to make sure that the `k` modifies the result such
-that it is valid in the original context e.g. bind all newly introduced free variables. -/
+This runs the computation, temporarily modifies the local context, evaluates the callback on the
+result in the modified context, and then reverts the context. It is the user's responsibility to
+make the returned value valid in the original context, for example by binding newly introduced
+free variables. -/
 def withoutModifyingLCtx (k : X → MetaM Y) (x : LSimpM X) : LSimpM Y := do
   fun mths ctx s => do
     Meta.withoutModifyingLCtx (fun (x,s') => do pure (← k x, s'))
@@ -165,9 +165,10 @@ def State.printTimings (s : State) : MetaM Unit := do
     trace[Meta.Tactic.simp.time] "{k} took {t.print}"
 
 
-/-- Run `x` and discart any changes to the cache.
+/-- Run the computation and discard any changes to the cache.
 
-The cache is modified while running `x` but all changes are discarted once `x` is done.  -/
+The cache is modified while running the computation but all changes are discarded once it is
+done. -/
 def withoutModifyingCache {α} (x : LSimpM α) : LSimpM α :=
   fun m ctx s  => do
     let cacheRef := s.cache

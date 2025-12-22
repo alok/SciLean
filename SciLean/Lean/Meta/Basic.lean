@@ -1,4 +1,5 @@
 import Lean
+import Verso.Code.External
 import Batteries.Lean.Expr
 
 import SciLean.Lean.Expr
@@ -6,8 +7,7 @@ import SciLean.Lean.Array
 
 namespace Lean
 
-/-- Does free variable {given}`x` use free variable {given}`y` in its type or value?
--/
+/-- Does free variable {lean}`x` use free variable {lean}`y` in its type or value? -/
 def FVarId.usesFVar (x y : FVarId) : MetaM Bool := do
   if (← x.getType).containsFVar y then
     return true
@@ -93,7 +93,7 @@ def revertStructureProj (e : Expr) : MetaM Expr :=
     mkAppM projFn #[struct]
   | _ => return e
 
-/-- Is {given}`e` in the form {lit}`foo x₀ .. xₙ` where {given}`foo` is some constant
+/-- Is {lean}`e` in the form {lit}`foo x₀ .. xₙ` where {lit}`foo` is some constant
 
   It returns only explicit arguments and the original expression should be recoverable by {lit}`mkAppM foo #[x₀, .., xₙ]`
   -/
@@ -112,8 +112,7 @@ def getExplicitArgs (e : Expr) : MetaM (Option (Name×Array Expr)) := do
   return (funName, explicitArgs)
 
 
-/-- Eta expansion, but adds at most {given}`n` binders
--/
+/-- Eta expansion, but adds at most {lean}`n` binders. -/
 def etaExpandN (e : Expr) (n : Nat) : MetaM Expr :=
   withDefault do forallTelescopeReducing (← inferType e) fun xs _ => mkLambdaFVars xs[0:n] (mkAppN e xs[0:n])
 
@@ -179,7 +178,7 @@ def mkProdFst (x : Expr) : MetaM Expr := mkAppM ``Prod.fst #[x]
 def mkProdSnd (x : Expr) : MetaM Expr := mkAppM ``Prod.snd #[x]
 
 /--
-For {lit}`(x₀, .., xₙ₋₁)` return {given}`xᵢ` but as a product projection.
+For {lit}`(x₀, .., xₙ₋₁)` return {lit}`xᵢ` but as a product projection.
 
 We need to know the total size of the product to be considered.
 
@@ -280,30 +279,20 @@ def splitLambdaToComp (e : Expr) (mk := ``Prod.mk) (fst := ``Prod.fst) (snd := `
 
 
 inductive LambdaSplit where
-  /-- Result of splitting a lambda function as `fun x => f (g x)` -/
+  /-- Result of splitting a lambda function as {lit}``fun x => f (g x)`` -/
   | comp (f g : Expr)
-  /-- Result of splitting a lambda function as `fun x i₁ ... iₙ => f (g x i₁ ... iₙ)` -/
+  /-- Result of splitting a lambda function as {lit}``fun x i₁ ... iₙ => f (g x i₁ ... iₙ)`` -/
   | piComp (f g : Expr) (comp : Expr → Expr → Expr)
 
 /--
-This function decomposes function as
-```
-fun x i₁ .. iₙ => b
-=
-fun x i₁ ... iₙ => f (g x) i₁ ... iₙ
-=
-f ∘ g
-```
+This function decomposes a function of the form {lit}``fun x i₁ ... iₙ => b`` as
+{lit}``fun x i₁ ... iₙ => f (g x) i₁ ... iₙ`` and {lit}``f ∘ g``.
 
-For example, for `f' : Y → I → Z` and `g' : X → I → Y`
-```
-fun x i => f' (g' x i) i
-=
-fun x i => f'' (g' x) i
-=
-f'' ∘ g'
-```
-where `f'' = fun (y' : I → Y) i => f' (y' i) i`
+For example, with {lit}``f' : Y → I → Z`` and {lit}``g' : X → I → Y``:
+{lit}``fun x i => f' (g' x i) i`` =
+{lit}``fun x i => f'' (g' x) i`` =
+{lit}``f'' ∘ g'``,
+where {lit}``f'' := fun (y' : I → Y) i => f' (y' i) i``.
 -/
 def splitHighOrderLambdaToComp (e : Expr) (mk := ``Prod.mk) (fst := ``Prod.fst) (snd := ``Prod.snd) : MetaM (Expr × Expr) := do
   match e with
@@ -384,11 +373,8 @@ def splitHighOrderLambdaToComp (e : Expr) (mk := ``Prod.mk) (fst := ``Prod.fst) 
 
 /--
 This function finds decomposition:
-```
-fun x i₁ .. iₙ => b
-=
-fun x i₁ ... iₙ => f (g x i₁ ... iₙ) i₁ ... iₙ
-```
+{lit}``fun x i₁ ... iₙ => b`` =
+{lit}``fun x i₁ ... iₙ => f (g x i₁ ... iₙ) i₁ ... iₙ``.
 -/
 def elemWiseSplitHighOrderLambdaToComp (e : Expr) (mk := ``Prod.mk) (fst := ``Prod.fst) (snd := ``Prod.snd) : MetaM (Expr × Expr) := do
   match e with
@@ -457,7 +443,7 @@ def mkLocalDecls [MonadControlT MetaM n] [Monad n]
   (names : Array Name) (bi : BinderInfo) (types : Array Expr) : Array (Name × BinderInfo × (Array Expr → n Expr)) :=
   types.mapIdx (fun i type => (names[i]!, bi, fun _ : Array Expr => pure type))
 
-/-- Simpler version of `withLocalDecls` that can't deal with dependent types but has simpler signature -/
+/-- Simpler version of {name}``withLocalDecls`` that can't deal with dependent types but has simpler signature -/
 def withLocalDecls' [Inhabited α] [MonadControlT MetaM n] [Monad n]
   (names : Array Name) (bi : BinderInfo) (types : Array Expr) (k : Array Expr → n α) : n α :=
   withLocalDecls (mkLocalDecls names bi types) k
@@ -561,20 +547,19 @@ private partial def flatLetTelescopeImpl {α} (fuel : Nat) (e : Expr) (k : Array
     k #[] e
 
 
-/-- Telescope for let bindings but it flattens let bindings first
+/-- Telescope for let bindings but it flattens let bindings first.
 
 Example:
-```
-let a :=
-  let b := (10, 12)
-  20
-f a b
-```
+{lit}``let a :=``
+{lit}``  let b := (10, 12)``
+{lit}``  20``
+{lit}``f a b``
 
-It will run `k #[b₁, b₂, a] (f a (b₁,b₂))` where `b₁ := 10, b₂ := 12, a := 20`.
+It will run {lit}``k #[b₁, b₂, a] (f a (b₁, b₂))`` where
+{lit}``b₁ := 10``, {lit}``b₂ := 12``, {lit}``a := 20``.
 
 
-If `splitPairs` is `false`, it will run `k #[b, a] (f a b)`
+If {lean}``splitPairs`` is {name}``false``, it will run {lit}``k #[b, a] (f a b)``.
 -/
 def flatLetTelescope (fuel : Nat) (e : Expr) (k : Array Expr → Expr → n α) (splitPairs := true) : n α :=
   map2MetaM (fun k => flatLetTelescopeImpl fuel e k splitPairs) k
@@ -582,27 +567,23 @@ def flatLetTelescope (fuel : Nat) (e : Expr) (k : Array Expr → Expr → n α) 
 /-- Flattens let bindings and splits let binding of pairs.
 
 Example:
-```
-let a :=
-  let b := (10, 12)
-  (b.1, 3 * b.2)
-a.2
-```
+{lit}``let a :=``
+{lit}``  let b := (10, 12)``
+{lit}``  (b.1, 3 * b.2)``
+{lit}``a.2``
 is rewritten to
-```
-let b₁ := 10;
-let b₂ := 12;
-let a₁ := (b₁, b₂).fst;
-let a₂ := 3 * (b₁, b₂).snd;
-(a₁, a₂).snd
-```
+{lit}``let b₁ := 10;``
+{lit}``let b₂ := 12;``
+{lit}``let a₁ := (b₁, b₂).fst;``
+{lit}``let a₂ := 3 * (b₁, b₂).snd;``
+{lit}``(a₁, a₂).snd``
 -/
 def flattenLet (fuel : Nat) (e : Expr) (splitPairs := true) : MetaM Expr :=
   flatLetTelescope (splitPairs:=splitPairs) fuel e λ xs e' =>
     mkLetFVars xs e'
 
 
-/-- Reduces structure projection but it preserves let bindings unlike `Lean.Meta.reduceProj?`.
+/-- Reduces structure projection but it preserves let bindings unlike {name}``Lean.Meta.reduceProj?``.
 -/
 def reduceProj?' (e : Expr) : MetaM (Option Expr) := do
   match e with
@@ -615,7 +596,7 @@ def reduceProj?' (e : Expr) : MetaM (Option Expr) := do
   | _               => return none
 
 
-/-- Reduces structure projection function but it preserves let bindings unlike `Lean.Meta.Simp.reduceProjFn?`.
+/-- Reduces structure projection function but it preserves let bindings unlike {lit}``Lean.Meta.Simp.reduceProjFn?``.
 
   TODO: Maybe move to SimpM and recover unfolding of user specified classes
 -/
@@ -709,14 +690,9 @@ open ReduceProjOfCtor in
 /-- Reduces structure projection of explicit constructors
 
 Examples:
-```
-((a,b),c).1.2  ==> b
-```
-
-```
-((a,b),c).1.2.1  ==> b.1
-```
-even if `b` is a free variable introduced by a let binding
+{lit}``((a, b), c).1.2  ==> b``
+{lit}``((a, b), c).1.2.1  ==> b.1``
+even if {lit}``b`` is a free variable introduced by a let binding
 -/
 def reduceProjOfCtor (e : Expr) : MetaM Expr := do
   let (e',ps) ← peelOfProjections e
@@ -725,7 +701,7 @@ def reduceProjOfCtor (e : Expr) : MetaM Expr := do
 open ReduceProjOfCtor in
 /-- Reduces structure projection of explicit constructors
 
-For example, `(x,y,z).2.1.1` reduces to `y.1` even if `y` is reducible definition
+For example, {lit}``(x, y, z).2.1.1`` reduces to {lit}``y.1`` even if {lit}``y`` is a reducible definition
 or let fvar.
 -/
 def reduceProjOfCtor? (e : Expr) : MetaM (Option Expr) := do
