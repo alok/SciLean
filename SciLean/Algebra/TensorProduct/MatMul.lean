@@ -5,7 +5,7 @@ namespace SciLean
 
 /-- Class providing matrix-matrix multiplication
 
-This takes `A : Z ⊗ Y` and `B : Y ⊗ X` and produces `A*B : Z ⊗ X`
+This takes {given}`A : Z ⊗ Y` and {given}`B : Y ⊗ X` and produces {lean}`A*B : Z ⊗ X`
  -/
 class TensorProductMul
   (R Z Y X ZY YX ZX : Type*) [RCLike R]
@@ -15,10 +15,9 @@ class TensorProductMul
   where
 
     /-- Matrix-matrix multiplication
-    ```
-    matMul a A B b C = a*A*B + b*C
-    ```
 
-    The type signature is the same as of `gemm` BLAS function.
+        matMul a A B b C = a*A*B + b*C
+
+    The type signature is the same as of the GEMM BLAS function.
     -/
     matMul (a : R) (A : ZY) (B : YX) (b : R) (C : ZX) : ZX

@@ -14,12 +14,12 @@ private def buildMk (mk : Expr) (mks : List Expr) (vars vals : Array Expr) : Met
       buildMk mk mks' (vars++xs) (vals.push b)
 
 
-/-- Decomposes an element `e` that is a nested application of constructors
+/-- Decomposes an element {given}`e` that is a nested application of constructors
 
-For example, calling this function on `((a,b),c)` returns
- - list of elements `#[a, b, c]`
- - list of projections `#[fun x => x.1.1, fun x => x.1.2, fun x => x.2]`
- - function to build the structure back up `fun a b c => ((a,b),c))`
+For example, calling this function on {lean}`((a,b),c)` returns
+ - list of elements {lean}`#[a, b, c]`
+ - list of projections {lean}`#[fun x => x.1.1, fun x => x.1.2, fun x => x.2]`
+ - function to build the structure back up {lean}`fun a b c => ((a,b),c))`
 -/
 private partial def splitByCtorsImpl (e : Expr) : MetaM (Array Expr × Array Expr × Expr) := do
 
@@ -61,9 +61,9 @@ private partial def splitByCtorsImpl (e : Expr) : MetaM (Array Expr × Array Exp
   return (eis.flatten, projs, mk)
 
 
-/-- Decomposes an element `e` that is a nested application of constructors
+/-- Decomposes an element {given}`e` that is a nested application of constructors
 
-For example, calling this function on `x : (Nat×Nat)×Nat` returns `(#[x.1.1, x.1.2, x.1], fun a b c => ((a,b),c))`
+For example, calling this function on {lean}`x : (Nat×Nat)×Nat` returns {lean}`(#[x.1.1, x.1.2, x.1], fun a b c => ((a,b),c))`
 -/
 def splitByCtors? (e : Expr) : MetaM (Option (Array Expr × Array Expr × Expr)) := do
   withTraceNode `splitByCtors (fun _ => do pure s!"splitByCtors") do

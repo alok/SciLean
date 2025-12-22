@@ -12,27 +12,24 @@ variable {X I Y : Type*} {nI} [IndexType I nI] [Fold I]
   [SetElem' X I Y]
 
 /--
-Maps elements of `xs` by `f` with data accessor `g`.
+Maps elements of {given}`xs` by {given}`f` with data accessor {given}`g`.
 
-```
-(mapIdxMono2 f g xs)[i] = f i (g i) x[i]
-```
+    (mapIdxMono2 f g xs)[i] = f i (g i) x[i]
 
-This is a low level function that provides additional agument `g` which is used as data accessor
-inside of `f`. For example, instead of writing
-```
-def add (x y : X) := mapIdxMono (fun i xi => xi + y[i]) x
-```
+This is a low level function that provides additional argument {given}`g` which is used as data accessor
+inside of {given}`f`. For example, instead of writing
+
+    def add (x y : X) := mapIdxMono (fun i xi => xi + y[i]) x
+
 you should write
-```
-def add (x y : X) := mapIdxMono2 (fun i yi xi => xi + yi) (fun i => y[i]) x
-```
+
+    def add (x y : X) := mapIdxMono2 (fun i yi xi => xi + yi) (fun i => y[i]) x
+
 This way reverse mode AD can produce better code.
 
-An example of higer arity function
-```
-def mulAdd (x y z : X) := mapIdxMono2 (fun i (xi,yi) zi => xi*yi + zi) (fun i => (x[i],y[i])) z
-```
+An example of higher arity function
+
+    def mulAdd (x y z : X) := mapIdxMono2 (fun i (xi,yi) zi => xi*yi + zi) (fun i => (x[i],y[i])) z
 -/
 @[inline, specialize, macro_inline]
 def mapIdxMonoAcc (f : I → Z → Y → Y) (g : I → Z) (xs : X) : X :=
@@ -44,15 +41,13 @@ def mapIdxMonoAcc (f : I → Z → Y → Y) (g : I → Z) (xs : X) : X :=
 
 
 /--
-Maps elements of `xs` by `f`.
+Maps elements of {given}`xs` by {given}`f`.
 
-```
-(mapIdxMono2 f xs)[i] = f i x[i]
-```
+    (mapIdxMono f xs)[i] = f i x[i]
 
-Note: Consider using `mapIdxMono2` if `f` is accesing element of another array,
-      like `f := fun i xi => xi + y[i]`. Reverse mode AD is able to produce better gradients for
-      `mapIdxMono2`.
+Note: Consider using {name}`mapIdxMonoAcc` if {given}`f` is accesing element of another array,
+      like {lean}`f := fun i xi => xi + y[i]`. Reverse mode AD is able to produce better gradients for
+      {name}`mapIdxMonoAcc`.
 -/
 @[reducible, inline, specialize, macro_inline]
 def mapIdxMono (f : I → Y → Y) (xs : X) : X :=
@@ -60,11 +55,9 @@ def mapIdxMono (f : I → Y → Y) (xs : X) : X :=
 
 
 /--
-Maps elements of `xs` by `f`.
+Maps elements of {given}`xs` by {given}`f`.
 
-```
-(mapIdxMono2 f xs)[i] = f x[i]
-```
+    (mapMono f xs)[i] = f x[i]
 -/
 @[reducible, inline, specialize, macro_inline]
 def mapMono [DefaultIndex X I] (f : Y → Y) (xs : X) : X :=

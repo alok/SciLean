@@ -22,16 +22,16 @@ abbrev erase (a : α) : Erased α := .mk a
 theorem erase_out {α} (a : α) : (erase a).out = a := by simp[erase]
 
 
-/-- `x : Rand X` is a random variable of type `X`
+/-- {given}`x : Rand X` is a random variable of type {given}`X`.
 
 You can:
-  - generate sample with `x.get : IO X`
-  - get probability measure with `x.ℙ : Measure X`
+  - generate sample with {lean}`x.get : IO X`
+  - get probability measure with {lean}`x.ℙ : Measure X`
 
-The internal fields `spec` and `rand` are just an internal implementation of `Rand` and should not
+The internal fields `spec` and `rand` are just an internal implementation of {name}`Rand` and should not
 be accessed by normal users.
 
-TODO: Hide implementation using quotients or something like that
+TODO: Hide implementation using quotients or something like that.
 -/
 structure Rand (X : Type _)  where
   /-- `spec` defines a probability measure by computing an expectation. This means if `x : Rand X`

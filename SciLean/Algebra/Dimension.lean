@@ -6,21 +6,21 @@ import SciLean.Util.RewriteBy
 namespace SciLean
 
 
-/-- Dimension of `X` over the ring `R` is `dim`.
+/-- Dimension of {given}`X` over the ring {given}`R` is {given}`dim`.
 
-The need for this typeclass comes when we want to write code, the function `Module.finrank` is
-noncomputable. This calss allow you to add implicit argument `dim` which will be resolved   -/
+The need for this typeclass comes when we want to write code, the function {name}`Module.finrank` is
+noncomputable. This class allows you to add implicit argument {given}`dim` which will be resolved.  -/
 class Dimension (R : Type*) (X : Type*) (dim : outParam ℕ) [Ring R] [AddCommGroup X] [Module R X] where
   is_dim : Module.finrank R X = dim
 
 
 open Lean Meta Elab Qq in
-/-- Dimension of `X`.
+/-- Dimension of {given}`X`.
 
-The dimension is over the default scalar `R` set with
-```
-set_default_scalar R
-``` -/
+The dimension is over the default scalar {given}`R` set with
+
+    set_default_scalar R
+-/
 elab "dim(" X:term ")" : term => do
 
   let R ← Term.elabTerm (← `(defaultScalar%)) none

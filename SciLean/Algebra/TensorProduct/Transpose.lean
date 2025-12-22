@@ -4,9 +4,9 @@ namespace SciLean
 
 
 /--
-Class providing matrix-matrix multiplication
+Class providing matrix transposition
 
-This takes `A : Z ⊗ Y` and `B : Y ⊗ X` and produces `A*B : Z ⊗ X`
+This takes {given}`A : Y ⊗ X` and produces {lean}`Aᵀ : X ⊗ Y`
  -/
 class TensorProductTranspose
   (R Y X YX XY : Type*) [RCLike R]
@@ -16,10 +16,7 @@ class TensorProductTranspose
   where
 
     /-- Matrix transposition/conjugation
-    ```
-    transpose A = Aᵀ  or  Aᴴ
-    ```
 
-    The type signature is the same as of `gemm` BLAS function.
+        conjTranspose A = Aᵀ  or  Aᴴ
     -/
     conjTranspose (A : YX) : XY
