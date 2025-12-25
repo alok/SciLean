@@ -38,8 +38,11 @@ package scilean {
 }
 
 
--- Use latest mathlib (includes compile_inductive fix PR #32225)
-require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "master"
+-- Pin mathlib to the Lean 4.27.0-rc1 compatible tag
+require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "v4.27.0-rc1"
+
+-- Pin ProofWidgets to a release tag so cloud releases are available
+require proofwidgets from git "https://github.com/leanprover-community/ProofWidgets4" @ "v0.0.84"
 
 -- Use local LeanBLAS
 require leanblas from ".." / "LeanBLAS"
