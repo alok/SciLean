@@ -1,4 +1,5 @@
 import Lean
+import SciLean.VersoPrelude
 namespace SciLean
 
 open Lean Parser.Term
@@ -118,7 +119,7 @@ macro_rules (kind :=let'_syntax'')
 /-- Let binding that deconstructs structure into its fields.
 
 The notation {lit}`let ⟨..⟩ := s; b` expands to {lit}`let ⟨x₁,...,xₙ⟩ := s; b`
-where {given}`x₁` are field names of struct {given}`s`.
+where {given}`x₁` are field names of struct {given}`s`, so each {lean}`x₁` is a field of {lean}`s`.
 
 For example, {name}`Prod` has field {name (full := MProd.fst)}`fst` and {name (full := MProd.snd)}`snd` therefore
 {lit}`let ⟨..⟩ := (1,2); fst + snd` expands to {lit}`let ⟨fst,snd⟩ := (1,2); fst + snd`.

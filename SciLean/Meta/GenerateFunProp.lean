@@ -2,6 +2,7 @@ import Mathlib.Tactic.FunProp
 import SciLean.Lean.Meta.Basic
 import SciLean.Util.RewriteBy
 import Mathlib.Lean.Meta.RefinedDiscrTree
+import SciLean.VersoPrelude
 
 open Lean Meta Elab Term Command
 

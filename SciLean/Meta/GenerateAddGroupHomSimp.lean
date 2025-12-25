@@ -6,6 +6,7 @@ import SciLean.Algebra.IsAddGroupHom
 
 import SciLean.Data.IndexType
 import SciLean.Meta.SimpAttr
+import SciLean.VersoPrelude
 
 import SciLean.Tactic.AnalyzeConstLambda
 
@@ -85,7 +86,7 @@ by
   have h := fun (x x' : X) (y y' : Y) => hg.map_add (x,y) (x',y')
   have h' := fun x y => hg.map_neg (x,y)
   simp at h; simp at h'
-  simp[← neg_add_eq_sub,hg.map_add,hg.map_neg,h,h']
+  simp [← neg_add_eq_sub, h, h']
 
 theorem _root_.IsAddGroupHom.sub_pull₂  (x x' : X) (y y' : Y)
   : g (x - x') (y - y') = g x y - g x' y' :=
@@ -93,7 +94,7 @@ by
   have h := fun (x x' : X) (y y' : Y) => hg.map_add (x,y) (x',y')
   have h' := fun x y => hg.map_neg (x,y)
   simp at h; simp at h'
-  simp[← neg_add_eq_sub,hg.map_add,hg.map_neg,h,h']
+  simp [← neg_add_eq_sub, h, h']
 
 theorem _root_.IsAddGroupHom.neg_push₂ (x : X) (y : Y)
   : - g x y = g (- x) (- y) :=
@@ -165,8 +166,8 @@ def generateAddGroupHomSimp
 open Lean Meta
 /-- Generates bunch of simp theorems given a proof that function is linear.
 
-The provided theorem should be in the simple form `IsAddGroupHom (fun x => foo x)`
-Not in the composition form `IsAddGroupHom (fun x => foo (f x))`
+The provided theorem should be in the simple form {lit}`IsAddGroupHom (fun x => foo x)`
+Not in the composition form {lit}`IsAddGroupHom (fun x => foo (f x))`
 -/
 def generateAddGroupHomSimps (isAddGroupHomTheorem : Name) : MetaM Unit := do
 
@@ -188,13 +189,13 @@ def generateAddGroupHomSimps (isAddGroupHomTheorem : Name) : MetaM Unit := do
 /-- This commands generates simp lemmas for given function preserving addition and subtraction.
 
 The commands is used as
-```lean
+```nonLeanCode
 #generate_add_group_hom_simps thrmName
 ```
-where {given}`thrmName` is a name of a theorem that states {syntax term}`IsAddGroupHom f`.
+where {given}`thrmName` is a name of a theorem that states {lit}`IsAddGroupHom f`.
 
 The command generates theorems
-```lean
+```nonLeanCode
 @[add_push] theorem add_push (x x' : X) : f x + f x' = f (x + x') := ...
 @[add_pull] theorem add_pull (x x' : X) : f (x + x') = f x + f x' := ...
 @[sub_push] theorem sub_push (x x' : X) : f x - f x' = f (x - x') := ...
@@ -208,12 +209,12 @@ arithmetic operations by calling {tactic}`simp` e.g. {tactic}`simp only [add_pul
 
 
 The command also supports functions jointly linear in two arguments. If we have
-{syntax term}`g : X → Y → Z` and {syntax term}`g_is_linear₂ : IsLinear K fun (x,y) => g x y` then
-```lean
+{lit}`g : X → Y → Z` and {lit}`g_is_linear₂ : IsLinear K fun (x,y) => g x y` then
+```nonLeanCode
 #generate_add_group_hom_simps g_is_linear₂
 ```
 generates theorems like
-```lean
+```nonLeanCode
 @[add_push] theorem add_push (x x' : X) (y y' : Y) : g x y + g x' y' = g (x + x') (y + y') := ...
 ...
 ```

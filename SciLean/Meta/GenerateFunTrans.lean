@@ -4,6 +4,7 @@ import SciLean.Meta.GenerateFunProp
 import SciLean.Tactic.Autodiff
 import SciLean.Tactic.FunTrans.Core
 import SciLean.Util.RewriteBy
+import SciLean.VersoPrelude
 
 open Lean Meta Elab Term Command Mathlib.Meta
 

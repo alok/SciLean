@@ -1,5 +1,6 @@
 import SciLean.Data.ArrayType.Notation
 import SciLean.Data.IndexType.Operations
+import SciLean.VersoPrelude
 
 namespace SciLean
 
@@ -13,33 +14,33 @@ open TSyntax.Compat
 initialize registerTraceClass `einsum_notation
 
 /--
-Einstein summation / `einx`-style notation with named axes.
+Einstein summation / {lit}`einx`-style notation with named axes.
 
 The core idea is that *axes are identifiers*, not strings. This lets you write expressive
-einsum-style programs using descriptive names like `batch`, `channel`, `feature`, ... and Lean
+einsum-style programs using descriptive names like {lit}`batch`, {lit}`channel`, {lit}`feature`, ... and Lean
 binds them for you.
 
 Syntax:
 
 `einsum[axes₁, axes₂, ... -> outAxes] (x₁, x₂, ...)`
 
-where each `axesᵢ` and `outAxes` is a whitespace-separated list of axis identifiers. Axis
-identifiers can optionally be annotated with a type: `(axisName : AxisType)`.
+where each {lit}`axesᵢ` and {lit}`outAxes` is a whitespace-separated list of axis identifiers. Axis
+identifiers can optionally be annotated with a type: {lit}`(axisName : AxisType)`.
 
 Examples (for `Float^[...]` tensors):
 
 * Matrix multiplication:
-  `einsum[row shared, shared col -> row col] (A, B)` expands to
-  `⊞ row col => ∑ᴵ shared, A[row,shared] * B[shared,col]`.
+  {lit}`einsum[row shared, shared col -> row col] (A, B)` expands to
+  {lit}`⊞ row col => ∑ᴵ shared, A[row,shared] * B[shared,col]`.
 
 * Sum-reduction:
-  `einsum[row col -> row] (A)` expands to `⊞ row => ∑ᴵ col, A[row,col]`.
+  {lit}`einsum[row col -> row] (A)` expands to {lit}`⊞ row => ∑ᴵ col, A[row,col]`.
 
 * Transpose / permutation:
-  `einsum[row col -> col row] (A)` expands to `⊞ col row => A[row,col]`.
+  {lit}`einsum[row col -> col row] (A)` expands to {lit}`⊞ col row => A[row,col]`.
 
 If the `-> outAxes` part is omitted, the output axes default to those appearing *exactly once*
-across all inputs (in first-appearance order), matching common `einsum` conventions.
+across all inputs (in first-appearance order), matching common {lit}`einsum` conventions.
 
 Limitations (for now):
 * Output axes must appear in at least one input.

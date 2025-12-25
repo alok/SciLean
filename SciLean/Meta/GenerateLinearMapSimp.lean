@@ -6,6 +6,7 @@ import SciLean.Data.IndexType
 import SciLean.Meta.SimpAttr
 
 import SciLean.Tactic.AnalyzeConstLambda
+import SciLean.VersoPrelude
 
 namespace SciLean
 
