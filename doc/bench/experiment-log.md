@@ -1,5 +1,35 @@
 # Experiment Log
 
+## 2025-12-25: Transfer timing fix + M4Pro size guard
+
+**Timestamp:** 2025-12-25 00:36:38 -0800  
+**Commit:** 0cd6fa5d  
+**Branch:** metal-backend  
+**Worktree:** dirty (many local changes)  
+**Run dir:** doc/bench/runs/20251225-003553
+
+### Commands
+```bash
+lake build GpuTensorBenchmark GEMMCorrectness
+.lake/build/bin/GpuTensorBenchmark
+.lake/build/bin/GEMMCorrectness
+uv run scripts/bench_regression.py --run-dir doc/bench/runs/20251225-003553
+```
+
+### Key Results
+
+**GpuTensor transfer (averaged)**
+- 256KB: 0.00373ms upload, 0.00396ms download, 0.00770ms total
+- 1MB:   0.01318ms upload, 0.01442ms download, 0.02761ms total
+- 4MB:   0.06881ms upload, 0.06261ms download, 0.13143ms total
+
+**GEMMCorrectness**
+- M4Pro skipped for 4×4 and 8×8 (requires multiple of 64)
+- M4Pro correct at 64×64; MPS and Accelerate correct at all tested sizes
+
+### Regression Check
+- `gpu_tensor.transfer_total.512` regression cleared (now −71.4% vs baseline)
+
 ## 2025-12-24: Full benchmark sweep (Lean + Python + Graph4)
 
 **Timestamp:** 2025-12-24 23:59:56 -0800  

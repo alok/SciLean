@@ -1,0 +1,8 @@
+gpu_tensor.gemm.256: 0.42895ms (baseline 2.15104ms, delta -80.1%) [OK]
+gpu_tensor.gemm.512: 0.38384ms (baseline 1.19882ms, delta -68.0%) [OK]
+gpu_tensor.gemm.1024: 0.68237ms (baseline 2.53737ms, delta -73.1%) [OK]
+gpu_tensor.chain.256: 0.51778ms (baseline 2.80291ms, delta -81.5%) [OK]
+gpu_tensor.chain.512: 0.63216ms (baseline 1.31492ms, delta -51.9%) [OK]
+gpu_tensor.transfer_total.256: 0.0077ms (baseline 0.03587ms, delta -78.5%) [OK]
+gpu_tensor.transfer_total.512: 0.02761ms (baseline 0.09666ms, delta -71.4%) [OK]
+gpu_tensor.transfer_total.1024: 0.13143ms (baseline 0.71904ms, delta -81.7%) [OK]
