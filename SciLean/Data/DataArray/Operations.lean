@@ -7,16 +7,17 @@ import SciLean.Meta.Notation.Let'
 import SciLean.Data.ArrayOperations.Operations
 
 import SciLean.Analysis.Scalar.FloatAsReal
+import SciLean.VersoPrelude
 
 namespace SciLean.DataArrayN
 
 variable {X : Type*} [PlainDataType X] {I : Type*} {nI} [IndexType I nI] [Fold I]
 
-/-- Transform all elements of `xs^[I]` using `f : X → X`. -/
+/-- Transform all elements of {lit}`xs^[I]` using {lit}`f : X → X`. -/
 abbrev mapMono (f : X → X) (xs : X^[I]) : X^[I] :=
   ArrayOps.mapMono f xs
 
-/-- Transform all elements of `xs^[I]` using `f : I → X → X`. -/
+/-- Transform all elements of {lit}`xs^[I]` using {lit}`f : I → X → X`. -/
 abbrev mapIdxMono (f : I → X → X) (xs : X^[I]) : X^[I] :=
   ArrayOps.mapIdxMono f xs
 
@@ -36,7 +37,7 @@ def zipWith {Y Z : Type*} [PlainDataType Y] [PlainDataType Z]
     (f : X → Y → Z) (xs : X^[I]) (ys : Y^[I]) : Z^[I] :=
   ofFn (coll := Z^[I]) fun i => f xs[i] ys[i]
 
-/-- Combine two arrays element-wise, mutating `xs` if possible. -/
+/-- Combine two arrays element-wise, mutating {lean}`xs` if possible. -/
 abbrev zipWithMono (f : X → X → X) (xs ys : X^[I]) : X^[I] :=
   ArrayOps.mapIdxMonoAcc (X:=X^[I]) (I:=I) (Y:=X) (Z:=X)
     (fun _ yi xi => f xi yi) (fun i => ys[i]) xs
@@ -46,13 +47,13 @@ abbrev zipWithMono (f : X → X → X) (xs ys : X^[I]) : X^[I] :=
 -- Numpy-style convenience constructors ------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 
-/-- Numpy-style `arange`: `start + step*i` for `i = 0..n-1`. -/
+/-- Numpy-style {name}`arange`: {lit}`start + step*i` for {lit}`i = 0..n-1`. -/
 @[inline]
 def arange {R : Type*} [RealScalar R] [PlainDataType R]
     (n : Nat) (start : R := 0) (step : R := 1) : R^[n] :=
   ofFn (coll := R^[n]) fun (i : Idx n) => start + step * ((i : Nat) : R)
 
-/-- Numpy-style `linspace` with `n` points. For `n ≤ 1` this returns `start` (or the empty array). -/
+/-- Numpy-style {name}`linspace` with {lit}`n` points. For {lit}`n ≤ 1` this returns {lit}`start` (or the empty array). -/
 @[inline]
 def linspace {R : Type*} [RealScalar R] [PlainDataType R]
     (n : Nat) (start stop : R) : R^[n] :=
@@ -63,40 +64,40 @@ def linspace {R : Type*} [RealScalar R] [PlainDataType R]
     ofFn (coll := R^[n]) fun (i : Idx n) =>
       start + (stop - start) * ((i : Nat) : R) / denom
 
-/-- Reverse a vector (Numpy: `flip`). -/
+/-- Reverse a vector (Numpy: {lit}`flip`). -/
 @[inline]
 def reverse {n : Nat} (x : X^[n]) : X^[n] :=
   ⊞ (i : Idx n) =>
     let j : Idx n := ⟨(n - 1 - (i : Nat)).toUSize, sorry_proof⟩
     x[j]
 
-/-- Identity matrix (Numpy: `eye`). -/
+/-- Identity matrix (Numpy: {lit}`eye`). -/
 @[inline]
 def eye {R : Type*} [RealScalar R] [PlainDataType R]
     (n : Nat) : R^[n,n] :=
   ⊞ (i : Idx n) (j : Idx n) =>
     if i = j then (1 : R) else 0
 
-/-- Create a diagonal matrix from a vector (Numpy: `diag`). -/
+/-- Create a diagonal matrix from a vector (Numpy: {lit}`diag`). -/
 @[inline]
 def diag {R : Type*} [RealScalar R] [PlainDataType R]
     (n : Nat) (v : R^[n]) : R^[n,n] :=
   ⊞ (i : Idx n) (j : Idx n) =>
     if i = j then v[i] else 0
 
-/-- Extract the diagonal of a square matrix (Numpy: `diagonal`). -/
+/-- Extract the diagonal of a square matrix (Numpy: {lit}`diagonal`). -/
 @[inline]
 def diagonal {R : Type*} [RealScalar R] [PlainDataType R]
     (n : Nat) (A : R^[n,n]) : R^[n] :=
   ofFn (coll := R^[n]) fun (i : Idx n) => A[i,i]
 
-/-- Trace of a square matrix (Numpy: `trace`). -/
+/-- Trace of a square matrix (Numpy: {lit}`trace`). -/
 @[inline]
 def trace {R : Type*} [RealScalar R] [PlainDataType R]
     (n : Nat) (A : R^[n,n]) : R :=
   ∑ᴵ (i : Idx n), A[i,i]
 
-/-- Numpy-style `nonzero` for 1D arrays: return indices where `x[i] ≠ 0`. -/
+/-- Numpy-style {lit}`nonzero` for 1D arrays: return indices where {lit}`x[i] ≠ 0`. -/
 @[inline]
 def nonzeroIdx {R : Type*} [PlainDataType R] [Zero R] [DecidableEq R]
     (x : R^[I]) : Array I := Id.run do
@@ -106,7 +107,7 @@ def nonzeroIdx {R : Type*} [PlainDataType R] [Zero R] [DecidableEq R]
       idxs := idxs.push i
   return idxs
 
-/-- 2D border pattern: `border` on the boundary and `inside` in the interior. -/
+/-- 2D border pattern: {lit}`border` on the boundary and {lit}`inside` in the interior. -/
 @[inline]
 def border2 {R : Type*} [RealScalar R] [PlainDataType R]
     (m n : Nat) (border inside : R) : R^[m,n] :=
@@ -131,29 +132,29 @@ def pad2 {R : Type*} [RealScalar R] [PlainDataType R]
     else
       A[⟨(ii - 1).toUSize, sorry_proof⟩, ⟨(jj - 1).toUSize, sorry_proof⟩]
 
-/-- Checkerboard pattern of `a`/`b` (Numpy exercises 19/21). -/
+/-- Checkerboard pattern of {lit}`a`/{lit}`b` (Numpy exercises 19/21). -/
 @[inline]
 def checkerboard {R : Type*} [RealScalar R] [PlainDataType R]
     (m n : Nat) (a : R := 0) (b : R := 1) : R^[m,n] :=
   ⊞ (i : Idx m) (j : Idx n) =>
     if ((i : Nat) + (j : Nat)) % 2 = 0 then a else b
 
-/-- Fold elements of `xs : X^[I]` using `op : α → X → α`.
+/-- Fold elements of {lit}`xs : X^[I]` using {lit}`op : α → X → α`.
 
-It is just and abbreviation for a call to `IndexType.foldl` which runs a fold over the index
-type `I`. -/
+It is just and abbreviation for a call to {name}`IndexType.fold` which runs a fold over the index
+type {lit}`I`. -/
 abbrev foldl (op : α → X → α) (init : α) (xs : X^[I]) : α :=
   IndexType.fold .full (init:=init) (fun i a => op a xs[i])
 
-/-- Reduce elements of `xs : X^[I]` using `op : X → X → X`.
+/-- Reduce elements of {lit}`xs : X^[I]` using {lit}`op : X → X → X`.
 
-It is just and abbreviation for a call to `IndexType.reduce` which does reduction over the index
-type `I`. -/
+It is just and abbreviation for a call to {name}`IndexType.reduce` which does reduction over the index
+type {lit}`I`. -/
 abbrev reduce [Inhabited X] (op : X → X → X) (xs : X^[I]) : X :=
   IndexType.reduce .full (fun (i:I) => xs[i]) op
 
 
-/-- Reshape array to one dimensional array of `n` elements. -/
+/-- Reshape array to one dimensional array of {lit}`n` elements. -/
 abbrev reshape1 (x : X^[I]) (m : Nat) (h : m = nI) : X^[m] :=
   x.reshape (Idx m) h
 
@@ -178,15 +179,15 @@ variable
 
 
 /--
-Map real scalars of `x : X^[I]` by `f : R → R`.
+Map real scalars of {lit}`x : X^[I]` by {lit}`f : R → R`.
 
-It is required that `X ≃ R^[ι]` for some `ι`
+It is required that {lit}`X ≃ R^[ι]` for some {lit}`ι`.
 
-The function `f` provides two indices `(i : X)` and `(j : ι)`
-  - `i` maps to the particular `X`
-  - `j` maps to the particular real scalar in `X`
+The function {lit}`f` provides two indices {lit}`(i : X)` and {lit}`(j : ι)`:
+  - {lit}`i` maps to the particular {lit}`X`
+  - {lit}`j` maps to the particular real scalar in {lit}`X`
 
-Note that calling this function on `R^[n]` will give you `j : Unit`.
+Note that calling this function on {lit}`R^[n]` will give you {lit}`j : Unit`.
 -/
 @[reducible, inline, specialize, macro_inline]
 def rmapIdx (f : I → ι → R → R) (x : X^[I]) : X^[I] :=
@@ -196,28 +197,28 @@ def rmapIdx (f : I → ι → R → R) (x : X^[I]) : X^[I] :=
       f i j) x
 
 /--
-Map real scalars of `x : X^[I]` by `f : R → R`.
+Map real scalars of {lit}`x : X^[I]` by {lit}`f : R → R`.
 
-It is required that `X ≃ R^[ι]` for some `ι`
+It is required that {lit}`X ≃ R^[ι]` for some {lit}`ι`.
 -/
 @[reducible, inline, specialize, macro_inline]
 def rmap (f : R → R) (x : X^[I]) : X^[I] :=
   rmapIdx (fun _ _ => f) x
 
 /--
-Map2 real scalars of `x y : X^[I]` by `f : R → R → R`
+Map2 real scalars of {lit}`x y : X^[I]` by {lit}`f : R → R → R`.
 
-The first argument `x` is mutated if possible.
+The first argument {lit}`x` is mutated if possible.
 
-It is required that `X ≃ R^[ι]` for some `ι`
+It is required that {lit}`X ≃ R^[ι]` for some {lit}`ι`.
 
-The function `f` provides two indices `(i : X)` and `(j : ι)`
-  - `i` maps to the particular `X` in `X^[I]`
-  - `j` maps to the particular real scalar `R` in `X`
+The function {lit}`f` provides two indices {lit}`(i : X)` and {lit}`(j : ι)`:
+  - {lit}`i` maps to the particular {lit}`X` in {lit}`X^[I]`
+  - {lit}`j` maps to the particular real scalar {lit}`R` in {lit}`X`
 
-Note that calling this function on `R^[n]` will give you `j : Unit`.
+Note that calling this function on {lit}`R^[n]` will give you {lit}`j : Unit`.
 
-TODO: make this function to decide whether to mutate `x` or `y`
+TODO: make this function to decide whether to mutate {lit}`x` or {lit}`y`.
 -/
 @[reducible, inline, specialize, macro_inline]
 def rmapIdx2 (f : I → ι → R → R → R) (x y : X^[I]) : X^[I] :=
@@ -230,13 +231,13 @@ def rmapIdx2 (f : I → ι → R → R → R) (x y : X^[I]) : X^[I] :=
 
 
 /--
-Map2 real scalars of `x y : X^[I]` by `f : R → R → R`
+Map2 real scalars of {lit}`x y : X^[I]` by {lit}`f : R → R → R`.
 
-The first argument `x` is mutated if possible.
+The first argument {lit}`x` is mutated if possible.
 
-It is required that `X ≃ R^[J]` for some `J`
+It is required that {lit}`X ≃ R^[J]` for some {lit}`J`.
 
-TODO: make this function to decide whether to mutate `x` or `y`
+TODO: make this function to decide whether to mutate {lit}`x` or {lit}`y`.
 -/
 @[reducible, inline, specialize, macro_inline]
 def rmap2 (f : R → R → R) (x y : X^[I]) : X^[I] :=

@@ -1,5 +1,6 @@
 import SciLean.Data.DataArray.DataArray
 import SciLean.Data.ArrayOperations.Algebra
+import SciLean.VersoPrelude
 
 namespace SciLean
 

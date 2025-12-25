@@ -16,7 +16,7 @@ namespace SciLean.PlainDataType.Deriving
 
 open Lean Elab Command Meta Term
 
-/-- Get the byte size of a PlainDataType at compile time via `evalExpr`. -/
+/-- Get the byte size of a PlainDataType at compile time via {name}`evalExpr`. -/
 def getPlainDataTypeBytes (type : Expr) : MetaM (Option Nat) := do
   let pdType ← mkAppM ``SciLean.PlainDataType #[type]
   match ← trySynthInstance pdType with

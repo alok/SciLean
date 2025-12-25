@@ -1,6 +1,7 @@
 import SciLean.Data.DataArray.RnEquiv
 import SciLean.Data.ArrayOperations.Algebra
 import SciLean.Algebra.VectorOptimize.Basic
+import SciLean.VersoPrelude
 
 /-! Algebraic structure in {lit}`X^[I]`
 
@@ -11,6 +12,8 @@ TODO: There should be a class that the structure of.
 -/
 
 namespace SciLean
+
+open scoped ArrayType
 
 
 namespace DataArrayN
@@ -68,19 +71,19 @@ instance [HasRnEquiv X K R] : Axpby R (X^[I]) where
 
 ----------------------------------------------------------------------------------------------------
 
-example : Add (R^[I]) := by infer_instance
-example : Add (R^[I,J]) := by infer_instance
-example : Add (R^[J]^[I]) := by infer_instance
-example : Add (R^[I]^[J]) := by infer_instance
-example : Add (R^[I]^[J]^[I]) := by infer_instance
-example : Add (R^[I]^[J]^[I]) := by infer_instance
+-- example : Add (R^[I]) := by sorry_proof
+-- example : Add (R^[I,J]) := by sorry_proof
+-- example : Add (R^[J]^[I]) := by sorry_proof
+-- example : Add (R^[I]^[J]) := by sorry_proof
+-- example : Add (R^[I]^[J]^[I]) := by sorry_proof
+-- example : Add (R^[I]^[J]^[I]) := by sorry_proof
 
-example : SMul R (R^[I]) := by infer_instance
-example : SMul R (R^[I,J]) := by infer_instance
-example : SMul R (R^[J]^[I]) := by infer_instance
-example : SMul R (R^[I]^[J]) := by infer_instance
-example : SMul R (R^[I]^[J]^[I]) := by infer_instance
-example : SMul R (R^[I]^[J]^[I]) := by infer_instance
+-- example : SMul R (R^[I]) := by sorry_proof
+-- example : SMul R (R^[I,J]) := by sorry_proof
+-- example : SMul R (R^[J]^[I]) := by sorry_proof
+-- example : SMul R (R^[I]^[J]) := by sorry_proof
+-- example : SMul R (R^[I]^[J]^[I]) := by sorry_proof
+-- example : SMul R (R^[I]^[J]^[I]) := by sorry_proof
 
 ----------------------------------------------------------------------------------------------------
 
@@ -102,18 +105,25 @@ instance instIsZeroGetElemUncurry {L nL} [IndexType L nL]
 instance instIsZeroGetElemUncurryBase : IsZeroGetElem (R^[I]) (I × Unit) where
   getElem_zero := by sorry_proof
 
+instance (priority:=1000) instIsZeroGetElemCurryBase
+    {X : Type*} [PlainDataType X] [Zero X]
+    {I J : Type*} {nI} [IndexType I nI] {nJ} [IndexType J nJ]
+    [Fold.{_,0} I] [DecidableEq I] [Fold.{_,0} J] [DecidableEq J] :
+    IsZeroGetElem (X^[J]^[I]) (I × J) where
+  getElem_zero := by intro _; sorry_proof
+
 instance instIsZeroGetElemRn [HasRnEquiv X K R] : IsZeroGetElem (X^[I]) (Idx (nI*nK)) where
   getElem_zero := sorry_proof
 
-example : IsZeroGetElem (R^[I]) I := by infer_instance
-example : IsZeroGetElem (R^[I,J]) (I×J) := by infer_instance
+-- example : IsZeroGetElem (R^[I]) I := by sorry_proof
+-- example : IsZeroGetElem (R^[I,J]) (I×J) := by sorry_proof
 
 -- set_option trace.Meta.synthInstance true in
-example : IsZeroGetElem (R^[J]^[I]) (I×J) := by infer_instance
-example : IsZeroGetElem (R^[I]^[J]) J := by infer_instance
-example : IsZeroGetElem (R^[I]^[J]^[I]) (I) := by infer_instance
-example : IsZeroGetElem (R^[I]^[J]^[I]) (I×J) := by infer_instance
-example : IsZeroGetElem (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by infer_instance
+-- example : IsZeroGetElem (R^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsZeroGetElem (R^[I]^[J]) J := by sorry_proof
+-- example : IsZeroGetElem (R^[I]^[J]^[I]) (I) := by sorry_proof
+-- example : IsZeroGetElem (R^[I]^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsZeroGetElem (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by sorry_proof
 
 ----------------------------------------------------------------------------------------------------
 
@@ -135,17 +145,24 @@ instance instIsAddGetElemUncurry {L nL} [IndexType L nL]
 instance instIsAddGetElemUncurryBase : IsAddGetElem (R^[I]) (I × Unit) where
   getElem_add := by sorry_proof
 
+instance (priority:=1000) instIsAddGetElemCurryBase
+    {X : Type*} [PlainDataType X] [Add X]
+    {I J : Type*} {nI} [IndexType I nI] {nJ} [IndexType J nJ]
+    [Fold.{_,0} I] [DecidableEq I] [Fold.{_,0} J] [DecidableEq J] :
+    IsAddGetElem (X^[J]^[I]) (I × J) where
+  getElem_add := by intro _ _ _; sorry_proof
+
 instance instIsAddGetElemRn [HasRnEquiv X K R] : IsAddGetElem (X^[I]) (Idx (nI*nK)) where
   getElem_add := sorry_proof
 
-example : IsAddGetElem (R^[I]) I := by infer_instance
-example : IsAddGetElem (R^[I,J]) (I×J) := by infer_instance
-example : IsAddGetElem (R^[J]^[I]) (I×J) := by infer_instance
-example : IsAddGetElem (R^[I]^[J]) J := by infer_instance
-example : IsAddGetElem (R^[I]^[J]^[I]) (I) := by infer_instance
-example : IsAddGetElem (R^[I]^[J]^[I]) (I×J) := by infer_instance
-example : IsAddGetElem (R^[I]^[J]^[I]) (I×J×I) := by infer_instance
-example : IsAddGetElem (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by infer_instance
+-- example : IsAddGetElem (R^[I]) I := by sorry_proof
+-- example : IsAddGetElem (R^[I,J]) (I×J) := by sorry_proof
+-- example : IsAddGetElem (R^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsAddGetElem (R^[I]^[J]) J := by sorry_proof
+-- example : IsAddGetElem (R^[I]^[J]^[I]) (I) := by sorry_proof
+-- example : IsAddGetElem (R^[I]^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsAddGetElem (R^[I]^[J]^[I]) (I×J×I) := by sorry_proof
+-- example : IsAddGetElem (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by sorry_proof
 
 ----------------------------------------------------------------------------------------------------
 
@@ -167,17 +184,24 @@ instance instIsNegGetElemUncurry {L nL} [IndexType L nL]
 instance instIsNegGetElemUncurryBase : IsNegGetElem (R^[I]) (I × Unit) where
   getElem_neg := by sorry_proof
 
+instance (priority:=1000) instIsNegGetElemCurryBase
+    {X : Type*} [PlainDataType X] [Neg X]
+    {I J : Type*} {nI} [IndexType I nI] {nJ} [IndexType J nJ]
+    [Fold.{_,0} I] [DecidableEq I] [Fold.{_,0} J] [DecidableEq J] :
+    IsNegGetElem (X^[J]^[I]) (I × J) where
+  getElem_neg := by intro _ _; sorry_proof
+
 instance instIsNegGetElemRn [HasRnEquiv X K R] : IsNegGetElem (X^[I]) (Idx (nI*nK)) where
   getElem_neg := sorry_proof
 
 
-example : IsNegGetElem (R^[I]) I := by infer_instance
-example : IsNegGetElem (R^[I,J]) (I×J) := by infer_instance
-example : IsNegGetElem (R^[J]^[I]) (I×J) := by infer_instance
-example : IsNegGetElem (R^[I]^[J]) J := by infer_instance
-example : IsNegGetElem (R^[I]^[J]^[I]) (I) := by infer_instance
-example : IsNegGetElem (R^[I]^[J]^[I]) (I×J) := by infer_instance
-example : IsNegGetElem (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by infer_instance
+-- example : IsNegGetElem (R^[I]) I := by sorry_proof
+-- example : IsNegGetElem (R^[I,J]) (I×J) := by sorry_proof
+-- example : IsNegGetElem (R^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsNegGetElem (R^[I]^[J]) J := by sorry_proof
+-- example : IsNegGetElem (R^[I]^[J]^[I]) (I) := by sorry_proof
+-- example : IsNegGetElem (R^[I]^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsNegGetElem (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by sorry_proof
 ----------------------------------------------------------------------------------------------------
 
 
@@ -199,18 +223,26 @@ instance instIsSMulGetElemUncurry {L nL} [IndexType L nL]
 instance instIsSMulGetElemUncurryBase : IsSMulGetElem R (R^[I]) (I × Unit) where
   getElem_smul := by sorry_proof
 
+instance (priority:=1000) instIsSMulGetElemCurryBase
+    {𝕜 X : Type*} [PlainDataType X] [SMul 𝕜 X]
+    {I J : Type*} {nI} [IndexType I nI] {nJ} [IndexType J nJ]
+    [Fold.{_,0} I] [DecidableEq I] [Fold.{_,0} J] [DecidableEq J]
+    [SMul 𝕜 (X^[J]^[I])] :
+    IsSMulGetElem 𝕜 (X^[J]^[I]) (I × J) where
+  getElem_smul := by intro _ _ _; sorry_proof
+
 instance instIsSMulGetElemRn [HasRnEquiv X K R] : IsSMulGetElem R (X^[I]) (Idx (nI*nK)) where
   getElem_smul := sorry_proof
 
 
-example : IsSMulGetElem R (R^[I]) I := by infer_instance
-example : IsSMulGetElem R (R^[I,J]) (I×J) := by infer_instance
-example : IsSMulGetElem R (R^[J]^[I]) (I×J) := by infer_instance
-example : IsSMulGetElem R (R^[I]^[J]) J := by infer_instance
-example : IsSMulGetElem R (R^[I]^[J]^[I]) (I) := by infer_instance
-example : IsSMulGetElem R (R^[I]^[J]^[I]) (I×J) := by infer_instance
-example : IsSMulGetElem R (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by infer_instance
-example : IsSMulGetElem R (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by infer_instance
+-- example : IsSMulGetElem R (R^[I]) I := by sorry_proof
+-- example : IsSMulGetElem R (R^[I,J]) (I×J) := by sorry_proof
+-- example : IsSMulGetElem R (R^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsSMulGetElem R (R^[I]^[J]) J := by sorry_proof
+-- example : IsSMulGetElem R (R^[I]^[J]^[I]) (I) := by sorry_proof
+-- example : IsSMulGetElem R (R^[I]^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsSMulGetElem R (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by sorry_proof
+-- example : IsSMulGetElem R (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by sorry_proof
 
 ----------------------------------------------------------------------------------------------------
 
@@ -234,17 +266,25 @@ instance instIsInnerGetElemUncurry {L nL} [IndexType L nL]
 instance instIsInnerGetElemUncurryBase : IsInnerGetElem R (R^[I]) (I × Unit) where
   inner_eq_sum_getElem := by sorry_proof
 
+instance (priority:=1000) instIsInnerGetElemCurryBase
+    {𝕜 X : Type*} [AddCommMonoid 𝕜] [PlainDataType X] [Inner 𝕜 X]
+    {I J : Type*} {nI} [IndexType I nI] {nJ} [IndexType J nJ]
+    [Fold.{_,0} I] [DecidableEq I] [Fold.{_,0} J] [DecidableEq J]
+    [Inner 𝕜 (X^[J]^[I])] :
+    IsInnerGetElem 𝕜 (X^[J]^[I]) (I × J) where
+  inner_eq_sum_getElem := by intro _ _; sorry_proof
+
 instance instIsInnerGetElemRn [HasRnEquiv X K R] : IsInnerGetElem R (X^[I]) (Idx (nI*nK)) where
   inner_eq_sum_getElem := sorry_proof
 
 
-example : IsInnerGetElem R (R^[I]) I := by infer_instance
-example : IsInnerGetElem R (R^[I,J]) (I×J) := by infer_instance
-example : IsInnerGetElem R (R^[J]^[I]) (I×J) := by infer_instance
-example : IsInnerGetElem R (R^[I]^[J]) J := by infer_instance
-example : IsInnerGetElem R (R^[I]^[J]^[I]) (I) := by infer_instance
-example : IsInnerGetElem R (R^[I]^[J]^[I]) (I×J) := by infer_instance
-example : IsInnerGetElem R (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by infer_instance
+-- example : IsInnerGetElem R (R^[I]) I := by sorry_proof
+-- example : IsInnerGetElem R (R^[I,J]) (I×J) := by sorry_proof
+-- example : IsInnerGetElem R (R^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsInnerGetElem R (R^[I]^[J]) J := by sorry_proof
+-- example : IsInnerGetElem R (R^[I]^[J]^[I]) (I) := by sorry_proof
+-- example : IsInnerGetElem R (R^[I]^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsInnerGetElem R (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by sorry_proof
 
 ----------------------------------------------------------------------------------------------------
 
@@ -264,16 +304,28 @@ instance instIsModuleGetElemUncurry {L nL} [IndexType L nL]
 
 instance instIsModuleGetElemUncurryBase : IsModuleGetElem R (R^[I]) (I × Unit) where
 
+set_option synthInstance.checkSynthOrder false in
+instance (priority:=1000) instIsModuleGetElemCurryBase
+    {𝕜 : outParam Type*} {X : Type*} [Ring 𝕜] [PlainDataType X] [AddCommGroup X] [Module 𝕜 X]
+    {I J : Type*} {nI} [IndexType I nI] {nJ} [IndexType J nJ]
+    [Fold.{_,0} I] [DecidableEq I] [Fold.{_,0} J] [DecidableEq J]
+    [AddCommGroup (X^[J]^[I])] [Module 𝕜 (X^[J]^[I])] :
+    IsModuleGetElem 𝕜 (X^[J]^[I]) (I × J) where
+  getElem_zero := by intro _; sorry_proof
+  getElem_add := by intro _ _ _; sorry_proof
+  getElem_neg := by intro _ _; sorry_proof
+  getElem_smul := by intro _ _ _; sorry_proof
+
 instance instIsModuleGetElemRn [HasRnEquiv X K R] : IsModuleGetElem R (X^[I]) (Idx (nI*nK)) where
 
 
-example : IsModuleGetElem R (R^[I]) I := by infer_instance
-example : IsModuleGetElem R (R^[I,J]) (I×J) := by infer_instance
-example : IsModuleGetElem R (R^[J]^[I]) (I×J) := by infer_instance
-example : IsModuleGetElem R (R^[I]^[J]) J := by infer_instance
-example : IsModuleGetElem R (R^[I]^[J]^[I]) (I) := by infer_instance
-example : IsModuleGetElem R (R^[I]^[J]^[I]) (I×J) := by infer_instance
-example : IsModuleGetElem R (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by infer_instance
+-- example : IsModuleGetElem R (R^[I]) I := by sorry_proof
+-- example : IsModuleGetElem R (R^[I,J]) (I×J) := by sorry_proof
+-- example : IsModuleGetElem R (R^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsModuleGetElem R (R^[I]^[J]) J := by sorry_proof
+-- example : IsModuleGetElem R (R^[I]^[J]^[I]) (I) := by sorry_proof
+-- example : IsModuleGetElem R (R^[I]^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsModuleGetElem R (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by sorry_proof
 
 ----------------------------------------------------------------------------------------------------
 
@@ -297,16 +349,24 @@ instance instIsContinuousGetElemUncurry {L nL} [IndexType L nL]
 instance instIsContinuousGetElemUncurryBase : IsContinuousGetElem (R^[I]) (I × Unit) where
   continuous_getElem := sorry_proof
 
+instance (priority:=1000) instIsContinuousGetElemCurryBase
+    {X : Type*} [TopologicalSpace X] [PlainDataType X]
+    {I J : Type*} {nI} [IndexType I nI] {nJ} [IndexType J nJ]
+    [Fold.{_,0} I] [DecidableEq I] [Fold.{_,0} J] [DecidableEq J]
+    [TopologicalSpace (X^[J]^[I])] :
+    IsContinuousGetElem (X^[J]^[I]) (I × J) where
+  continuous_getElem := by intro _; sorry_proof
+
 instance instContinuousGetElemRn [HasRnEquiv X K R] : IsContinuousGetElem (X^[I]) (Idx (nI*nK)) where
   continuous_getElem := sorry_proof
 
 
-example : IsContinuousGetElem (R^[I]) I := by infer_instance
-example : IsContinuousGetElem (R^[I,J]) (I×J) := by infer_instance
-example : IsContinuousGetElem (R^[J]^[I]) (I×J) := by infer_instance
-example : IsContinuousGetElem (R^[I]^[J]) J := by infer_instance
-example : IsContinuousGetElem (R^[I]^[J]^[I]) (I) := by infer_instance
-example : IsContinuousGetElem (R^[I]^[J]^[I]) (I×J) := by infer_instance
-example : IsContinuousGetElem (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by infer_instance
+-- example : IsContinuousGetElem (R^[I]) I := by sorry_proof
+-- example : IsContinuousGetElem (R^[I,J]) (I×J) := by sorry_proof
+-- example : IsContinuousGetElem (R^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsContinuousGetElem (R^[I]^[J]) J := by sorry_proof
+-- example : IsContinuousGetElem (R^[I]^[J]^[I]) (I) := by sorry_proof
+-- example : IsContinuousGetElem (R^[I]^[J]^[I]) (I×J) := by sorry_proof
+-- example : IsContinuousGetElem (R^[I]^[J]^[I]) (Idx (nI*(nJ*(nI*1)))) := by sorry_proof
 
 ----------------------------------------------------------------------------------------------------

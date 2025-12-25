@@ -3,6 +3,7 @@ import SciLean.Data.DataArray.DataArray
 import SciLean.Data.DataArray.DataArrayEquiv
 import SciLean.Analysis.Scalar.Basic
 import SciLean.Analysis.AdjointSpace.Basic
+import SciLean.VersoPrelude
 
 /-! Class {lit}`HasRnEquiv X n R` states that {lit}`X` is canonically isomorphic to {lit}`R^[n]`
 
