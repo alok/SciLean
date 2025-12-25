@@ -502,3 +502,27 @@ stdbuf -oL -eL ./.lake/build/bin/GpuMNIST | tee doc/bench/runs/20251224-003640/G
 
 ### Notes
 - Overhead swings indicate run-to-run noise; no stable penalty observed. The guard adds a single alignment check before dispatch.
+
+## 2025-12-25 01:31:30 -0800 — GEMMFocus interleaved guard overhead (M4Pro raw vs guarded)
+
+**SciLean Commit:** 8091f0c2  
+**SciLean Branch:** metal-backend  
+**Worktree:** dirty (new run log files)
+
+### Commands
+```bash
+./.lake/build/bin/GEMMFocus | tee doc/bench/runs/20251225-013130/gemm_focus.txt
+```
+
+### Key Results
+- Run log: `doc/bench/runs/20251225-013130/gemm_focus.txt`
+- Guard overhead (M4Pro vs M4ProRaw, interleaved chunks, 2× iters, warmup 10):
+  - 128: +15.6%
+  - 256: +0.9%
+  - 512: -0.0%
+  - 1024: +2.2%
+  - 2048: +4.6%
+  - 4096: -0.4%
+
+### Notes
+- Interleaving is done by alternating single-iteration chunks to reduce drift.
