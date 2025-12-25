@@ -88,14 +88,14 @@ lake build NestedPodStressTest && .lake/build/bin/NestedPodStressTest
 ```
 
 ### Files Changed
-- `SciLean/Data/Tensor/GpuTensor.lean` - Type-safe strided tensor
+- `SciLean/Data/Tensor/GpuTensor.lean` - Type-safe layout-aware tensor
 - `SciLean/FFI/Metal/GpuBufferView.lean` - GPU buffer with layout
 - `SciLean/Data/Tensor/Layout.lean` - O(1) view operations
 - `SciLean/AD/TensorRevFDeriv.lean` - GEMM backward autodiff
 - `SciLean/Data/DataArray/DerivePlainDataTypeFast.lean` - Zero-overhead derive
 
 ### Notes
-- Renamed Strided* → GpuTensor/GpuBufferView for cleaner API
+- Renamed legacy tensor types → GpuTensor/GpuBufferView for cleaner API
 - All tensors now carry layout metadata from creation
 - GEMM backward uses O(1) transpose views (no data copy)
 
@@ -136,3 +136,168 @@ lake build NestedPodStressTest && .lake/build/bin/NestedPodStressTest
 ### Notes
 - GPU available; explicit CPU↔GPU transfers only at start/end for GpuTensor runs
 - GEMM view dispatch overhead remains in nanoseconds
+
+## 2025-12-23: GPU Benchmarks (GpuTensor only; GemmView/GpuMNIST build stalled)
+
+**Timestamp:** 2025-12-23 23:31:23 -0800  
+**Commit:** f907ed01508928d938e8384197204c4b591aaddb  
+**Branch:** metal-backend  
+**Worktree:** dirty (new bench regression script + metrics/logs)
+**Run dir:** doc/bench/runs/20251223-230518
+
+### Commands
+```bash
+.lake/build/bin/GpuTensorBenchmark | tee doc/bench/runs/20251223-230518/GpuTensorBenchmark.txt
+# GemmViewBenchmark + GpuMNIST not run (see notes)
+```
+
+### Key Results
+
+**GpuTensorBenchmark**
+- Single GEMM (GpuTensor): 256=243.725ms, 512=191.976ms, 1024=125.846ms
+- Chained GEMM: 256=316.615ms, 512=57.9716ms
+- Transfer overhead (upload+download): 256KB=0.01387ms, 1MB=0.03562ms, 4MB=0.38537ms
+
+### Comparison vs 2025-12-21 baseline
+- GEMM and chained GEMM times regressed by ~48x–159x (see doc/bench/runs/20251223-230518/metrics.json).
+- Transfer totals improved by ~46–63%.
+
+### Notes
+- Repeated `lake build GemmViewBenchmark` stalled at `SciLean.Analysis.Calculus.Monad.HasRevFDerivMonad` (and earlier at `SciLean.Tactic.DataSynth.Main`); timed out and aborted.
+- GpuMNIST not built/run due to the same build stall.
+- The GEMM regression is suspiciously large; likely wrong code path or sync behavior. Needs investigation before trusting these numbers.
+
+## 2025-12-23: GPU Benchmarks (GpuTensor after MPS GEMM cache)
+
+**Timestamp:** 2025-12-23 23:51:33 -0800  
+**Commit:** f907ed01508928d938e8384197204c4b591aaddb  
+**Branch:** metal-backend  
+**Worktree:** dirty (MPS GEMM cache + bench artifacts)  
+**Run dir:** doc/bench/runs/20251223-235111
+
+### Commands
+```bash
+.lake/build/bin/GpuTensorBenchmark | tee doc/bench/runs/20251223-235111/GpuTensorBenchmark.txt
+scripts/bench_regression.py --run-dir doc/bench/runs/20251223-235111
+```
+
+### Key Results
+
+**GpuTensorBenchmark**
+- Single GEMM (GpuTensor): 256=0.29718ms, 512=0.30848ms, 1024=0.79793ms
+- Chained GEMM: 256=0.40202ms, 512=0.55973ms
+- Transfer overhead (upload+download): 256KB=0.01233ms, 1MB=0.03729ms, 4MB=0.15824ms
+
+### Comparison vs 2025-12-21 baseline
+- GEMM and chained GEMM improved by ~57–86%.
+- Transfer totals improved by ~61–78%.
+
+### Notes
+- Fix: cache MPSMatrixMultiplication objects in `Metal/metal_backend.mm` to avoid per-call kernel creation overhead.
+- The previous 2025-12-23 regression run was an artifact of uncached MPS kernel creation.
+
+## 2025-12-23: GPU Benchmarks (GpuTensor + GemmView; GpuMNIST crash)
+
+**Timestamp:** 2025-12-23 23:55:00 -0800  
+**Commit:** f907ed01508928d938e8384197204c4b591aaddb  
+**Branch:** metal-backend  
+**Worktree:** dirty (MPS GEMM cache + bench artifacts)  
+**Run dir:** doc/bench/runs/20251223-235111
+
+### Commands
+```bash
+.lake/build/bin/GpuTensorBenchmark | tee doc/bench/runs/20251223-235111/GpuTensorBenchmark.txt
+.lake/build/bin/GemmViewBenchmark | tee doc/bench/runs/20251223-235111/GemmViewBenchmark.txt
+stdbuf -oL -eL .lake/build/bin/GpuMNIST 2>&1 | tee doc/bench/runs/20251223-235111/GpuMNIST.txt
+scripts/bench_regression.py --run-dir doc/bench/runs/20251223-235111
+```
+
+### Key Results
+
+**GpuTensorBenchmark**
+- Single GEMM (GpuTensor): 256=0.29718ms, 512=0.30848ms, 1024=0.79793ms
+- Chained GEMM: 256=0.40202ms, 512=0.55973ms
+- Transfer overhead (upload+download): 256KB=0.01233ms, 1MB=0.03729ms, 4MB=0.15824ms
+
+**GemmViewBenchmark**
+- Baseline direct GEMM: 256=263.522us, 512=510.914us, 1024=598.718us, 2048=1.702339ms
+- Performance: 256=0.13 TFLOPs/s, 512=0.53 TFLOPs/s, 1024=3.59 TFLOPs/s, 2048=10.09 TFLOPs/s
+- O(1) transpose overhead: 15–17ns; dispatch checks: isContiguous 17ns, isTransposed 18ns
+
+**GpuMNIST (Metal)**
+- Run aborted after printing `Training (60000 samples, mini-batch=256)...` (no epoch logs; exit code 1).
+
+### Notes
+- Fix: cached MPSMatrixMultiplication objects in `Metal/metal_backend.mm` to remove per-call kernel creation overhead.
+- GpuMNIST crash appears after training start; no exception message observed. Needs follow-up.
+
+## 2025-12-24: GpuMNIST (Metal) crash fix verification
+
+**Timestamp:** 2025-12-24 00:33:01 -0800  
+**Commit:** f907ed01  
+**Branch:** metal-backend  
+**Worktree:** dirty (local changes)
+
+### Commands
+```bash
+MTL_DEBUG_LAYER=1 METAL_DEVICE_WRAPPER_TYPE=1 stdbuf -oL -eL ./.lake/build/bin/GpuMNIST 2>&1
+```
+
+### Key Results
+
+**GpuMNIST (Metal)**
+- Dataset: 60,000 train samples, minibatch=256
+- Initial accuracy: 6.6%
+- Final accuracy (10 epochs): 98.3%
+- Epoch times: 263–537ms (per 234 batches)
+
+### Notes
+- Fixes: aligned softmax threadgroup memory to 16B; `copyLayout` now reads `Array Nat` safely (prevents huge buffer allocations on sliced batches).
+
+## 2025-12-24: GpuMNIST (Metal) run log (no validation)
+
+**Timestamp:** 2025-12-24 00:37:15 -0800  
+**Commit:** f907ed01  
+**Branch:** metal-backend  
+**Worktree:** dirty (local changes)
+
+### Commands
+```bash
+stdbuf -oL -eL ./.lake/build/bin/GpuMNIST | tee doc/bench/runs/20251224-003640/GpuMNIST.txt
+```
+
+### Key Results
+
+**GpuMNIST (Metal)**
+- Run log: `doc/bench/runs/20251224-003640/GpuMNIST.txt`
+- Initial accuracy: 6.2%
+- Final accuracy (10 epochs): 97.8%
+- Epoch times: 165–320ms (per 234 batches)
+
+### Notes
+- Baseline run for post-fix performance tracking without Metal validation.
+
+## 2025-12-24: GemmViewBenchmark (layout-aware)
+
+**Timestamp:** 2025-12-24 16:30:03 -0800  
+**Commit:** f907ed01  
+**Branch:** metal-backend  
+**Worktree:** dirty (local changes)
+
+### Commands
+```bash
+./.lake/build/bin/GemmViewBenchmark
+```
+
+### Key Results
+
+**GemmViewBenchmark**
+- 256: baseline 442.564us, ~0.08 TFLOPs/s
+- 512: baseline 502.814us, ~0.53 TFLOPs/s
+- 1024: baseline 726.695us, ~2.96 TFLOPs/s
+- 2048: baseline 2.352941ms, ~7.30 TFLOPs/s
+- O(1) transpose overhead: 26–40ns
+- Dispatch checks: isContiguous 25ns, isTransposed 30ns
+
+### Notes
+- Layout-aware GEMM path exercised for transpose views.
