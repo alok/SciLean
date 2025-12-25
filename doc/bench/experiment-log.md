@@ -325,3 +325,26 @@ stdbuf -oL -eL ./.lake/build/bin/GpuMNIST | tee doc/bench/runs/20251224-003640/G
 
 ### Notes
 - Loading images took 19.23s; labels 30ms (see run log).
+
+## 2025-12-24 17:50:17 -0800 — Graph4 standalone_bench (CSR SpMV)
+
+**SciLean Commit:** 971855da  
+**Graph4 Commit:** b0aefa2  
+**SciLean Branch:** metal-backend  
+**Graph4 Branch:** main  
+**Worktree:** dirty (local changes)
+
+### Commands
+```bash
+# from /Users/alokbeniwal/graph4
+./.lake/build/bin/standalone_bench
+```
+
+### Key Results
+- CPU SpMV (DataArray, 1M cycle, 100 iters): 40396ms, 0.004951 GFLOPS
+- GPU CSR SpMV (Float32, 1M cycle, 100 iters): 61ms, 3.278689 GFLOPS
+- GPU final value check: 1.000000
+- Run log: `doc/bench/runs/20251224-175017/graph4_standalone_bench.txt`
+
+### Notes
+- Metal shaders loaded via Graph4 symlink `Metal -> ../SciLean/Metal` to expose `kmeans.metal` (contains `csr_spmv`).
