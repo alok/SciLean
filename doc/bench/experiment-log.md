@@ -301,3 +301,27 @@ stdbuf -oL -eL ./.lake/build/bin/GpuMNIST | tee doc/bench/runs/20251224-003640/G
 
 ### Notes
 - Layout-aware GEMM path exercised for transpose views.
+
+## 2025-12-24: GpuMNIST (Metal) run
+
+**Timestamp:** 2025-12-24 16:31:46 -0800  
+**Commit:** ce85eabd  
+**Branch:** metal-backend  
+**Worktree:** dirty (local changes)
+
+### Commands
+```bash
+./.lake/build/bin/GpuMNIST | tee doc/bench/runs/20251224-163053/GpuMNIST.txt
+```
+
+### Key Results
+
+**GpuMNIST (Metal)**
+- Run log: `doc/bench/runs/20251224-163053/GpuMNIST.txt`
+- Dataset: 60,000 train samples, minibatch=256
+- Initial accuracy: 6.0%
+- Final accuracy (10 epochs): 98.4%
+- Epoch times: 308–480ms (per 234 batches)
+
+### Notes
+- Loading images took 19.23s; labels 30ms (see run log).

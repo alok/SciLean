@@ -1,0 +1,29 @@
+GPU-Accelerated MNIST Training (Metal)
+========================================
+Using type-safe CpuBuffer/GpuTensor API (no implicit coercions!)
+Metal GPU: available
+Loading images from data/train-images-idx3-ubyte... done (19230ms)
+Loading labels from data/train-labels-idx1-ubyte... done (30ms)
+Loaded 60000 training samples to CPU
+Initializing weights on CPU... done
+Uploading to GPU (explicit transfer)... done
+DEBUG: After upload - b1.sizeBytes = 512 (expected 512)
+DEBUG: After upload - w1.sizeBytes = 401408 (expected 401408)
+DEBUG: cpuB1.sizeBytes = 512 (expected 512)
+Initial accuracy: 6.000000%
+
+Training (60000 samples, mini-batch=256)...
+Epoch 1: accuracy = 91.900000%, time = 339ms (234 batches)
+Epoch 2: accuracy = 94.800000%, time = 408ms (234 batches)
+Epoch 3: accuracy = 96.100000%, time = 436ms (234 batches)
+Epoch 4: accuracy = 96.600000%, time = 473ms (234 batches)
+Epoch 5: accuracy = 96.900000%, time = 389ms (234 batches)
+Epoch 6: accuracy = 97.300000%, time = 374ms (234 batches)
+Epoch 7: accuracy = 97.400000%, time = 308ms (234 batches)
+Epoch 8: accuracy = 97.800000%, time = 446ms (234 batches)
+Epoch 9: accuracy = 97.900000%, time = 480ms (234 batches)
+Epoch 10: accuracy = 98.400000%, time = 421ms (234 batches)
+
+Final accuracy: 98.400000%
+
+Done!
