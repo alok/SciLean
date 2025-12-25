@@ -1,12 +1,15 @@
 import SciLean.Tactic.StructureDecomposition
 import SciLean.Tactic.LetNormalize
 import SciLean.Data.Function
+import Verso.Code.External
+import SciLean.VersoPrelude
+import SciLean.Util.VersoExtensions
 
 namespace SciLean.Meta
 
 set_option linter.unusedVariables false
 
-open Lean Meta Qq
+open Lean Meta Qq Verso.Code.External
 
 initialize registerTraceClass `Meta.Tactic.structuralInverse.step
 
@@ -60,16 +63,11 @@ private def afterBackwardPassSystemToString
 
 
 /--
-Solves the system of m-equations in n-variables
-```
-y₁ = f₁ x₁ ... xₙ
-...
-yₘ = fₘ x₁ ... xₙ
-```
+Solves the system of m-equations in n-variables: {lit}`y₁ = f₁ x₁ ... xₙ`, ..., {lit}`yₘ = fₘ x₁ ... xₙ`.
 
-Returns values of `xᵢ` in terms of `yⱼ`.
+Returns values of {lit}`xᵢ` in terms of {lit}`yⱼ`.
 
-If `n>m` then the values `xᵢ` can depend also on other `xₖ`. The set `n-m` xs
+If {lit}`n>m` then the values {lit}`xᵢ` can depend also on other {lit}`xₖ`. The set {lit}`n-m` xs
 -/
 private partial def invertValues (xVars yVals fVals : Array Expr) : MetaM (Option (SystemInverse × Array MVarId)) := do
 
@@ -213,9 +211,9 @@ structure FullInverse where
 
 open Qq
 /--
-  Holds right inverse to the function `f : X → Y`.
+Holds right inverse to the function {lit}`f : X → Y`.
 
-  Further more it provides decomposition `X ≃ X₁×X₂` such that `f` restricted to only `X₂` is fully invertible.
+Further more it provides decomposition {lit}`X ≃ X₁×X₂` such that {lit}`f` restricted to only {lit}`X₂` is fully invertible.
 -/
 structure RightInverse where
   {v : Level}
@@ -230,22 +228,13 @@ inductive FunctionInverse where
   | full (inv : FullInverse)
   | right (inv : RightInverse)
 
-/-- Compute inverse of a function `f : X → Y` where both `X` and `Y` are possible nested strustures
+/-- Compute inverse of a function {lit}`f : X → Y` where both {lit}`X` and {lit}`Y` are possible nested structures.
 
-For example
-```
-fun (x,(y,z)) => ((x+y, x), z)
-==>
-fun ((x',y'),z') => (y', (x' - y', z'))
-```
+For example, {lit}`fun (x,(y,z)) => ((x+y, x), z)` becomes {lit}`fun ((x',y'),z') => (y', (x' - y', z'))`.
 
-It can also compute right inverses
-```
-fun (x,y,z) => x+y+z)
-==>
-fun (y,z) x' => (x'-y-z, y, z)
-```
-the right inverse `f⁻¹` is parametrized by a type `X₁` and for every `x₁ : X₁` the `f⁻¹ x₁` is right inverse of `f`
+It can also compute right inverses, e.g. {lit}`fun (x,y,z) => x+y+z` becomes {lit}`fun (y,z) x' => (x'-y-z, y, z)`.
+
+The right inverse {lit}`f⁻¹` is parametrized by a type {lit}`X₁` and for every {lit}`x₁ : X₁` the {lit}`f⁻¹ x₁` is right inverse of {lit}`f`.
 
 Returns also a list of pending goals proving that individual inversions are possible.
 -/

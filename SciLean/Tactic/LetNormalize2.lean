@@ -15,7 +15,7 @@ of an expression as possible.
 
 open Lean Elab Parser Meta Tactic
 
-/-- Configuration for {name}`Lean.Expr.liftLets` and the {tactic}`lift_lets` tactic. -/
+/-- Configuration for the {tactic}`lift_lets` tactic. -/
 structure Lean.Expr.LiftLets2Config where
   /-- Whether to lift lets out of proofs. The default is not to. -/
   proofs : Bool := false
@@ -39,7 +39,7 @@ structure Lean.Expr.LiftLets2Config where
 
 
 /--
-Auxiliary definition for {name}`Lean.Expr.liftLets`. Takes a list of the accumulated fvars.
+Auxiliary definition for lifting let bindings. Takes a list of the accumulated fvars.
 This list is used during the computation to merge let bindings.
 -/
 private partial def Lean.Expr.liftLets2Aux {α} (config : LiftLets2Config) (e : Expr) (fvars : Array Expr)
@@ -129,7 +129,7 @@ list of local bindings (each an fvar) and the new expression.
 
 Let bindings are merged if they have the same type and value.
 
-Use {name}`Lean.Expr.liftLets` with {name}`mkLetFVars` to get a defeq expression with all let bindings
+Use {name}`mkLetFVars` to get a defeq expression with all let bindings
 lifted as far as possible. -/
 def Lean.Expr.liftLets2 {α} (e : Expr) (f : Array Expr → Expr → n α)
     (config : LiftLets2Config := {}) : n α :=

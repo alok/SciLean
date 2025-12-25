@@ -3,6 +3,7 @@ import Qq
 
 import SciLean.Lean.Meta.Basic
 import SciLean.Data.ArraySet
+import SciLean.VersoPrelude
 
 set_option linter.unusedVariables false
 

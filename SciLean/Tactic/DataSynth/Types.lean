@@ -5,6 +5,7 @@ import SciLean.Lean.Meta.Uncurry
 import SciLean.Lean.Meta.Basic
 
 import Mathlib.Logic.Equiv.Defs
+import SciLean.VersoPrelude
 
 open Lean Meta
 

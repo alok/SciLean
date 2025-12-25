@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Group.Defs
 import SciLean.Logic.Function.Constant
+import SciLean.VersoPrelude
 
 namespace SciLean.UnsafeAD
 

@@ -1,4 +1,5 @@
 import SciLean.Tactic.DataSynth.Main
+import SciLean.VersoPrelude
 
 namespace SciLean
 

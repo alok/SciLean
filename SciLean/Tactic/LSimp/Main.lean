@@ -14,6 +14,7 @@ import Lean.Meta.Match.Value
 
 import SciLean.Tactic.LSimp.Types
 import SciLean.Util.HoldLet
+import SciLean.VersoPrelude
 
 open Lean Meta
 

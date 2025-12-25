@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Tomas Skrivan
 -/
 import Qq
+import SciLean.VersoPrelude
 
 /-!
 # funTrans environment extension
@@ -126,7 +127,8 @@ def getFunTransDecl? (e : Expr) : MetaM (Option FunTransDecl) := do
   | .none => return none
 
 
-/-- Returns function {given}`f` from {lit}`e = T f` and {given}`T` is function transformation. -/
+/-- Returns function {given}`f` from {lit}`e = T f`, where {given}`T` is the function transformation
+{lean}`T`; the result is {lean}`f`. -/
 def getFunTransFun? (e : Expr) : MetaM (Option Expr) := do
   match ← getFunTrans? e with
   | .some (_,f) => return f

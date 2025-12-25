@@ -1,5 +1,6 @@
 import Lean.Elab.Tactic.Simp
 import Lean.Elab.Tactic.Conv.Basic
+import SciLean.VersoPrelude
 
 namespace Lean.Elab.Tactic.Conv
 open Meta

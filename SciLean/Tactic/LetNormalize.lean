@@ -7,6 +7,7 @@ import SciLean.Lean.Meta.Basic
 import SciLean.Lean.Expr
 
 import SciLean.Util.RewriteBy
+import SciLean.VersoPrelude
 
 namespace SciLean.Meta.LetNormalize
 
@@ -23,8 +24,8 @@ structure LetNormalizeConfig where
   removeNumConst := true
 deriving Inhabited, BEq, Repr
 
-/-- Is {syntax term}`e` in the form {syntax term}`p₁ (...(pₙ x))`
-where {syntax term}`pᵢ` are projections and {syntax term}`x` is a free variable?
+/-- Is {lit}`e` in the form {lit}`p₁ (...(pₙ x))`
+where {lit}`pᵢ` are projections and {lit}`x` is a free variable?
 -/
 def isProjectionOfFVar (e : Expr) : MetaM Bool := do
   match e with

@@ -11,6 +11,7 @@ import SciLean.Tactic.FunTrans.Theorems
 import SciLean.Tactic.FunTrans.Types
 import Mathlib.Tactic.FunProp.Core
 import Mathlib.Tactic.FunProp.Types
+import SciLean.VersoPrelude
 
 /-!
 # funTrans Core Algorithm

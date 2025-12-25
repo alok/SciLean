@@ -5,6 +5,7 @@ Authors: Kyle Miller, Tomas Skrivan
 -/
 import Mathlib.Tactic.Core
 import Mathlib.Logic.Equiv.Defs
+import SciLean.VersoPrelude
 
 /-!
 # Generating "simple proxy types"
@@ -53,7 +54,7 @@ returns {lit}`Sigma (fun x => Fin x)` and {lit}`⟨a, b⟩`.
 Always returns a {lit}`Type*`. Uses {name}`Unit`, {name}`PLift`, and {name}`Sigma`. Avoids using {name}`PSigma` since
 the {lit}`Fintype` instances for it go through {name}`Sigma`s anyway.
 
-The {given}`decorateSigma` function is to wrap the {name}`Sigma` a decorator such as {lit}`Lex`.
+The {lit}`decorateSigma` function wraps the {name}`Sigma` with a decorator such as {lit}`Lex`.
 It should yield a definitionally equal type. -/
 def defaultMkCtorSimpleProxyType (xs : List (Expr × Name))
     (decorateSigma : Expr → TermElabM Expr := pure) :
@@ -84,7 +85,7 @@ def defaultMkCtorSimpleProxyType (xs : List (Expr × Name))
 
 /-- Create a {name}`Sum` of types, mildly optimized to not have a trailing {name}`Empty`.
 
-The {given}`decorateSum` function is to wrap the {name}`Sum` with a function such as {lit}`Lex`.
+The {lit}`decorateSum` function wraps the {name}`Sum` with a function such as {lit}`Lex`.
 It should yield a definitionally equal type.
 
 Returns a tuple of (type, patterns, tactic proof). -/
@@ -230,7 +231,7 @@ def ensureProxyEquiv (config : ProxyEquivConfig) (indVal : InductiveVal) : TermE
 
 /-- Helper function for {lit}`simple_proxy_equiv% type : expectedType` elaborators.
 
-Elaborate {given}`type` and get its {name}`InductiveVal`. Uses the {given}`expectedType`, where the
+Elaborate {lit}`type` and get its {name}`InductiveVal`. Uses {lit}`expectedType`, where the
 expected type should be of the form {lit}`_ ≃ type`. -/
 def elabProxyEquiv (type : Term) (expectedType? : Option Expr) :
     TermElabM (Expr × InductiveVal) := do
@@ -247,12 +248,12 @@ def elabProxyEquiv (type : Term) (expectedType? : Option Expr) :
   return (type, ← getConstInfoInduct declName)
 
 /--
-The term elaborator {lit}`simple_proxy_equiv% α` for a type {given}`α` elaborates to an equivalence {lit}`β ≃ α`
-for a "proxy type" {given}`β` composed out of basic type constructors {name}`Unit`, {name}`PLift`, {name}`Prod`,
+The term elaborator {lit}`simple_proxy_equiv% α` for a type {lit}`α` elaborates to an equivalence {lit}`β ≃ α`
+for a "proxy type" {lit}`β` composed out of basic type constructors {name}`Unit`, {name}`PLift`, {name}`Prod`,
 {name}`Empty`, and {name}`Sum`.
 
-This only works for inductive types {given}`α` that are neither recursive nor have indices.
-If {given}`α` is an inductive type with name {lit}`I`, then as a side effect this elaborator defines
+This only works for inductive types {lit}`α` that are neither recursive nor have indices.
+If {lit}`α` is an inductive type with name {lit}`I`, then as a side effect this elaborator defines
 {lit}`I.simpleProxyType` and {lit}`I.simpleProxyTypeEquiv`.
 
 The elaborator makes use of the expected type, so {lit}`(simple_proxy_equiv% _ : _ ≃ α)` works.

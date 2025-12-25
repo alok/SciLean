@@ -3,6 +3,7 @@ import Mathlib.Lean.Meta.RefinedDiscrTree
 
 import SciLean.Tactic.DataSynth.Decl
 import SciLean.Lean.Meta.Basic
+import SciLean.VersoPrelude
 
 open Lean Meta
 open Mathlib.Meta.FunProp
@@ -23,7 +24,7 @@ inductive LambdaTheoremData where
   /-- Composition theorem
 
   The theorem should have roughly the following form
-  {syntax term}``(g : X → Y) (f : Y → Z) (hg : P g g') (hf : P f f') → P (f∘g) fg'``
+  {lit}``(g : X → Y) (f : Y → Z) (hg : P g g') (hf : P f f') → P (f∘g) fg'``
   and {lit}`gId`, {lit}`fId`, {lit}`hgId`, {lit}`hfId` are indices of corresponding arguments
   in the theorem {lit}`thmName`
    -/
@@ -31,7 +32,7 @@ inductive LambdaTheoremData where
   /-- Let binding theorem
 
   The theorem should have roughly the following form
-  {syntax term}``(g : X → Y) (f : Y → X → Z) (hg : P g g') (hf : P f f') → P (fun x => let y := g x; f y x) fg'``
+  {lit}``(g : X → Y) (f : Y → X → Z) (hg : P g g') (hf : P f f') → P (fun x => let y := g x; f y x) fg'``
   and {lit}`gId`, {lit}`fId`, {lit}`hgId`, {lit}`hfId` are indices of corresponding arguments
   in the theorem {lit}`thmName`
   -/
@@ -42,7 +43,7 @@ inductive LambdaTheoremData where
   differentiable everywhere except integers.
 
   The theorem should have roughly the following form
-  {syntax term}``(g : X → Y) (f : Y → X → Z) (hf : ∀ y, P (f y) (f' y)) → P (fun x => let y := g x; f y x) fg'``
+  {lit}``(g : X → Y) (f : Y → X → Z) (hf : ∀ y, P (f y) (f' y)) → P (fun x => let y := g x; f y x) fg'``
   and {lit}`gId`, {lit}`fId`, {lit}`hfId` are indices of corresponding arguments
   in the theorem {lit}`thmName`
   -/
@@ -50,14 +51,14 @@ inductive LambdaTheoremData where
   /-- Pi theorem
 
   The theorem should have roughly the following form
-  {syntax term}``(f : X → I → Y) (hf : ∀ i, P (f · i) (f' i)) → P (fun x i => f x i) f'``
+  {lit}``(f : X → I → Y) (hf : ∀ i, P (f · i) (f' i)) → P (fun x i => f x i) f'``
   and {lit}`fId`, {lit}`hfId` are indices of corresponding arguments in the theorem {lit}`thmName`
   -/
   | pi (fId hfId : Nat)
   /-- Constant theorem
 
   The theorem should have roughly the following form
-  {syntax term}``(y : Y) → P (fun x => y) c'``
+  {lit}``(y : Y) → P (fun x => y) c'``
   -/
   | const
   /-- Projection theorem
@@ -66,7 +67,7 @@ inductive LambdaTheoremData where
   {lit}`X₁` and we know how to transform this restriction then we know how to transform {lit}`f`.
 
   The theorem should have roughly the following form
-  {syntax term}``(f : X → Y) (g : X₁ → Y) (p₁ : X → X₁) (p₂ : X → X₂) (q : X₁ → X₂ → X) (hg : P g g') → P f f'``
+  {lit}``(f : X → Y) (g : X₁ → Y) (p₁ : X → X₁) (p₂ : X → X₂) (q : X₁ → X₂ → X) (hg : P g g') → P f f'``
 
   TODO: There has to be some condition on p₁,p₂,q that they really form a decomposition.
   -/

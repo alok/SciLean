@@ -7,6 +7,7 @@ import Lean
 
 import SciLean.Tactic.FunTrans.Decl
 import SciLean.Tactic.FunTrans.Theorems
+import SciLean.VersoPrelude
 
 /-!
 # funTrans Attribute

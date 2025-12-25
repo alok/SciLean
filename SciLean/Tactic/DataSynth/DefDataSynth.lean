@@ -1,5 +1,6 @@
 import SciLean.Analysis.Scalar
 import SciLean.Tactic.DataSynth.Elab
+import SciLean.VersoPrelude
 
 namespace SciLean.Tactic.DataSynth
 

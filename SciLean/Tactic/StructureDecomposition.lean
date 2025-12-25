@@ -1,5 +1,6 @@
 import SciLean.Lean.Expr
 import SciLean.Lean.Meta.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean.Meta
 
@@ -142,21 +143,15 @@ structure StructureDecomposition where
   proof : Q(IsDecomposition $p₁ $p₂ $q)
 deriving Inhabited
 
-/-- Takes a type {given}`X` of a nested structure and splits it into two {given}`X₁` and {given}`X₂`. Elements {given}`x`
-for which {syntax term}`split i x` is true are gathered in {given}`X₁` and rest is in {given}`X₂`.
-Returns function {syntax term}`p₁ : X → X₁`, {syntax term}`p₂ : X → X₂` and {syntax term}`q : X₁ → X₂ → X`
+/-- Takes a type {lit}`X` of a nested structure and splits it into two {lit}`X₁` and {lit}`X₂`. Elements {lit}`x`
+for which {lit}`split i x` is true are gathered in {lit}`X₁` and the rest is in {lit}`X₂`.
+Returns functions {lit}`p₁ : X → X₁`, {lit}`p₂ : X → X₂` and {lit}`q : X₁ → X₂ → X`
 that are inverse of each other.
 
-Example:
-```leanTerm
-split ((u,v),(w,x),y) (fun i => i%2==0)
-```
-returns
-```leanTerm
-p₁ := fun ((a,b),(c,d),e) => (a,c,e)
-p₂ := fun ((a,b),(c,d),e) => (b,d)
-q  := fun ((a,c,e),(b,d)) => ((a,b),(c,d),e)
-```
+Example: {lit}`split ((u,v),(w,x),y) (fun i => i%2==0)` returns
+{lit}`p₁ := fun ((a,b),(c,d),e) => (a,c,e)`,
+{lit}`p₂ := fun ((a,b),(c,d),e) => (b,d)`, and
+{lit}`q  := fun ((a,c,e),(b,d)) => ((a,b),(c,d),e)`.
 -/
 def decomposeStructure (e : Expr) (split : Nat → Expr → Bool) : MetaM (Option StructureDecomposition) := do
   let ⟨u,X,_⟩ ← inferTypeQ e

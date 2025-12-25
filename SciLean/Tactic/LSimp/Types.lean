@@ -11,6 +11,7 @@ import SciLean.Tactic.GTrans.MetaLCtxM
 
 import SciLean.Tactic.FunTrans.Core
 import SciLean.Tactic.FunTrans.Elab
+import SciLean.VersoPrelude
 
 open Lean Meta
 

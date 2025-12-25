@@ -3,6 +3,7 @@ import Lean.Elab.Tactic.Conv
 import SciLean.Tactic.GTrans.Core
 import SciLean.Util.RewriteBy
 import SciLean.Tactic.InferVar
+import SciLean.VersoPrelude
 
 import Mathlib.Tactic.FunProp.Elab
 
@@ -14,7 +15,7 @@ open Lean Meta Elab Tactic
 
 syntax (name:=gtrans_tac) "gtrans" : tactic
 
-/-- `gtrans` as conv tactic will fill in meta variables in generalized transformation -/
+/-- {tactic}`gtrans` as conv tactic will fill in metavariables in generalized transformation. -/
 syntax (name:=gtrans_conv) "gtrans" : conv
 
 open Lean.Parser.Tactic in
@@ -111,7 +112,8 @@ open Mathlib.Meta.FunProp Lean.Parser.Tactic in
 
 
 open Lean Elab Term Meta Qq in
-/-- `gtrans_output t by gtrans` returns tuple of all output parameters infered by `gtrans` in the term `t` -/
+/-- {lit}`gtrans_output t by gtrans` returns tuple of all output parameters inferred by {lit}`gtrans`
+in the term {lit}`t`. -/
 elab "gtrans_output" t:term "by" c:Parser.Tactic.Conv.convSeq : term => do
 
   let e ← elabTerm (← `($t rewrite_by $c)) none
@@ -129,7 +131,8 @@ elab "gtrans_output" t:term "by" c:Parser.Tactic.Conv.convSeq : term => do
 
     mkLambdaFVars xs (← mkProdElem output)
 
-/-- `gtrans_output t` returns tuple of all output parameters infered by `gtrans` in the term `t`.
+/-- {lit}`gtrans_output t` returns tuple of all output parameters inferred by {lit}`gtrans` in the
+term {lit}`t`.
 
-This is a shorthand for `gtrans_output t by gtrans`. -/
+This is a shorthand for {lit}`gtrans_output t by gtrans`. -/
 macro "gtrans_output" t:term : term => `(gtrans_output $t by gtrans)

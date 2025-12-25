@@ -2,6 +2,7 @@ import Lean.Meta.Tactic.Simp
 
 import Mathlib.Lean.Meta.RefinedDiscrTree
 import Mathlib.Lean.Meta.RefinedDiscrTree.Lookup
+import SciLean.VersoPrelude
 
 namespace SciLean
 

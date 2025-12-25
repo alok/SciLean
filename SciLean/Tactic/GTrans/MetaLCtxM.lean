@@ -2,6 +2,7 @@ import Lean
 import Qq
 
 import SciLean.Lean.Meta.Basic
+import SciLean.VersoPrelude
 
 open Lean Meta
 

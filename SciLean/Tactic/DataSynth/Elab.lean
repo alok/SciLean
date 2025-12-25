@@ -1,6 +1,7 @@
 import Lean.Elab.Tactic.Conv
 import SciLean.Tactic.DataSynth.Main
 import SciLean.Tactic.DataSynth.Simproc
+import SciLean.VersoPrelude
 
 namespace SciLean.Tactic.DataSynth
 
