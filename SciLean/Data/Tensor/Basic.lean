@@ -6,6 +6,7 @@ Authors: SciLean contributors
 import SciLean.Data.DataArray
 import SciLean.Data.Tensor.GpuTensor
 import SciLean.Data.Tensor.Layout
+import SciLean.VersoPrelude
 
 namespace SciLean
 

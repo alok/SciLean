@@ -7,6 +7,7 @@ import Batteries.Lean.Expr
 import Mathlib.LinearAlgebra.Matrix.Notation
 
 import Qq
+import SciLean.VersoPrelude
 
 
 namespace SciLean

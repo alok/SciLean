@@ -13,6 +13,7 @@
        `uncurryN 3 (λ i j k : Nat => i + j) = λ (i,j,k) => i + j`
  -/
 
+import SciLean.VersoPrelude
 ----------------------------------------------------------------------
 
 class Prod.Size (α : Type) where

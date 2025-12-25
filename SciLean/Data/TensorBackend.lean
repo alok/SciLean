@@ -11,6 +11,7 @@ The key insight from tinygrad:
 -/
 import SciLean.Data.DataArray.DataArray
 import SciLean.Data.DataArray.TensorOperations
+import SciLean.VersoPrelude
 
 namespace SciLean
 
@@ -40,19 +41,19 @@ class TensorBackend (B : Type) where
   /-- Copy data from one buffer to another -/
   copy : B → B
 
-  /-- Element-wise addition: `z = x + y` -/
+  /-- Element-wise addition: {lit}`z = x + y` -/
   add : B → B → B
 
-  /-- Scalar multiplication: `y = a * x` -/
+  /-- Scalar multiplication: {lit}`y = a * x` -/
   scal : Float → B → B
 
-  /-- Scalar addition: `y = x + a` -/
+  /-- Scalar addition: {lit}`y = x + a` -/
   adds : B → Float → B
 
-  /-- Element-wise multiplication: `z = x * y` -/
+  /-- Element-wise multiplication: {lit}`z = x * y` -/
   mul : B → B → B
 
-  /-- Dot product: `sum(x * y)` -/
+  /-- Dot product: {lit}`sum(x * y)` -/
   dot : B → B → Float
 
   /-- Sum of all elements -/
@@ -61,15 +62,15 @@ class TensorBackend (B : Type) where
   /-- Maximum element -/
   max : B → Float
 
-  /-- Matrix-vector multiply: `y = A * x`.
+  /-- Matrix-vector multiply: {lit}`y = A * x`.
       A is m×n stored row-major, x is n-dim, y is m-dim -/
   gemv : Nat → Nat → B → B → B
 
-  /-- Matrix-matrix multiply: `C = A * B`.
+  /-- Matrix-matrix multiply: {lit}`C = A * B`.
       A is m×k, B is k×n, C is m×n, all row-major -/
   gemm : Nat → Nat → Nat → B → B → B
 
-  /-- GEMM with scaling: `C = α*A*B + β*C` -/
+  /-- GEMM with scaling: {lit}`C = α*A*B + β*C` -/
   gemmScaled : Nat → Nat → Nat → Float → B → B → Float → B → B
 
   /-- Element-wise exponential -/

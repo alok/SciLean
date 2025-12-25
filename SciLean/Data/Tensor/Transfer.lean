@@ -5,6 +5,7 @@ Authors: SciLean contributors
 -/
 import SciLean.Data.Tensor.Basic
 import SciLean.Data.IndexType.Shape
+import SciLean.VersoPrelude
 
 namespace SciLean
 
