@@ -478,3 +478,27 @@ stdbuf -oL -eL ./.lake/build/bin/GpuMNIST | tee doc/bench/runs/20251224-003640/G
 
 ### Notes
 - Metal shaders loaded via Graph4 symlink `Metal -> ../SciLean/Metal` to expose `kmeans.metal` (contains `csr_spmv`).
+
+## 2025-12-25 01:21:14 -0800 — GEMMFocus guard overhead (M4Pro raw vs guarded)
+
+**SciLean Commit:** ed24b457  
+**SciLean Branch:** metal-backend  
+**Worktree:** dirty (GEMMFocus guard bench + untracked run log)
+
+### Commands
+```bash
+./.lake/build/bin/GEMMFocus | tee doc/bench/runs/20251225-012114/gemm_focus.txt
+```
+
+### Key Results
+- Run log: `doc/bench/runs/20251225-012114/gemm_focus.txt`
+- Guard overhead (M4Pro vs M4ProRaw):
+  - 128: +51.8%
+  - 256: -19.0%
+  - 512: -18.2%
+  - 1024: -13.1%
+  - 2048: +0.7%
+  - 4096: +17.7%
+
+### Notes
+- Overhead swings indicate run-to-run noise; no stable penalty observed. The guard adds a single alignment check before dispatch.
