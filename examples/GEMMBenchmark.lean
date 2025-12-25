@@ -25,14 +25,14 @@ def FloatArray.random (n : Nat) : IO FloatArray := do
     xs := xs.push (← rand01)
   return xs
 
-/-- Create random Float^[I,J] matrix -/
+/-- Create random {lean}`Float^[I,J]` matrix -/
 def DataArrayN.random {I nI} [IndexType I nI] {J nJ} [IndexType J nJ] : IO (Float^[I,J]) := do
   let mut arr : FloatArray := .emptyWithCapacity (nI * nJ)
   for _ in [0:(nI * nJ)] do
     arr := arr.push (← rand01)
   return DataArrayN.fromFloatArray arr
 
-/-- Naive matrix multiplication: C = A * B -/
+/-- Naive matrix multiplication: {lit}`C = A * B` -/
 def naiveMatMul (m k n : Nat) (A B : FloatArray) : FloatArray := Id.run do
   let mut C : FloatArray := .emptyWithCapacity (m * n)
   for _ in [0:m*n] do
@@ -47,7 +47,7 @@ def naiveMatMul (m k n : Nat) (A B : FloatArray) : FloatArray := Id.run do
       C := C.uset (i*n + j).toUSize sum sorry_proof
   return C
 
-/-- BLAS GEMM: C = A * B -/
+/-- BLAS GEMM: {lit}`C = A * B` -/
 def blasMatMul (m k n : Nat) (A B : FloatArray) : FloatArray :=
   let C : FloatArray := .mk (Array.replicate (m * n) 0.0)
   BLAS.dgemmSimple m.toUSize n.toUSize k.toUSize 1.0 A B 0.0 C

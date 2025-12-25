@@ -6,8 +6,8 @@ import SciLean.Util.Benchmark
 
 This compares a few ways of generating random vectors:
 
-1. `IO.rand` in a loop to build a `FloatArray`
-2. `SciLean.Rand` (using `uniformI`) to build a `Float^[n]` in one state-thread
+1. {name}`IO.rand` in a loop to build a {name}`FloatArray`
+2. {name}`SciLean.Rand` (using {lit}`uniformI`) to build a {lit}`Float^[n]` in one state-thread
 
 The goal is to keep this *fast* and *easy to run* as a smoke/perf test.
 -/
