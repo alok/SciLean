@@ -41,6 +41,28 @@ kernel void gemv(
     y[i] = sum;
 }
 
+// Sparse CSR SpMV: y = A * x
+// row_ptr has length m + 1, col_ind and values length nnz
+kernel void csr_spmv(
+    device const uint* row_ptr [[buffer(0)]],
+    device const uint* col_ind [[buffer(1)]],
+    device const float* values [[buffer(2)]],
+    device const float* x [[buffer(3)]],
+    device float* y [[buffer(4)]],
+    constant uint& m [[buffer(5)]],
+    uint row [[thread_position_in_grid]]
+) {
+    if (row >= m) return;
+
+    uint start = row_ptr[row];
+    uint end = row_ptr[row + 1];
+    float sum = 0.0f;
+    for (uint idx = start; idx < end; idx++) {
+        sum += values[idx] * x[col_ind[idx]];
+    }
+    y[row] = sum;
+}
+
 // Matrix multiply: C = A * B (naive - 1 thread per element)
 // A is m x k, B is k x n, C is m x n
 kernel void gemm(
