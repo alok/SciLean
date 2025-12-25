@@ -1,13 +1,14 @@
 import SciLean.Probability.Rand
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 universe v
 
-/-- Monad transformer for computations guided by `StdGen` randomness.
+/-- Monad transformer for computations guided by {lit}`StdGen` randomness.
 
-Note: `StdGen : Type` lives in universe 0, so this transformer is restricted to
-monads over `Type` (universe 0).
+Note: {lit}`StdGen : Type` lives in universe 0, so this transformer is restricted to
+monads over {lit}`Type` (universe 0).
 -/
 abbrev RandT (m : Type → Type v) := StateT StdGen m
 
@@ -24,7 +25,7 @@ namespace RandT
   let (_, g) ← x.run g
   return g
 
-/-- Run a random computation in `IO` using Lean's global `StdGen` reference. -/
+/-- Run a random computation in {lit}`IO` using Lean's global {lit}`StdGen` reference. -/
 @[inline] def runIO (x : RandT IO α) : IO α := do
   let g ← IO.stdGenRef.get
   let (a, g) ← x.run g

@@ -1,4 +1,5 @@
 import Lean
+import SciLean.VersoPrelude
 
 /-! # Probability Simp Attributes
 

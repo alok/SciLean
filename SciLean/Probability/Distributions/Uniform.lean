@@ -3,6 +3,7 @@ import Mathlib.MeasureTheory.Measure.Prod
 import SciLean.Analysis.AdjointSpace.Geometry
 import SciLean.Data.DataArray
 import SciLean.Probability.Rand
+import SciLean.VersoPrelude
 
 open MeasureTheory Set
 
@@ -11,7 +12,7 @@ namespace SciLean.Rand
 set_option deprecated.oldSectionVars true
 variable {R} [RealScalar R] [MeasureSpace R]
 
-/-- Class providing uniform sampler from the set `A`. -/
+/-- Class providing uniform sampler from the set {lean}`A`. -/
 class UniformRand {X : Type _} (A : Set X) [MeasureSpace X] where
   uniform : Rand X
   is_uniform : ∀ x, uniform.ℙ.rnDeriv volume x = 1 / volume A
@@ -153,10 +154,10 @@ theorem Set.Icc_volume (a b : R) (h : a ≤ b) :
 
 
 variable (R)
-/-- Helper class allowing us to draw samples from a ball over a generic type `X`.
+/-- Helper class allowing us to draw samples from a ball over a generic type {lean}`X`.
 
-There are many variants of the space `ℝⁿ` like `ℝ×ℝ`, `ℝ^[n]`, `ℝ^[n]×ℝ^[n]`, etc. with the help
-of this class we can effectivelly define sampling frmo a ball inductively. -/
+There are many variants of the space {lit}`ℝⁿ` like {lit}`ℝ×ℝ`, {lit}`ℝ^[n]`, {lit}`ℝ^[n]×ℝ^[n]`, etc. With the help
+of this class we can effectively define sampling from a ball inductively. -/
 class RejectionSampleBall₂ (X : Type) [NormedAddCommGroup X] [AdjointSpace R X]  where
   sample : Rand X
 variable {R}
