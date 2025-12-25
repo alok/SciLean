@@ -246,8 +246,8 @@ open Lean Meta Expr
 /-- Simproc for zetaDelta reduction in very specific case:
 
 Consider that we create an array and then immediately take an element of it:
-{syntax term}`fun i => (let xs := ofFn (fun j => f j); xs[i])`
-we want this to reduce to {syntax term}`fun i => f i`. This simproc does that without the need of turning on
+{lit}`fun i => (let xs := ofFn (fun j => f j); xs[i])`
+we want this to reduce to {lit}`fun i => f i`. This simproc does that without the need of turning on
 the zeta/zetaDelta simp options.
  -/
 simproc_decl getElem_ofFn_zetaDelta (getElem _ _ _) := fun e => do

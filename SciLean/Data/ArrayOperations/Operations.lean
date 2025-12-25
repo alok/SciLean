@@ -2,6 +2,7 @@ import SciLean.Data.ArrayOperations.Basic
 import SciLean.Data.IndexType
 import SciLean.Data.IndexType.Basic
 import SciLean.Data.IndexType.Fold
+import SciLean.VersoPrelude
 
 namespace SciLean
 
@@ -12,24 +13,24 @@ variable {X I Y : Type*} {nI} [IndexType I nI] [Fold I]
   [SetElem' X I Y]
 
 /--
-Maps elements of {given}`xs` by {given}`f` with data accessor {given}`g`.
+Maps elements of {lit}`xs` by {lit}`f` with data accessor {lit}`g`.
 
-`(mapIdxMono2 f g xs)[i] = f i (g i) x[i]`
+For {lit}`i`, {lit}`(mapIdxMonoAcc f g xs)[i] = f i (g i) xs[i]`.
 
-This is a low level function that provides additional argument {given}`g` which is used as data accessor
-inside of {given}`f`. For example, instead of writing
+This is a low level function that provides additional argument {lit}`g` which is used as data accessor
+inside of {lit}`f`. For example, instead of writing
 
-`def add (x y : X) := mapIdxMono (fun i xi => xi + y[i]) x`
+{lit}`def add (x y : X) := mapIdxMono (fun i xi => xi + y[i]) x`
 
 you should write
 
-`def add (x y : X) := mapIdxMono2 (fun i yi xi => xi + yi) (fun i => y[i]) x`
+{lit}`def add (x y : X) := mapIdxMonoAcc (fun i yi xi => xi + yi) (fun i => y[i]) x`
 
 This way reverse mode AD can produce better code.
 
-An example of higher arity function
+An example of higher arity function:
 
-`def mulAdd (x y z : X) := mapIdxMono2 (fun i (xi,yi) zi => xi*yi + zi) (fun i => (x[i],y[i])) z`
+{lit}`def mulAdd (x y z : X) := mapIdxMonoAcc (fun i (xi,yi) zi => xi*yi + zi) (fun i => (x[i],y[i])) z`
 -/
 @[inline, specialize, macro_inline]
 def mapIdxMonoAcc (f : I → Z → Y → Y) (g : I → Z) (xs : X) : X :=
@@ -41,12 +42,12 @@ def mapIdxMonoAcc (f : I → Z → Y → Y) (g : I → Z) (xs : X) : X :=
 
 
 /--
-Maps elements of {given}`xs` by {given}`f`.
+Maps elements of {lit}`xs` by {lit}`f`.
 
-`(mapIdxMono f xs)[i] = f i x[i]`
+For {lit}`i`, {lit}`(mapIdxMono f xs)[i] = f i xs[i]`.
 
-Note: Consider using {name}`mapIdxMonoAcc` if {given}`f` is accessing element of another array,
-like `f := fun i xi => xi + y[i]`. Reverse mode AD is able to produce better gradients for
+Note: Consider using {name}`mapIdxMonoAcc` if {lit}`f` is accessing element of another array,
+like {lit}`f := fun i xi => xi + y[i]`. Reverse mode AD is able to produce better gradients for
 {name}`mapIdxMonoAcc`.
 -/
 @[reducible, inline, specialize, macro_inline]
@@ -55,9 +56,9 @@ def mapIdxMono (f : I → Y → Y) (xs : X) : X :=
 
 
 /--
-Maps elements of {given}`xs` by {given}`f`.
+Maps elements of {lit}`xs` by {lit}`f`.
 
-`(mapMono f xs)[i] = f x[i]`
+For {lit}`i`, {lit}`(mapMono f xs)[i] = f xs[i]`.
 -/
 @[reducible, inline, specialize, macro_inline]
 def mapMono [DefaultIndex X I] (f : Y → Y) (xs : X) : X :=
