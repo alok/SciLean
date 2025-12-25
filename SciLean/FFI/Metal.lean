@@ -554,19 +554,19 @@ opaque gemmSimdOpt (m k n : USize) (A B : @& ByteArray) : ByteArray
 -- REQUIRES: M, N, K are multiples of 64
 -- 8 simdgroups (256 threads), 4×2 accumulator grid per simdgroup
 @[extern "scilean_metal_gemm_m4_f32"]
-opaque gemmM4 (m k n : USize) (A B : @& ByteArray) : ByteArray
+opaque gemmM4Raw (m k n : USize) (A B : @& ByteArray) : ByteArray
 
 -- M4-Pro GEMM: Double-buffered with software pipelining
 -- REQUIRES: M, N, K are multiples of 64
 -- Prefetches next tile while computing current
 @[extern "scilean_metal_gemm_m4_pro_f32"]
-opaque gemmM4Pro (m k n : USize) (A B : @& ByteArray) : ByteArray
+opaque gemmM4ProRaw (m k n : USize) (A B : @& ByteArray) : ByteArray
 
 -- M4-Max GEMM: Larger tiles (128×64) for better compute density
 -- REQUIRES: M multiple of 128, N, K multiples of 64
 -- 16 simdgroups (512 threads), maximum occupancy
 @[extern "scilean_metal_gemm_m4_max_f32"]
-opaque gemmM4Max (m k n : USize) (A B : @& ByteArray) : ByteArray
+opaque gemmM4MaxRaw (m k n : USize) (A B : @& ByteArray) : ByteArray
 
 -- MPS matrix multiply on GPU (Float32): Apple's Metal Performance Shaders
 -- This uses Apple's highly optimized GEMM that leverages the Neural Engine and GPU
@@ -600,6 +600,26 @@ opaque gemmAccelerate (m k n : USize) (A B : @& ByteArray) : ByteArray
     gemmTiled m k n A B
   else
     gemm m k n A B
+
+-- Safe wrappers for M4 kernels: fall back to {name}`gemmAuto` when alignment rules are not met.
+
+@[inline] def gemmM4 (m k n : USize) (A B : @& ByteArray) : ByteArray :=
+  if m % 64 == 0 && k % 64 == 0 && n % 64 == 0 then
+    gemmM4Raw m k n A B
+  else
+    gemmAuto m k n A B
+
+@[inline] def gemmM4Pro (m k n : USize) (A B : @& ByteArray) : ByteArray :=
+  if m % 64 == 0 && k % 64 == 0 && n % 64 == 0 then
+    gemmM4ProRaw m k n A B
+  else
+    gemmAuto m k n A B
+
+@[inline] def gemmM4Max (m k n : USize) (A B : @& ByteArray) : ByteArray :=
+  if m % 128 == 0 && k % 64 == 0 && n % 64 == 0 then
+    gemmM4MaxRaw m k n A B
+  else
+    gemmAuto m k n A B
 
 /-! ## BLAS Level 1 Operations -/
 
