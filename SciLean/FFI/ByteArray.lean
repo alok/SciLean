@@ -1,5 +1,7 @@
 
-/-- Get {given}`i`-th float out of {name}`ByteArray` if interpreted as {name}`FloatArray` -/
+import SciLean.VersoPrelude
+/-- Get the {given}`i`-th float out of {name}`ByteArray` if interpreted as {name}`FloatArray`
+(index {lean}`i`). -/
 @[extern c inline "((double*)(lean_sarray_cptr(#1)))[#2]"]
 -- @[extern "scilean_byte_array_uget_float"]
 opaque ByteArray.ugetFloat (a : @& ByteArray) (i : USize) (hi : i.toNat*8 + 7 < a.size) : Float
@@ -16,7 +18,8 @@ The reason for the {given}`uniqueName` argument is that we have to fight the com
 optimization. If we write {lit}`let b := a.mkExclusive; let c := a.mkExclusive`, then {lit}`b` and {lit}`c`
 point to the same object which is not what we want! Instead write
 {lit}`let b := a.mkExclusive (Name.mkSimple \"b\"); let c := a.mkExclusive (Name.mkSimple \"c\")`
-so common subexpression optimization can't collapse those two calls into one.
+so common subexpression optimization can't collapse those two calls into one; the tag {lean}`uniqueName`
+forces distinct names.
 
 TODO: Is there a more robust way to avoid common subexpression optimization?
 -/
@@ -24,7 +27,8 @@ TODO: Is there a more robust way to avoid common subexpression optimization?
 opaque ByteArray.mkExclusive (a : ByteArray) (uniqueName : Name) : ByteArray := a
 
 
-/-- Set {given}`i`-th float out of {name}`ByteArray` if interpreted as {name}`FloatArray`
+/-- Set the {given}`i`-th float out of {name}`ByteArray` if interpreted as {name}`FloatArray`
+(index {lean}`i`).
 
 This function is unsafe! It mutates the array without checking the array -/
 @[extern c inline "((((double*)(lean_sarray_cptr(#1)))[#2] = #3), #1)"]

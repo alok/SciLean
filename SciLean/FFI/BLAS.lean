@@ -1,9 +1,10 @@
+import SciLean.VersoPrelude
+
 /-!
 # BLAS Level 3 FFI
 
 FFI bindings for BLAS Level 3 operations (matrix-matrix).
 -/
-
 namespace SciLean.BLAS
 
 /--
