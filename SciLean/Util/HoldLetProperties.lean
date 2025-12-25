@@ -2,14 +2,15 @@ import SciLean.Analysis.Calculus.RevFDeriv
 import SciLean.Analysis.Calculus.FwdFDeriv
 import SciLean.Analysis.Calculus.HasRevFDeriv
 import SciLean.Util.HoldLet
+import SciLean.VersoPrelude
 
 namespace SciLean
 
-/-- Reduce `holdLet f x` to `f x` as in such cases `holdLet` is not serving its purpose anymore.
+/-- Reduce {lean}`holdLet f x` to {lean}`f x` as in such cases {name}`holdLet` is not serving its purpose anymore.
 
-`holdLet` is designed to preserve let bindings like `let f := holdLet (fun x => x*x)` which
-would get removed by `lsimp` or `autodiff` tactics without `holdLet`. Therefore let binding
-`let z := holdLet (fun x => x*x) y` can be safely reduced to `let z := y*y`. -/
+{name}`holdLet` is designed to preserve let bindings like {lit}`let f := holdLet (fun x => x*x)` which
+would get removed by {lit}`lsimp` or {lit}`autodiff` tactics without {name}`holdLet`. Therefore let binding
+{lit}`let z := holdLet (fun x => x*x) y` can be safely reduced to {lit}`let z := y*y`. -/
 @[simp, simp_core]
 theorem holdLet_apply {α β : Type*} (f : α → β) (x : α) : holdLet f x = f x := rfl
 

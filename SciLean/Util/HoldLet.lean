@@ -1,4 +1,5 @@
 import Verso.Code.External
+import SciLean.VersoPrelude
 
 namespace SciLean
 

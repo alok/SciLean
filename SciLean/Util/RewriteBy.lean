@@ -1,4 +1,5 @@
 import Lean
+import SciLean.VersoPrelude
 -- import Mathlib
 
 namespace SciLean

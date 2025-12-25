@@ -1,6 +1,7 @@
 import Lean
 import Wandb.Json
 import Wandb.Local
+import SciLean.VersoPrelude
 
 /-!
 # Benchmarking Utilities

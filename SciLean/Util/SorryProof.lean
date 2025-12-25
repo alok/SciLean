@@ -1,5 +1,5 @@
 import SorryProof
-import Verso.Code.External
+import SciLean.VersoPrelude
 
 /-! Re-exports sorry_proof and sorry_data from standalone SorryProof package. -/
 

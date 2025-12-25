@@ -1,3 +1,4 @@
+import SciLean.VersoPrelude
 /--
 Helpers for appending benchmark/experiment entries to a markdown log.
 -/

@@ -7,7 +7,7 @@ import SciLean.Lean.Meta.Basic
 namespace SciLean
 
 open Lean Elab Tactic
-/-- This tactic eliminates `limit` from an expression that you are approximating
+/-- This tactic eliminates {kw (of := SciLean.«termLimit_→_,_»)}`limit` from an expression that you are approximating
 
 For example, for goal
 

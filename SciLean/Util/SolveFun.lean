@@ -26,12 +26,12 @@ structure HasSolution {F Xs} [UncurryAll F Xs Prop] (P : F) : Prop where
 structure HasUniqueSolution {F Xs} [UncurryAll F Xs Prop] (P : F) : Prop extends HasSolution P where
   uniq : ∀ xs xs', uncurryAll P xs → uncurryAll P xs' → xs = xs'
 
-/-- Finds unique {syntax term}`(x₁, ..., xₙ)` such that {syntax term}`P x₁ ... xₙ` holds.
+/-- Finds unique {lit}`(x₁, ..., xₙ)` such that {lit}`P x₁ ... xₙ` holds.
 
 TODO: Can we return a solution if it exists and it not necessarily unique? I'm not sure if we would be able to prove
-{name}`decomposeSolution` then.
+{lit}`decomposeSolution` then.
 
-TODO: This is related to mathlib's `Classical.epsilon` i.e. the Hilbert epsilon function. Maybe redefine this function using it.
+TODO: This is related to mathlib's {name}`Classical.epsilon` i.e. the Hilbert epsilon function. Maybe redefine this function using it.
 -/
 noncomputable
 def solveFun {F : Sort _} {Xs : outParam (Type _)} [UncurryAll F Xs Prop] [Nonempty Xs] (f : F /- Xs → ... → Prop -/) : Xs :=
@@ -42,14 +42,9 @@ def solveFun {F : Sort _} {Xs : outParam (Type _)} [UncurryAll F Xs Prop] [Nonem
 
 
 open Lean Parser Elab Term in
-/-- Expresses the unique solution of a system of equations if it exists
+/-- Expresses the unique solution of a system of equations if it exists.
 
-For example
-
-```
-solve x y, x + y = a ∧ x - y = b
-```
-returns a pair {lit}`(x,y)` that solve the above system
+For example, {lit}`solve x y, x + y = a ∧ x - y = b` returns a pair {lit}`(x,y)` that solve the above system.
 
 The returned value is not specified if the system does not have an unique solution.
 -/
@@ -120,7 +115,7 @@ def splitAnd? (e : Expr) : MetaM (Array Expr) := do
   | e => return #[e]
 
 
-/-- Decompose {lit}`solve` problem into two {lit}`solve` problems. First, solve specified equations with indices {given}`js` w.r.t to unknowns with indices {given}`is`. Afterward, solve remaining equations w.r.t. remaining unknowns.
+/-- Decompose {lit}`solve` problem into two {lit}`solve` problems. First, solve specified equations with indices {lit}`js` w.r.t. unknowns with indices {lit}`is`. Afterward, solve remaining equations w.r.t. remaining unknowns.
 
 Returns:
 
@@ -132,23 +127,9 @@ Returns:
 
 ---
 
-For example calling {lit}`solveForFrom · #[1,3] #[0,1]` on
-
-```
-  solve x y z w, P ∧ Q ∧ R ∧ T
-```
-
-will return
-
-```
-  let yw' := fun x z => solve y w, P ∧ Q
-
-  fun (x,z) := solve x z, R ∧ T
-
-  let (y,w) := yw' x z
-
-  (x,y,z,w)
-```
+For example, calling {lit}`solveForFrom · #[1,3] #[0,1]` on
+{lit}`solve x y z w, P ∧ Q ∧ R ∧ T` will return a term of the form
+{lit}`let yw' := fun x z => solve y w, P ∧ Q; fun (x,z) => solve x z, R ∧ T; let (y,w) := yw' x z; (x,y,z,w)`.
 
 TODO: This should produce proof that those two terms are equal
 -/
@@ -243,23 +224,9 @@ You have to provide proof {lit}`uniq` that the decomposed problem has unique sol
 
 ---
 
-For example, calling {lit}`solve_for y w from 0 1 := by ...` on:
-
-```
-  solve x y z w, P ∧ Q ∧ R ∧ T
-```
-
-produces
-
-```
-  let yw' := fun x z => solve y w, P ∧ Q
-
-  fun (x,z) := solve x z, R ∧ T
-
-  let (y,w) := yw' x z
-
-  (x,y,z,w)
-```
+For example, calling {lit}`solve_for y w from 0 1 := by ...` on
+{lit}`solve x y z w, P ∧ Q ∧ R ∧ T` produces a term of the form
+{lit}`let yw' := fun x z => solve y w, P ∧ Q; fun (x,z) => solve x z, R ∧ T; let (y,w) := yw' x z; (x,y,z,w)`.
 
 Warning: this tactic currently uses {lit}`sorry`!-/
 local syntax (name:=solve_for_core_tactic) "solve_for_core " ident+ " from " num+ " := " term : conv
