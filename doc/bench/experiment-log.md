@@ -30,6 +30,24 @@ uv run scripts/bench_regression.py --run-dir doc/bench/runs/20251225-003553
 ### Regression Check
 - `gpu_tensor.transfer_total.512` regression cleared (now −71.4% vs baseline)
 
+## 2025-12-25: M4 kernel edge-case fix (fallback)
+
+**Timestamp:** 2025-12-25 01:02:04 -0800  
+**Commit:** ec77ec9a  
+**Branch:** metal-backend  
+**Worktree:** dirty (many local changes)  
+**Run dir:** doc/bench/runs/20251225-010107
+
+### Commands
+```bash
+lake build GEMMCorrectness
+.lake/build/bin/GEMMCorrectness
+```
+
+### Key Results
+- M4Pro correctness now matches MPS/Accelerate at 4×4 and 8×8.
+- Guarded M4/M4Pro/M4Max kernels now fall back to {name}`gemmAuto` when alignment rules are not met.
+
 ## 2025-12-24: Full benchmark sweep (Lean + Python + Graph4)
 
 **Timestamp:** 2025-12-24 23:59:56 -0800  
