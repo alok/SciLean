@@ -309,7 +309,7 @@ def testGpuGemmContiguous : IO Unit := do
   if passed then
     IO.println "  ✓ Contiguous GEMM result correct"
 
-/-- Test GEMM with transposed B (should use gemmNT kernel) -/
+/-- Test GEMM with transposed B (layout-aware GEMM). -/
 def testGpuGemmTransposedB : IO Unit := do
   IO.println "\n=== Testing GpuTensor.gemm with B transposed ==="
 
@@ -318,7 +318,7 @@ def testGpuGemmTransposedB : IO Unit := do
     return
 
   -- A: 2x3, B_storage: 2x3 but viewed as (3x2)^T
-  -- This tests that we correctly dispatch to gemmNT
+  -- This tests that we correctly handle a transposed layout
   let aData := floatsToByteArray [1, 2, 3, 4, 5, 6]
   -- Store B^T = [[1, 3, 5], [2, 4, 6]] (2x3 in storage)
   -- When viewed as transpose, it's B = [[1, 2], [3, 4], [5, 6]] (3x2)
@@ -356,9 +356,9 @@ def testGpuGemmTransposedB : IO Unit := do
       passed := false
 
   if passed then
-    IO.println "  ✓ GEMM with transposed B correct (used gemmNT)"
+    IO.println "  ✓ GEMM with transposed B correct"
 
-/-- Test GEMM with transposed A (should use gemmTN kernel) -/
+/-- Test GEMM with transposed A (layout-aware GEMM). -/
 def testGpuGemmTransposedA : IO Unit := do
   IO.println "\n=== Testing GpuTensor.gemm with A transposed ==="
 
@@ -403,7 +403,7 @@ def testGpuGemmTransposedA : IO Unit := do
       passed := false
 
   if passed then
-    IO.println "  ✓ GEMM with transposed A correct (used gemmTN)"
+    IO.println "  ✓ GEMM with transposed A correct"
 
 /-- Test GEMM backward using O(1) transpose views -/
 def testGpuGemmBackward : IO Unit := do

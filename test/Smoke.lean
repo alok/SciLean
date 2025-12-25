@@ -1,4 +1,6 @@
+import Std.Tactic
 import SciLean
+import SciLean.Modules.ML.Jaxpr
 import tensor_basic
 
 /-!
@@ -19,3 +21,14 @@ open SciLean
 #check Device
 #check CpuTensor
 #check GpuTensor
+
+-- JAXPR DSL elaboration + round-trip toString
+open SciLean.ML.Jaxpr in
+def smokeJaxpr : Jaxpr := [jaxpr|
+  in x:f32 y:f32
+  let z:f32 := add x:f32 y:f32
+  out z:f32
+]
+
+example : smokeJaxpr.toString = "in x:f32 y:f32\nz:f32 = add x:f32 y:f32\nout z:f32" := by
+  native_decide
