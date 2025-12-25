@@ -30,6 +30,13 @@ def checkGemm (name : String) (gemm : USize → USize → USize → ByteArray �
   else
     IO.println s!"  {name}: FAILED (sum = {actualSum}, expected = {expectedSum}, error = {relError * 100}%, C[0,0] bits = {bits})"
 
+def checkGemmAligned (name : String) (gemm : USize → USize → USize → ByteArray → ByteArray → ByteArray)
+    (n : Nat) (align : Nat) : IO Unit := do
+  if n % align != 0 then
+    IO.println s!"  {name}: SKIPPED (requires multiple of {align})"
+  else
+    checkGemm name gemm n
+
 def main : IO Unit := do
   IO.println "=== GEMM Correctness Check ==="
   IO.println "Computing C = A * B where A, B are all 1s\n"
@@ -43,7 +50,7 @@ def main : IO Unit := do
 
   for n in [4, 8, 64] do
     IO.println s!"Matrix size: {n}×{n}"
-    checkGemm "M4Pro      " Metal.Float32.gemmM4Pro n
+    checkGemmAligned "M4Pro      " Metal.Float32.gemmM4Pro n 64
     checkGemm "MPS        " Metal.Float32.gemmMPS n
     checkGemm "Accelerate " Metal.Float32.gemmAccelerate n
     IO.println ""

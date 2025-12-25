@@ -106,6 +106,25 @@ def benchChainGpuTensor (sz : Nat) (iters : Nat) : IO Float := do
 
   pure (Float.ofNat (endTime - startTime) / 1e9)
 
+/-- Benchmark: Upload + Download transfer averaged over many iterations. -/
+def benchTransfer (cpu : CpuBuffer) (iters : Nat) : IO (Float × Float) := do
+  let _ ← cpu.upload >>= GpuBuffer.download
+  let mut uploadNs : Nat := 0
+  let mut downloadNs : Nat := 0
+  for _ in [0:iters] do
+    let uploadStart ← IO.monoNanosNow
+    let gpu ← cpu.upload
+    let uploadEnd ← IO.monoNanosNow
+    let downloadStart ← IO.monoNanosNow
+    let _ ← GpuBuffer.download gpu
+    let downloadEnd ← IO.monoNanosNow
+    uploadNs := uploadNs + (uploadEnd - uploadStart)
+    downloadNs := downloadNs + (downloadEnd - downloadStart)
+  let itersF := iters.toFloat
+  let uploadMs := Float.ofNat uploadNs / 1e6 / itersF
+  let downloadMs := Float.ofNat downloadNs / 1e6 / itersF
+  return (uploadMs, downloadMs)
+
 def main : IO Unit := do
   IO.println ""
   IO.println "=============================================================="
@@ -172,46 +191,28 @@ def main : IO Unit := do
   let data256k := makeF32Data (256 * 256) 1.0
   let data1m := makeF32Data (512 * 512) 1.0
   let data4m := makeF32Data (1024 * 1024) 1.0
+  let cpu256k : CpuBuffer := ⟨data256k⟩
+  let cpu1m : CpuBuffer := ⟨data1m⟩
+  let cpu4m : CpuBuffer := ⟨data4m⟩
   IO.println ""
 
   IO.println "Size               | Upload     | Download   | Total"
   IO.println "------------------------------------------------------"
 
   -- 256KB
-  let uploadStart256k ← IO.monoNanosNow
-  let gpuBuf256k ← toGpuMatrix 256 256 data256k
-  let uploadEnd256k ← IO.monoNanosNow
-  let downloadStart256k ← IO.monoNanosNow
-  let _ ← GpuTensor.toCpu gpuBuf256k
-  let downloadEnd256k ← IO.monoNanosNow
-  let uploadMs256k := Float.ofNat (uploadEnd256k - uploadStart256k) / 1e6
-  let downloadMs256k := Float.ofNat (downloadEnd256k - downloadStart256k) / 1e6
+  let (uploadMs256k, downloadMs256k) ← benchTransfer cpu256k 200
   IO.println s!"256KB (256x256)    | {fmt uploadMs256k}ms  | {fmt downloadMs256k}ms  | {fmt (uploadMs256k + downloadMs256k)}ms"
   logMs "gpu_tensor/transfer" "upload_ms" "256x256" uploadMs256k
   logMs "gpu_tensor/transfer" "download_ms" "256x256" downloadMs256k
 
   -- 1MB
-  let uploadStart1m ← IO.monoNanosNow
-  let gpuBuf1m ← toGpuMatrix 512 512 data1m
-  let uploadEnd1m ← IO.monoNanosNow
-  let downloadStart1m ← IO.monoNanosNow
-  let _ ← GpuTensor.toCpu gpuBuf1m
-  let downloadEnd1m ← IO.monoNanosNow
-  let uploadMs1m := Float.ofNat (uploadEnd1m - uploadStart1m) / 1e6
-  let downloadMs1m := Float.ofNat (downloadEnd1m - downloadStart1m) / 1e6
+  let (uploadMs1m, downloadMs1m) ← benchTransfer cpu1m 100
   IO.println s!"1MB (512x512)      | {fmt uploadMs1m}ms  | {fmt downloadMs1m}ms  | {fmt (uploadMs1m + downloadMs1m)}ms"
   logMs "gpu_tensor/transfer" "upload_ms" "512x512" uploadMs1m
   logMs "gpu_tensor/transfer" "download_ms" "512x512" downloadMs1m
 
   -- 4MB
-  let uploadStart4m ← IO.monoNanosNow
-  let gpuBuf4m ← toGpuMatrix 1024 1024 data4m
-  let uploadEnd4m ← IO.monoNanosNow
-  let downloadStart4m ← IO.monoNanosNow
-  let _ ← GpuTensor.toCpu gpuBuf4m
-  let downloadEnd4m ← IO.monoNanosNow
-  let uploadMs4m := Float.ofNat (uploadEnd4m - uploadStart4m) / 1e6
-  let downloadMs4m := Float.ofNat (downloadEnd4m - downloadStart4m) / 1e6
+  let (uploadMs4m, downloadMs4m) ← benchTransfer cpu4m 50
   IO.println s!"4MB (1024x1024)    | {fmt uploadMs4m}ms  | {fmt downloadMs4m}ms  | {fmt (uploadMs4m + downloadMs4m)}ms"
   logMs "gpu_tensor/transfer" "upload_ms" "1024x1024" uploadMs4m
   logMs "gpu_tensor/transfer" "download_ms" "1024x1024" downloadMs4m
