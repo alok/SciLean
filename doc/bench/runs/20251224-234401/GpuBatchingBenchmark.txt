@@ -1,0 +1,52 @@
+===== GpuBatchingBenchmark =====
+=== GPU Batching Benchmark ===
+
+Warming up GPU...
+
+--- Test 1: Multiple iterations (3 ops each) ---
+Each iteration does: relu → add → mul
+
+  10 iterations, 10000 elements:
+    Unbatched: 5.000000 ms
+    Batched:   3.000000 ms
+    Speedup:   1.666667x
+
+  50 iterations, 10000 elements:
+    Unbatched: 23.000000 ms
+    Batched:   10.000000 ms
+    Speedup:   2.300000x
+
+  100 iterations, 10000 elements:
+    Unbatched: 58.000000 ms
+    Batched:   23.000000 ms
+    Speedup:   2.521739x
+
+--- Test 2: Long chains (single iteration) ---
+Chain of N relu operations
+
+  Chain length 10, 100000 elements:
+    Unbatched: 6.000000 ms
+    Batched:   2.000000 ms
+    Speedup:   3.000000x
+
+  Chain length 50, 100000 elements:
+    Unbatched: 12.000000 ms
+    Batched:   3.000000 ms
+    Speedup:   4.000000x
+
+  Chain length 100, 100000 elements:
+    Unbatched: 29.000000 ms
+    Batched:   4.000000 ms
+    Speedup:   7.250000x
+
+  Chain length 200, 100000 elements:
+    Unbatched: 44.000000 ms
+    Batched:   7.000000 ms
+    Speedup:   6.285714x
+
+=== Benchmark Complete ===
+
+Note: Batching reduces CPU-GPU synchronization overhead.
+For small/fast operations, the overhead reduction is significant.
+For large/slow operations, the GPU compute time dominates.
+exit_code=0

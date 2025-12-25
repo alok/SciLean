@@ -1,0 +1,36 @@
+===== GEMMFocus =====
+=== Focused GEMM Analysis ===
+Testing M4Pro, MPS, and Accelerate at various sizes
+
+Matrix size: 128×128 (50 iterations)
+  M4Pro      : 0.444235 ms, 9.441633 GFLOP/s
+  MPS        : 0.463045 ms, 9.058092 GFLOP/s
+  Accelerate : 0.018465 ms, 227.148876 GFLOP/s
+
+Matrix size: 256×256 (50 iterations)
+  M4Pro      : 0.301841 ms, 111.165918 GFLOP/s
+  MPS        : 0.328292 ms, 102.209107 GFLOP/s
+  Accelerate : 0.052756 ms, 636.030632 GFLOP/s
+
+Matrix size: 512×512 (50 iterations)
+  M4Pro      : 0.527195 ms, 509.176787 GFLOP/s
+  MPS        : 0.566740 ms, 473.648333 GFLOP/s
+  Accelerate : 0.214323 ms, 1.252481 TFLOP/s
+
+Matrix size: 1024×1024 (20 iterations)
+  M4Pro      : 1.903970 ms, 1.127898 TFLOP/s
+  MPS        : 1.848231 ms, 1.161913 TFLOP/s
+  Accelerate : 1.152560 ms, 1.863229 TFLOP/s
+
+Matrix size: 2048×2048 (10 iterations)
+  M4Pro      : 12.434358 ms, 1.381645 TFLOP/s
+  MPS        : 8.277250 ms, 2.075553 TFLOP/s
+  Accelerate : 8.353487 ms, 2.056611 TFLOP/s
+
+Matrix size: 4096×4096 (10 iterations)
+  M4Pro      : 44.278812 ms, 3.103944 TFLOP/s
+  MPS        : 32.012329 ms, 4.293313 TFLOP/s
+  Accelerate : 54.841533 ms, 2.506111 TFLOP/s
+
+Done!
+exit_code=0

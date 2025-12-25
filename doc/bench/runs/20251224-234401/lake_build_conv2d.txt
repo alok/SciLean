@@ -1,0 +1,36 @@
+⚠ [2/120] Replayed SciLean.FFI.Float32Array
+warning: SciLean/FFI/Float32Array.lean:8:57: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: SciLean/FFI/Float32Array.lean:12:54: unused variable `i`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+✔ [10/120] Fetched SubVerso.Compat
+✔ [11/120] Fetched SubVerso.Highlighting.Highlighted
+✔ [12/120] Fetched SubVerso.Highlighting.Export
+✔ [13/120] Fetched SubVerso.Highlighting.Messages
+✔ [14/120] Fetched SubVerso.Highlighting.Code
+✔ [15/120] Fetched SubVerso.Highlighting.Anchors.Basic
+✔ [16/120] Fetched SubVerso.Highlighting.Anchors.Check
+✔ [17/120] Fetched SubVerso.Highlighting.Anchors
+✔ [18/120] Fetched SubVerso.Highlighting.String
+✔ [19/120] Fetched SubVerso.Highlighting.Split
+✔ [20/120] Fetched SubVerso.Highlighting
+✔ [40/120] Fetched SubVerso.Module
+✔ [42/120] Fetched SubVerso.Helper.Netstring
+✔ [43/120] Fetched SubVerso.Helper
+✔ [49/120] Fetched MD4Lean
+✔ [50/120] Fetched MD4Lean:c.o
+✔ [51/120] Fetched MD4Lean:shared
+✔ [52/120] Fetched Verso.Code.External.Files
+✔ [53/120] Fetched Verso.Code.External.Config
+✔ [54/120] Fetched SubVerso.Examples.Messages.NormalizeLineNum
+✔ [55/120] Fetched SubVerso.Examples.Messages.NormalizeMetavars
+✔ [61/120] Fetched SubVerso.Examples.Messages
+✔ [62/120] Fetched Verso.Code.External
+✔ [63/120] Fetched SciLean.VersoPrelude
+✔ [64/120] Fetched SciLean.FFI.Metal
+✔ [118/120] Built examples.Conv2DTest (1.3s)
+✔ [119/120] Built examples.Conv2DTest:c.o (905ms)
+✔ [120/120] Built Conv2DTest:exe (1.1s)
+Build completed successfully (120 jobs).

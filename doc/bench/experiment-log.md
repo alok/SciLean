@@ -1,5 +1,87 @@
 # Experiment Log
 
+## 2025-12-24: Full benchmark sweep (Lean + Python + Graph4)
+
+**Timestamp:** 2025-12-24 23:59:56 -0800  
+**Commit:** b000b66d  
+**Branch:** metal-backend  
+**Worktree:** dirty (bench outputs + many uncommitted files)  
+**Run dir:** doc/bench/runs/20251224-234401
+
+### Commands
+```bash
+lake build BackendBenchmark MetalBenchmark GEMMBenchmark KernelGEMMBenchmark \
+  Float32Benchmark RandBenchmark MetalMinimalBenchmark GEMMComparison \
+  GEMMFocus GEMMCorrectness GpuTensorBenchmark KernelBenchmark \
+  GemmViewBenchmark GpuBatchingBenchmark GpuMNIST AMXBenchmark \
+  PodBenchmark StructVsTupleBenchmark LargeGEMM OverheadTest NestedPodStressTest
+
+# Executables (see run dir for full list of outputs)
+.lake/build/bin/BackendBenchmark
+.lake/build/bin/MetalBenchmark
+.lake/build/bin/GEMMBenchmark
+.lake/build/bin/KernelGEMMBenchmark
+.lake/build/bin/Float32Benchmark
+.lake/build/bin/RandBenchmark
+.lake/build/bin/MetalMinimalBenchmark
+.lake/build/bin/GEMMComparison
+.lake/build/bin/GEMMFocus
+.lake/build/bin/GEMMCorrectness
+.lake/build/bin/GpuTensorBenchmark
+.lake/build/bin/KernelBenchmark
+.lake/build/bin/GemmViewBenchmark
+.lake/build/bin/GpuBatchingBenchmark
+.lake/build/bin/GpuMNIST
+.lake/build/bin/AMXBenchmark
+.lake/build/bin/PodBenchmark
+.lake/build/bin/StructVsTupleBenchmark
+.lake/build/bin/NestedPodStressTest
+.lake/build/bin/LargeGEMM
+.lake/build/bin/OverheadTest
+
+uv run benchmarks/compare_frameworks.py
+uv run benchmarks/mlx_pytorch_comparison.py
+uv run benchmarks/conv2d_comparison.py
+lake build Conv2DTest && uv run benchmarks/conv2d_comparison.py
+uv run scripts/bench_regression.py --run-dir doc/bench/runs/20251224-234401
+
+cd ~/graph4 && ./.lake/build/bin/standalone_bench
+```
+
+### Key Results (selected)
+
+**GpuTensorBenchmark**
+- Single GEMM: 256=0.358ms, 512=0.348ms, 1024=1.261ms
+- Chained GEMM: 256=0.597ms, 512=0.566ms
+- Transfer total: 256KB=0.0116ms, 1MB=0.145ms, 4MB=0.4625ms
+
+**GemmViewBenchmark**
+- Baseline gemm: 256=0.264ms, 512=0.577ms, 1024=1.351ms, 2048=2.666ms
+- O(1) transpose overhead: 18–39ns; dispatch checks 16–22ns
+
+**GpuMNIST (Metal)**
+- Final accuracy: 98.3%
+- Epoch times: 319–536ms (avg 473.8ms)
+
+**AMXBenchmark**
+- Layer1 fwd (256×784 @ 784×128): AMX 917 GFLOP/s vs MPS 126 GFLOP/s
+- Layer2 fwd (256×128 @ 128×10): AMX 113 GFLOP/s vs MPS 2.15 GFLOP/s
+
+**Graph4 standalone (1M cycle)**
+- CPU SpMV: 43.488s total, 0.00460 GFLOP/s
+- GPU CSR SpMV: 73ms total, 2.74 GFLOP/s
+
+**Conv2D (SciLean vs MLX/PyTorch)**
+- SciLean fast kernel: 28×28 x32→64 = 0.233ms (124 GFLOP/s)
+- SciLean fast kernel: 224×224 x3→64 = 1.586ms (109 GFLOP/s)
+
+**GEMMCorrectness**
+- M4Pro failed for 4×4 and 8×8; correct at 64×64
+
+### Regression Check (scripts/bench_regression.py)
+- One warning: `gpu_tensor.transfer_total.512` regressed +50.1% (1MB total 0.145ms vs 0.0967ms baseline).
+- All other tracked metrics improved or matched baseline.
+
 ## 2025-12-21: GPU Benchmarks (current vs prev baseline)
 
 **Timestamp:** 2025-12-21 20:41:03 -0800  
