@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Alok Singh
 -/
 import SciLean.Kernel.DType
+import SciLean.VersoPrelude
 
 namespace SciLean.Kernel
 

@@ -6,6 +6,7 @@ Authors: Alok Singh
 import SciLean.Kernel.DType
 import SciLean.Kernel.Ops
 import SciLean.Kernel.Spec
+import SciLean.VersoPrelude
 
 namespace SciLean.Kernel
 

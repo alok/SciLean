@@ -12,6 +12,7 @@ import SciLean.Data.DataArray.DataArray
 import SciLean.Data.DataArray.PlainDataType
 import SciLean.AD.HasRevFDeriv
 import SciLean.Tactic.DataSynth.Attr
+import SciLean.VersoPrelude
 
 namespace SciLean.Kernel
 

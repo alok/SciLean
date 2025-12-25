@@ -8,6 +8,7 @@ import SciLean.Kernel.Spec
 import SciLean.Kernel.Axioms
 import SciLean.AD.Rules.Common
 import SciLean.Tactic.DataSynth.Attr
+import SciLean.VersoPrelude
 
 namespace SciLean.Kernel
 

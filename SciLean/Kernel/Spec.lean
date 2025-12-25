@@ -6,6 +6,7 @@ Authors: Alok Singh
 import Mathlib.Analysis.Normed.Field.Basic
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean.Kernel.Spec
 
