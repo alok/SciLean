@@ -7,6 +7,7 @@ import SciLean.Analysis.Scalar
 import SciLean.Logic.Function.Preimage
 
 import SciLean.Tactic.GTrans
+import SciLean.VersoPrelude
 
 open SciLean Set MeasureTheory
 
@@ -20,7 +21,8 @@ set_default_scalar R
 
 variable (R)
 /--
-`BoundaingBall₂ A c r` says that the set `A` is a subset of ball with center `c` and radius `r` -/
+{lit}`BoundingBall₂ R A center radius` says that the set {lean}`A` is a subset of the ball with
+center {lean}`center` and radius {lean}`radius`. -/
 @[gtrans]
 def SciLean.BoundingBall₂ {X} [NormedAddCommGroup X] [AdjointSpace R X]
     (A : Set X) (center : outParam X) (radius : outParam R) : Prop :=

@@ -3,6 +3,8 @@ import SciLean.Analysis.Calculus.FwdFDeriv
 import SciLean.Analysis.SpecialFunctions.Inner
 import SciLean.Analysis.SpecialFunctions.Norm2
 import SciLean.Analysis.AdjointSpace.Geometry
+import Verso.Code.External
+import SciLean.Util.VersoExtensions
 
 import SciLean.Tactic.Autodiff
 -- import SciLean.Tactic.GTrans
@@ -13,6 +15,8 @@ set_option deprecated.oldSectionVars true
 open MeasureTheory Topology Filter FiniteDimensional
 
 namespace SciLean
+
+open Verso.Code.External
 
 variable
   {R} [RealScalar R] [MeasureSpace R]
@@ -30,7 +34,7 @@ set_default_scalar R
 
 variable (R)
 open Classical in
-/-- Speed of the frontier of `A (w + t•dw)` in to normal direction at point `x` and time `t=0`. -/
+/-- Speed of the frontier of {lit}`A (w + t•dw)` in to normal direction at point {lit}`x` and time {lit}`t=0`. -/
 @[fun_trans]
 noncomputable
 def frontierSpeed (A : W → Set X) (w dw : W) (x : X) : R :=

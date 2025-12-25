@@ -6,28 +6,29 @@ Authors: SciLean contributors
 import SciLean.Data.Tensor
 import SciLean.Data.IndexType.Shape
 import SciLean.FFI.Metal
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 /-!
 # GPU Computation Monad
 
-The {name}`GPU` monad provides a structured way to sequence GPU operations with:
+The {lit}`GPU` monad provides a structured way to sequence GPU operations with:
 1. Automatic command buffer batching for performance
 2. Type-safe device transfers
 3. Clean composition of GPU computations
 
 ## Design Rationale
 
-The {name}`GPU` monad wraps {name}`IO` but adds semantic meaning: operations within
-a GPU computation block should be batched for efficiency. The {name}`GPU.exec`
+The {lit}`GPU` monad wraps {name}`IO` but adds semantic meaning: operations within
+a GPU computation block should be batched for efficiency. The {lit}`GPU.exec`
 function handles command buffer lifecycle automatically.
 
 ## Usage
 
-```lean
+```nonLeanCode
 -- Simple GPU computation
-let result ← GPU.run do
+let result ← GPU.exec do
   let a ← GPU.alloc (Float^[1024])
   let b ← GPU.alloc (Float^[1024])
   GPU.add a b
