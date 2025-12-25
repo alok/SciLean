@@ -6,6 +6,7 @@ Authors: SciLean contributors
 import SciLean.FFI.Metal.GpuBufferView
 import SciLean.Data.DataArray
 import SciLean.Data.IndexType.Shape
+import SciLean.Monad.TensorM
 
 -- Type-safe layout-aware GPU tensor with shape encoded in the type
 
@@ -75,6 +76,26 @@ def sliceCols (t : GpuTensor α (Idx m × Idx k)) (start len : Nat) :
     GpuTensor α (Idx m × Idx len) :=
   ⟨t.data.slice 1 start len⟩
 
+/-! ## Generic view ops (caller picks target index type) -/
+
+/-- Permute dimensions (O(1) view). The caller must ensure the target index type matches
+    the permuted shape. -/
+def permuteView {κ : Type} {m : ℕ} [IndexType κ m]
+    (t : GpuTensor α ι) (perm : Array Nat) : GpuTensor α κ :=
+  ⟨t.data.permute perm⟩
+
+/-- Squeeze a size-1 dimension (O(1) view). The caller must ensure the target index type
+    matches the squeezed shape. -/
+def squeezeView {κ : Type} {m : ℕ} [IndexType κ m]
+    (t : GpuTensor α ι) (dim : Nat) : GpuTensor α κ :=
+  ⟨t.data.squeeze dim⟩
+
+/-- Unsqueeze (add a size-1 dimension) (O(1) view). The caller must ensure the target
+    index type matches the expanded shape. -/
+def unsqueezeView {κ : Type} {m : ℕ} [IndexType κ m]
+    (t : GpuTensor α ι) (dim : Nat) : GpuTensor α κ :=
+  ⟨t.data.unsqueeze dim⟩
+
 /-- Make a contiguous copy if needed. -/
 def contiguous (t : GpuTensor α ι) : IO (GpuTensor α ι) := do
   let newData ← t.data.contiguous
@@ -84,7 +105,7 @@ def contiguous (t : GpuTensor α ι) : IO (GpuTensor α ι) := do
 
 /-- Ensure a contiguous layout (copy if needed). -/
 def ensureContiguous (t : GpuTensor α ι) : IO (GpuTensor α ι) :=
-  if t.isContiguous then
+  if t.isContiguous && t.data.layout.offset == 0 then
     pure t
   else
     t.contiguous
@@ -113,53 +134,138 @@ namespace GpuTensor
 
 variable {m k p : ℕ}
 
+/-- Layout-aware matrix multiply in {name}`TensorMT`.
+    Uses layout views when allowed by policy/caps and records copy statistics. -/
+def gemmMT {monad : Type → Type} [Monad monad] [MonadLift IO monad]
+    (A : GpuTensor Float (Idx m × Idx k))
+    (B : GpuTensor Float (Idx k × Idx p)) :
+    TensorMT monad (GpuTensor Float (Idx m × Idx p)) := do
+  let elemBytes := (inferInstance : PlainDataType Float).btype.bytes.toNat
+  let normalize {r c : ℕ} (t : GpuTensor Float (Idx r × Idx c)) :
+      TensorMT monad (GpuTensor Float (Idx r × Idx c) × Bool × Nat × Nat) := do
+    let caps ← TensorMT.getCaps
+    let policy ← TensorMT.getPolicy
+    let layout := t.data.layout
+    let bytes := layout.numel * elemBytes
+    let view? : Option (Bool × Nat × Nat) :=
+      if layout.isRowContiguous then
+        some (false, layout.rowStride, layout.offset)
+      else
+        let tl := layout.transpose
+        if tl.isRowContiguous then
+          some (true, tl.rowStride, tl.offset)
+        else
+          none
+    let view? :=
+      match view? with
+      | some (transposed, rowStride, offset) =>
+          let expectedRowStride := if transposed then r else c
+          let needsStride := rowStride != expectedRowStride
+          let needsOffset := offset != 0
+          let needsTrans := transposed
+          if (!needsTrans || caps.acceptsTransposed) &&
+             (!needsStride || caps.acceptsStride) &&
+             (!needsOffset || caps.acceptsOffset) then
+            some (transposed, rowStride, offset)
+          else
+            none
+      | none => none
+    if policy.preferViews then
+      match view? with
+      | some (transposed, rowStride, offset) =>
+          TensorMT.recordViewHit
+          return (t, transposed, rowStride, offset)
+      | none => pure ()
+    if policy.allowCopy then
+      let t' ← TensorMT.liftIO t.contiguous
+      TensorMT.recordCopy bytes
+      let layout' := t'.data.layout
+      return (t', false, layout'.rowStride, layout'.offset)
+    throw (LayoutError.copyDisallowed "gemm")
+  let (A, aTransposed, aRowStride, aOffset) ← normalize A
+  let (B, bTransposed, bRowStride, bOffset) ← normalize B
+  let result ← TensorMT.liftIO <|
+    Metal.GpuBuffer.gemmLayout
+      A.data.buffer B.data.buffer
+      m.toUSize k.toUSize p.toUSize
+      aRowStride.toUSize bRowStride.toUSize
+      aOffset.toUSize bOffset.toUSize
+      aTransposed bTransposed
+  return ⟨GpuBufferView.fromContiguous result #[m, p]⟩
+
+/-- {name}`TensorM` specialization of {name}`gemmMT`. -/
+def gemmM (A : GpuTensor Float (Idx m × Idx k))
+    (B : GpuTensor Float (Idx k × Idx p)) : TensorM (GpuTensor Float (Idx m × Idx p)) :=
+  by
+    let _ : MonadLift IO IO := ⟨fun x => x⟩
+    simpa using (gemmMT (monad:=IO) A B)
+
+/-- {name}`TensorM` wrapper that returns the result with the final stats. -/
+def gemmMWithStats (A : GpuTensor Float (Idx m × Idx k))
+    (B : GpuTensor Float (Idx k × Idx p)) : TensorM (GpuTensor Float (Idx m × Idx p) × LayoutStats) :=
+  TensorMT.withStats (gemmM A B)
+
 /-- Matrix multiply with layout-aware inputs.
-    Automatically dispatches to {name}`Metal.GpuBuffer.gemm`, {name}`Metal.GpuBuffer.gemmTN`,
-    or {name}`Metal.GpuBuffer.gemmNT` based on transpose state.
+    Uses {name}`Metal.GpuBuffer.gemmLayout` with row strides and offsets derived from views.
     This lets transpose views work without materializing a copy. -/
 def gemm (A : GpuTensor Float (Idx m × Idx k))
          (B : GpuTensor Float (Idx k × Idx p)) :
     IO (GpuTensor Float (Idx m × Idx p)) := do
-  let aTransposed := A.isTransposed
-  let bTransposed := B.isTransposed
+  let normalize {r c : ℕ} (t : GpuTensor Float (Idx r × Idx c)) :
+      IO (GpuTensor Float (Idx r × Idx c) × Bool × Nat × Nat) := do
+    let layout := t.data.layout
+    if layout.isRowContiguous then
+      return (t, false, layout.rowStride, layout.offset)
+    else
+      let tl := layout.transpose
+      if tl.isRowContiguous then
+        return (t, true, tl.rowStride, tl.offset)
+    let t' ← t.contiguous
+    let layout' := t'.data.layout
+    return (t', false, layout'.rowStride, layout'.offset)
+  let (A, aTransposed, aRowStride, aOffset) ← normalize A
+  let (B, bTransposed, bRowStride, bOffset) ← normalize B
   let result ←
-    match aTransposed, bTransposed with
-    | false, false =>
-      -- Both contiguous: C = A @ B
-      Metal.GpuBuffer.gemm A.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
-    | true, false =>
-      -- A transposed: C = A^T @ B
-      Metal.GpuBuffer.gemmTN A.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
-    | false, true =>
-      -- B transposed: C = A @ B^T
-      Metal.GpuBuffer.gemmNT A.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
-    | true, true =>
-      -- Both transposed: C = A^T @ B^T = (B @ A)^T
-      -- Need to do B @ A then transpose, or make contiguous copies
-      -- For now, make A contiguous and use gemmNT
-      let aContig ← A.contiguous
-      Metal.GpuBuffer.gemmNT aContig.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
+    Metal.GpuBuffer.gemmLayout
+      A.data.buffer B.data.buffer
+      m.toUSize k.toUSize p.toUSize
+      aRowStride.toUSize bRowStride.toUSize
+      aOffset.toUSize bOffset.toUSize
+      aTransposed bTransposed
   return ⟨GpuBufferView.fromContiguous result #[m, p]⟩
 
 /-- Matrix multiply with auto backend selection (AMX vs MPS).
-    Uses {name}`Metal.GpuBuffer.gemmAuto`, {name}`Metal.GpuBuffer.gemmTN_Auto`,
-    or {name}`Metal.GpuBuffer.gemmNT_Auto` based on transpose state. -/
+    Uses {name}`Metal.GpuBuffer.gemmAuto` for contiguous inputs and
+    falls back to {name}`Metal.GpuBuffer.gemmLayout` for stride/offset views. -/
 def gemmAuto (A : GpuTensor Float (Idx m × Idx k))
            (B : GpuTensor Float (Idx k × Idx p)) :
   IO (GpuTensor Float (Idx m × Idx p)) := do
-  let aTransposed := A.isTransposed
-  let bTransposed := B.isTransposed
+  let normalize {r c : ℕ} (t : GpuTensor Float (Idx r × Idx c)) :
+      IO (GpuTensor Float (Idx r × Idx c) × Bool × Nat × Nat) := do
+    let layout := t.data.layout
+    if layout.isRowContiguous then
+      return (t, false, layout.rowStride, layout.offset)
+    else
+      let tl := layout.transpose
+      if tl.isRowContiguous then
+        return (t, true, tl.rowStride, tl.offset)
+    let t' ← t.contiguous
+    let layout' := t'.data.layout
+    return (t', false, layout'.rowStride, layout'.offset)
+  let (A, aTransposed, aRowStride, aOffset) ← normalize A
+  let (B, bTransposed, bRowStride, bOffset) ← normalize B
+  let aContig := (!aTransposed) && aOffset == 0 && aRowStride == k
+  let bContig := (!bTransposed) && bOffset == 0 && bRowStride == p
   let result ←
-    match aTransposed, bTransposed with
-    | false, false =>
+    if aContig && bContig then
       Metal.GpuBuffer.gemmAuto A.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
-    | true, false =>
-      Metal.GpuBuffer.gemmTN_Auto A.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
-    | false, true =>
-      Metal.GpuBuffer.gemmNT_Auto A.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
-    | true, true =>
-      let aContig ← A.contiguous
-      Metal.GpuBuffer.gemmNT_Auto aContig.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
+    else
+      Metal.GpuBuffer.gemmLayout
+        A.data.buffer B.data.buffer
+        m.toUSize k.toUSize p.toUSize
+        aRowStride.toUSize bRowStride.toUSize
+        aOffset.toUSize bOffset.toUSize
+        aTransposed bTransposed
   return ⟨GpuBufferView.fromContiguous result #[m, p]⟩
 
 /-- Matrix multiply using AMX (contiguous inputs only). -/
@@ -175,25 +281,25 @@ def gemmAMX (A : GpuTensor Float (Idx m × Idx k))
 /-- Matrix multiply using AMX with A stored transposed.
     A is stored as {lean}`Idx k × Idx m`, B as {lean}`Idx k × Idx p`,
     returns {lean}`Idx m × Idx p`. -/
-def gemmTN_AMX (A : GpuTensor Float (Idx k × Idx m))
+def gemmTransposeLeft_AMX (A : GpuTensor Float (Idx k × Idx m))
                (B : GpuTensor Float (Idx k × Idx p)) :
     IO (GpuTensor Float (Idx m × Idx p)) := do
   let A ← ensureContiguous A
   let B ← ensureContiguous B
   let result ←
-    Metal.GpuBuffer.gemmTN_AMX A.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
+    Metal.GpuBuffer.gemmTransposeLeft_AMX A.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
   return ⟨GpuBufferView.fromContiguous result #[m, p]⟩
 
 /-- Matrix multiply using AMX with B stored transposed.
     A is stored as {lean}`Idx m × Idx k`, B as {lean}`Idx p × Idx k`,
     returns {lean}`Idx m × Idx p`. -/
-def gemmNT_AMX (A : GpuTensor Float (Idx m × Idx k))
+def gemmTransposeRight_AMX (A : GpuTensor Float (Idx m × Idx k))
                (B : GpuTensor Float (Idx p × Idx k)) :
     IO (GpuTensor Float (Idx m × Idx p)) := do
   let A ← ensureContiguous A
   let B ← ensureContiguous B
   let result ←
-    Metal.GpuBuffer.gemmNT_AMX A.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
+    Metal.GpuBuffer.gemmTransposeRight_AMX A.data.buffer B.data.buffer m.toUSize k.toUSize p.toUSize
   return ⟨GpuBufferView.fromContiguous result #[m, p]⟩
 
 -- Batched GEMM for multi-head attention
@@ -208,20 +314,36 @@ variable {batch : ℕ}
 def batchedGemm (A : GpuTensor Float (Idx batch × Idx m × Idx k))
                 (B : GpuTensor Float (Idx batch × Idx k × Idx p)) :
     IO (GpuTensor Float (Idx batch × Idx m × Idx p)) := do
-  let aTransposed := A.isTransposed
-  let bTransposed := B.isTransposed
+  let normalize {r c : ℕ} (t : GpuTensor Float (Idx batch × Idx r × Idx c)) :
+      IO (GpuTensor Float (Idx batch × Idx r × Idx c) × Bool × Nat × Nat × Nat) := do
+    let layout := t.data.layout
+    if layout.isRowContiguous then
+      return (t, false, layout.strides.getD 0 0, layout.rowStride, layout.offset)
+    else
+      let tl := layout.transpose
+      if tl.isRowContiguous then
+        return (t, true, tl.strides.getD 0 0, tl.rowStride, tl.offset)
+    let t' ← t.contiguous
+    let layout' := t'.data.layout
+    return (t', false, layout'.strides.getD 0 0, layout'.rowStride, layout'.offset)
+  let (A, aTransposed, aBatchStride, aRowStride, aOffset) ← normalize A
+  let (B, bTransposed, bBatchStride, bRowStride, bOffset) ← normalize B
+  let aContig :=
+    (!aTransposed) && aOffset == 0 && aRowStride == k && aBatchStride == m * k
+  let bContig :=
+    (!bTransposed) && bOffset == 0 && bRowStride == p && bBatchStride == k * p
   let result ←
-    match aTransposed, bTransposed with
-    | false, false =>
-      Metal.GpuBuffer.gemmBatched A.data.buffer B.data.buffer batch.toUSize m.toUSize k.toUSize p.toUSize
-    | true, false =>
-      Metal.GpuBuffer.gemmBatchedTN A.data.buffer B.data.buffer batch.toUSize m.toUSize k.toUSize p.toUSize
-    | false, true =>
-      Metal.GpuBuffer.gemmBatchedNT A.data.buffer B.data.buffer batch.toUSize m.toUSize k.toUSize p.toUSize
-    | true, true =>
-      -- Both transposed: make A contiguous and use batchedNT
-      let aContig ← A.contiguous
-      Metal.GpuBuffer.gemmBatchedNT aContig.data.buffer B.data.buffer batch.toUSize m.toUSize k.toUSize p.toUSize
+    if aContig && bContig then
+      Metal.GpuBuffer.gemmBatched A.data.buffer B.data.buffer
+        batch.toUSize m.toUSize k.toUSize p.toUSize
+    else
+      Metal.GpuBuffer.gemmBatchedLayout
+        A.data.buffer B.data.buffer
+        batch.toUSize m.toUSize k.toUSize p.toUSize
+        aBatchStride.toUSize bBatchStride.toUSize
+        aRowStride.toUSize bRowStride.toUSize
+        aOffset.toUSize bOffset.toUSize
+        aTransposed bTransposed
   return ⟨GpuBufferView.fromContiguous result #[batch, m, p]⟩
 
 /-- Batched GEMM backward using transpose views.

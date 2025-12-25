@@ -74,21 +74,21 @@ def benchmarkGemmRaw (m k n : Nat) : IO Unit := do
     pure ()
   suite := suite.add viewContiguousResult
 
-  -- 3. gemmTN (A transposed)
-  let gemmTNResult ← Benchmark.run "gemmTN (A^T @ B)" gpuConfig fun () => do
+  -- 3. A transposed view (layout-aware GEMM)
+  let aTResult ← Benchmark.run "A^T view (layout)" gpuConfig fun () => do
     let _ ← GpuTensor.gemm aT bGpu
     pure ()
-  suite := suite.add gemmTNResult
+  suite := suite.add aTResult
 
-  -- 4. gemmNT (B transposed)
-  let gemmNTResult ← Benchmark.run "gemmNT (A @ B^T)" gpuConfig fun () => do
+  -- 4. B transposed view (layout-aware GEMM)
+  let bTResult ← Benchmark.run "B^T view (layout)" gpuConfig fun () => do
     let _ ← GpuTensor.gemm aGpu bT
     pure ()
-  suite := suite.add gemmNTResult
+  suite := suite.add bTResult
 
   -- 5. Transposed A view
   let viewTNResult ← Benchmark.run "A^T view" gpuConfig fun () => do
-    -- Simulates: detect transposed, dispatch to gemmTN
+    -- Simulates: detect transposed, use layout-aware GEMM
     if aT.isTransposed && !bGpu.isTransposed then
       let _ ← GpuTensor.gemm aT bGpu
     pure ()
@@ -103,9 +103,9 @@ def benchmarkGemmRaw (m k n : Nat) : IO Unit := do
 
   -- 7. GEMM backward (2 gemm calls using O(1) transpose)
   let backwardResult ← Benchmark.run "Backward (dA + dB)" gpuConfig fun () => do
-    -- dA = dC @ B^T via gemmNT
+    -- dA = dC @ B^T
     let _ ← GpuTensor.gemm dcGpu (GpuTensor.transpose bGpu)
-    -- dB = A^T @ dC via gemmTN
+    -- dB = A^T @ dC
     let _ ← GpuTensor.gemm (GpuTensor.transpose aGpu) dcGpu
     pure ()
   suite := suite.add backwardResult

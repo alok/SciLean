@@ -616,8 +616,8 @@ theorem GpuTensor.gemm.arg_AB.HasRevFDerivM_rule :
           -- For C = A @ B where A : (m,k), B : (k,n), C : (m,n)
           -- dA = dC @ B^T  shape: (m,n) @ (n,k) = (m,k)
           -- dB = A^T @ dC  shape: (k,m) @ (m,n) = (k,n)
-          let dA ← GpuTensor.gemmNT dC AB.2  -- dC @ B^T
-          let dB ← GpuTensor.gemmTN AB.1 dC  -- A^T @ dC
+          let dA ← GpuTensor.gemmTransposeRight dC AB.2  -- dC @ B^T
+          let dB ← GpuTensor.gemmTransposeLeft AB.1 dC  -- A^T @ dC
           pure (dA, dB))) := by
   trivial
 

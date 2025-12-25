@@ -5,14 +5,15 @@
 #include <lean/lean.h>
 #include <vector>
 
-// Forward declarations for auto-dispatch functions
+// Forward declaration for layout-aware GEMM
 extern "C" {
-LEAN_EXPORT lean_obj_res scilean_gpu_gemm_tn_f32(
+LEAN_EXPORT lean_obj_res scilean_gpu_gemm_layout_f32(
     b_lean_obj_arg A_buf, b_lean_obj_arg B_buf,
-    size_t m, size_t k, size_t n, lean_obj_arg world);
-LEAN_EXPORT lean_obj_res scilean_gpu_gemm_nt_f32(
-    b_lean_obj_arg A_buf, b_lean_obj_arg B_buf,
-    size_t m, size_t k, size_t n, lean_obj_arg world);
+    size_t m, size_t k, size_t n,
+    size_t a_row_stride, size_t b_row_stride,
+    size_t a_offset, size_t b_offset,
+    uint8_t transposeA, uint8_t transposeB,
+    lean_obj_arg world);
 }
 
 // Global Metal state
@@ -20,6 +21,7 @@ static id<MTLDevice> device = nil;
 static id<MTLCommandQueue> commandQueue = nil;
 static id<MTLLibrary> library = nil;
 static NSMutableDictionary<NSString*, id<MTLComputePipelineState>>* pipelines = nil;
+static NSMutableDictionary<NSString*, MPSMatrixMultiplication*>* mps_gemm_cache = nil;
 
 // Buffer pool for reducing allocation overhead
 // Buckets: 256B, 1KB, 4KB, 16KB, 64KB, 256KB, 1MB, 4MB, 16MB
@@ -27,6 +29,11 @@ static const size_t BUFFER_BUCKET_SIZES[] = {256, 1024, 4096, 16384, 65536, 2621
 static const size_t NUM_BUFFER_BUCKETS = sizeof(BUFFER_BUCKET_SIZES) / sizeof(BUFFER_BUCKET_SIZES[0]);
 static const size_t MAX_POOLED_BUFFERS_PER_BUCKET = 4;
 static NSMutableArray<id<MTLBuffer>>* bufferPool[NUM_BUFFER_BUCKETS] = {nil};
+
+// Threadgroup memory sizes must be 16-byte aligned for Metal validation.
+static inline NSUInteger align16(NSUInteger bytes) {
+    return (bytes + 15u) & ~((NSUInteger)15u);
+}
 
 // ============================================================================
 // Command Buffer Batching
@@ -294,6 +301,33 @@ static id<MTLComputePipelineState> get_pipeline(NSString* kernelName) {
         pipelines[kernelName] = pipeline;
     }
     return pipeline;
+}
+
+// Cache MPSMatrixMultiplication kernels by transpose flags and sizes.
+// Creating these objects is relatively expensive; reuse for hot paths.
+static MPSMatrixMultiplication* get_mps_gemm(bool transposeLeft, bool transposeRight,
+                                            size_t m, size_t k, size_t n) {
+    if (!mps_gemm_cache) {
+        mps_gemm_cache = [NSMutableDictionary dictionary];
+    }
+    NSString* key = [NSString stringWithFormat:@"%c%c_%zu_%zu_%zu",
+                     transposeLeft ? 'T' : 'N',
+                     transposeRight ? 'T' : 'N',
+                     m, k, n];
+    MPSMatrixMultiplication* matMul = mps_gemm_cache[key];
+    if (!matMul) {
+        matMul = [[MPSMatrixMultiplication alloc]
+            initWithDevice:device
+            transposeLeft:transposeLeft
+            transposeRight:transposeRight
+            resultRows:m
+            resultColumns:n
+            interiorColumns:k
+            alpha:1.0
+            beta:0.0];
+        mps_gemm_cache[key] = matMul;
+    }
+    return matMul;
 }
 
 // Create a Metal buffer from a Lean FloatArray (Lean uses double, Metal uses float)
@@ -592,17 +626,9 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_f32(
         MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B descriptor:descB];
         MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C descriptor:descC];
 
-        // Create matrix multiplication kernel
+        // Create or reuse cached matrix multiplication kernel
         // C = A @ B (no transpose)
-        MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
-            initWithDevice:device
-            transposeLeft:false
-            transposeRight:false
-            resultRows:m
-            resultColumns:n
-            interiorColumns:k
-            alpha:1.0
-            beta:0.0];
+        MPSMatrixMultiplication* matMul = get_mps_gemm(false, false, m, k, n);
 
         bool in_batch = g_batch_mode;
         // MPS can't encode while compute encoder is active - pause it
@@ -627,6 +653,101 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_f32(
 
         lean_obj_res result = wrap_gpu_buffer(C, output_size);
         return lean_io_result_mk_ok(result);
+    }
+}
+
+// GEMM with layout metadata (row stride + offsets) and optional transpose flags.
+// A is logical [m, k], B is logical [k, n]. Row strides and offsets are in elements.
+LEAN_EXPORT lean_obj_res scilean_gpu_gemm_layout_f32(
+    b_lean_obj_arg A_buf,
+    b_lean_obj_arg B_buf,
+    size_t m, size_t k, size_t n,
+    size_t a_row_stride, size_t b_row_stride,
+    size_t a_offset, size_t b_offset,
+    uint8_t transposeA,
+    uint8_t transposeB,
+    lean_obj_arg /* world */
+) {
+    if (!ensure_metal_initialized()) {
+        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
+    }
+
+    id<MTLBuffer> A = get_mtl_buffer(A_buf);
+    id<MTLBuffer> B = get_mtl_buffer(B_buf);
+    if (!A || !B) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
+    }
+
+    bool tA = transposeA != 0;
+    bool tB = transposeB != 0;
+
+    // Stored shapes for A and B (before logical transpose)
+    size_t a_rows = tA ? k : m;
+    size_t a_cols = tA ? m : k;
+    size_t b_rows = tB ? n : k;
+    size_t b_cols = tB ? k : n;
+
+    size_t a_row_bytes = a_row_stride * sizeof(float);
+    size_t b_row_bytes = b_row_stride * sizeof(float);
+
+    if (a_row_bytes < a_cols * sizeof(float) || b_row_bytes < b_cols * sizeof(float)) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid GEMM layout (row stride too small)"));
+    }
+
+    @autoreleasepool {
+        size_t output_size = m * n * sizeof(float);
+        id<MTLBuffer> C = get_pooled_buffer(output_size);
+        if (!C) {
+            C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
+        }
+
+        MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:a_rows
+            columns:a_cols
+            rowBytes:a_row_bytes
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:b_rows
+            columns:b_cols
+            rowBytes:b_row_bytes
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:m
+            columns:n
+            rowBytes:n * sizeof(float)
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A
+                                                     offset:a_offset * sizeof(float)
+                                                  descriptor:descA];
+        MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B
+                                                     offset:b_offset * sizeof(float)
+                                                  descriptor:descB];
+        MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C descriptor:descC];
+
+        MPSMatrixMultiplication* matMul = get_mps_gemm(tA, tB, m, k, n);
+
+        bool in_batch = g_batch_mode;
+        pause_batch_encoder_for_mps();
+
+        id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
+
+        [matMul encodeToCommandBuffer:commandBuffer
+                           leftMatrix:matA
+                          rightMatrix:matB
+                         resultMatrix:matC];
+
+        if (!in_batch) {
+            [commandBuffer commit];
+            [commandBuffer waitUntilCompleted];
+        } else {
+            [g_batch_outputs addObject:C];
+            resume_batch_encoder();
+        }
+
+        return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
     }
 }
 
@@ -677,7 +798,7 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_f32(
 }
 
 // GEMM with A transposed using AMX: C = A^T @ B
-LEAN_EXPORT lean_obj_res scilean_amx_gemm_tn_f32(
+LEAN_EXPORT lean_obj_res scilean_amx_gemm_transpose_left_f32(
     b_lean_obj_arg A_buf,
     b_lean_obj_arg B_buf,
     size_t m, size_t k, size_t n,
@@ -728,7 +849,7 @@ LEAN_EXPORT lean_obj_res scilean_amx_gemm_tn_f32(
 }
 
 // GEMM with B transposed using AMX: C = A @ B^T
-LEAN_EXPORT lean_obj_res scilean_amx_gemm_nt_f32(
+LEAN_EXPORT lean_obj_res scilean_amx_gemm_transpose_right_f32(
     b_lean_obj_arg A_buf,
     b_lean_obj_arg B_buf,
     size_t m, size_t k, size_t n,
@@ -802,36 +923,6 @@ LEAN_EXPORT lean_obj_res scilean_auto_gemm_f32(
         return scilean_amx_gemm_f32(A_buf, B_buf, m, k, n, world);
     } else {
         return scilean_gpu_gemm_f32(A_buf, B_buf, m, k, n, world);
-    }
-}
-
-// Auto-dispatch GEMM with A transposed: C = A^T @ B
-// Uses AMX for small matrices to avoid encoder switching overhead
-LEAN_EXPORT lean_obj_res scilean_auto_gemm_tn_f32(
-    b_lean_obj_arg A_buf,
-    b_lean_obj_arg B_buf,
-    size_t m, size_t k, size_t n,
-    lean_obj_arg world
-) {
-    if (should_use_amx(m, k, n)) {
-        return scilean_amx_gemm_tn_f32(A_buf, B_buf, m, k, n, world);
-    } else {
-        return scilean_gpu_gemm_tn_f32(A_buf, B_buf, m, k, n, world);
-    }
-}
-
-// Auto-dispatch GEMM with B transposed: C = A @ B^T
-// Uses AMX for small matrices to avoid encoder switching overhead
-LEAN_EXPORT lean_obj_res scilean_auto_gemm_nt_f32(
-    b_lean_obj_arg A_buf,
-    b_lean_obj_arg B_buf,
-    size_t m, size_t k, size_t n,
-    lean_obj_arg world
-) {
-    if (should_use_amx(m, k, n)) {
-        return scilean_amx_gemm_nt_f32(A_buf, B_buf, m, k, n, world);
-    } else {
-        return scilean_gpu_gemm_nt_f32(A_buf, B_buf, m, k, n, world);
     }
 }
 
@@ -1098,6 +1189,76 @@ LEAN_EXPORT lean_obj_res scilean_gpu_relu_f32(
     }
 }
 
+// Sparse CSR SpMV on GPU: y = A * x
+// row_ptr, col_ind are UInt32 buffers; vals and x are Float32 buffers
+LEAN_EXPORT lean_obj_res scilean_gpu_csr_spmv_f32(
+    b_lean_obj_arg row_ptr_buf,
+    b_lean_obj_arg col_ind_buf,
+    b_lean_obj_arg vals_buf,
+    b_lean_obj_arg x_buf,
+    size_t m,
+    lean_obj_arg /* world */
+) {
+    if (!ensure_metal_initialized()) {
+        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
+    }
+
+    id<MTLBuffer> row_ptr = get_mtl_buffer(row_ptr_buf);
+    id<MTLBuffer> col_ind = get_mtl_buffer(col_ind_buf);
+    id<MTLBuffer> vals = get_mtl_buffer(vals_buf);
+    id<MTLBuffer> x = get_mtl_buffer(x_buf);
+    if (!row_ptr || !col_ind || !vals || !x) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
+    }
+
+    @autoreleasepool {
+        id<MTLComputePipelineState> pipeline = get_pipeline(@"csr_spmv");
+        if (!pipeline) {
+            return lean_io_result_mk_error(lean_mk_string("Failed to get csr_spmv pipeline"));
+        }
+
+        size_t output_size = m * sizeof(float);
+        id<MTLBuffer> y = get_pooled_buffer(output_size);
+        if (!y) {
+            y = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
+        }
+
+        uint32_t m32 = (uint32_t)m;
+
+        // Use batch encoder if in batch mode
+        bool batched = is_batch_mode();
+        id<MTLComputeCommandEncoder> encoder = batched ? get_encoder_for_op() : nil;
+        id<MTLCommandBuffer> commandBuffer = nil;
+        if (!batched) {
+            commandBuffer = [commandQueue commandBuffer];
+            encoder = [commandBuffer computeCommandEncoder];
+        }
+
+        [encoder setComputePipelineState:pipeline];
+        [encoder setBuffer:row_ptr offset:0 atIndex:0];
+        [encoder setBuffer:col_ind offset:0 atIndex:1];
+        [encoder setBuffer:vals offset:0 atIndex:2];
+        [encoder setBuffer:x offset:0 atIndex:3];
+        [encoder setBuffer:y offset:0 atIndex:4];
+        [encoder setBytes:&m32 length:sizeof(m32) atIndex:5];
+
+        MTLSize gridSize = MTLSizeMake(m, 1, 1);
+        NSUInteger tgSize = MIN(pipeline.maxTotalThreadsPerThreadgroup, m);
+        [encoder dispatchThreads:gridSize threadsPerThreadgroup:MTLSizeMake(tgSize, 1, 1)];
+
+        if (!batched) {
+            [encoder endEncoding];
+            [commandBuffer commit];
+            [commandBuffer waitUntilCompleted];
+        } else {
+            [g_batch_outputs addObject:y];
+        }
+
+        lean_obj_res result = wrap_gpu_buffer(y, output_size);
+        return lean_io_result_mk_ok(result);
+    }
+}
+
 // Softmax on GPU buffer
 // Supports batching: when in batch mode, queues to shared command buffer
 LEAN_EXPORT lean_obj_res scilean_gpu_softmax_f32(
@@ -1144,7 +1305,7 @@ LEAN_EXPORT lean_obj_res scilean_gpu_softmax_f32(
         [encoder setBytes:&row_size32 length:sizeof(row_size32) atIndex:2];
 
         // Allocate threadgroup memory for the shared array (one float per element in row)
-        NSUInteger threadgroupMemorySize = row_size * sizeof(float);
+        NSUInteger threadgroupMemorySize = align16(row_size * sizeof(float));
         [encoder setThreadgroupMemoryLength:threadgroupMemorySize atIndex:0];
 
         NSUInteger tgSize = MIN(pipeline.maxTotalThreadsPerThreadgroup, row_size);
@@ -1509,7 +1670,7 @@ LEAN_EXPORT lean_obj_res scilean_gpu_layer_norm_f32(
         tgSize = MIN(powerOf2, pipeline.maxTotalThreadsPerThreadgroup);
 
         // Allocate threadgroup memory for reduction
-        [encoder setThreadgroupMemoryLength:tgSize * sizeof(float) atIndex:0];
+        [encoder setThreadgroupMemoryLength:align16(tgSize * sizeof(float)) atIndex:0];
 
         // Dispatch exactly one threadgroup
         [encoder dispatchThreadgroups:MTLSizeMake(1, 1, 1)
@@ -2731,7 +2892,7 @@ LEAN_EXPORT double scilean_metal_reduce_sum(size_t n, b_lean_obj_arg x) {
             [encoder setBuffer:xbuf offset:0 atIndex:0];
             [encoder setBuffer:outbuf offset:0 atIndex:1];
             [encoder setBytes:&n32 length:sizeof(n32) atIndex:2];
-            [encoder setThreadgroupMemoryLength:threadGroupSize * sizeof(float) atIndex:0];
+            [encoder setThreadgroupMemoryLength:align16(threadGroupSize * sizeof(float)) atIndex:0];
 
             MTLSize gridSize = MTLSizeMake(threadGroupSize, 1, 1);
             MTLSize tgSize = MTLSizeMake(threadGroupSize, 1, 1);
@@ -2785,7 +2946,7 @@ LEAN_EXPORT double scilean_metal_reduce_sum(size_t n, b_lean_obj_arg x) {
         [encoder setBuffer:partialsBuf offset:0 atIndex:0];
         [encoder setBuffer:outbuf offset:0 atIndex:1];
         [encoder setBytes:&numBlocks32 length:sizeof(numBlocks32) atIndex:2];
-        [encoder setThreadgroupMemoryLength:numBlocks * sizeof(float) atIndex:0];
+        [encoder setThreadgroupMemoryLength:align16(numBlocks * sizeof(float)) atIndex:0];
 
         MTLSize gridSize2 = MTLSizeMake(numBlocks, 1, 1);
         MTLSize tgSize2 = MTLSizeMake(numBlocks, 1, 1);
@@ -2824,7 +2985,7 @@ LEAN_EXPORT double scilean_metal_reduce_max(size_t n, b_lean_obj_arg x) {
         [encoder setBuffer:xbuf offset:0 atIndex:0];
         [encoder setBuffer:outbuf offset:0 atIndex:1];
         [encoder setBytes:&n32 length:sizeof(n32) atIndex:2];
-        [encoder setThreadgroupMemoryLength:threadGroupSize * sizeof(float) atIndex:0];
+        [encoder setThreadgroupMemoryLength:align16(threadGroupSize * sizeof(float)) atIndex:0];
 
         MTLSize gridSize = MTLSizeMake(threadGroupSize, 1, 1);
         MTLSize tgSize = MTLSizeMake(threadGroupSize, 1, 1);
@@ -2863,7 +3024,7 @@ LEAN_EXPORT double scilean_metal_reduce_min(size_t n, b_lean_obj_arg x) {
         [encoder setBuffer:xbuf offset:0 atIndex:0];
         [encoder setBuffer:outbuf offset:0 atIndex:1];
         [encoder setBytes:&n32 length:sizeof(n32) atIndex:2];
-        [encoder setThreadgroupMemoryLength:threadGroupSize * sizeof(float) atIndex:0];
+        [encoder setThreadgroupMemoryLength:align16(threadGroupSize * sizeof(float)) atIndex:0];
 
         MTLSize gridSize = MTLSizeMake(threadGroupSize, 1, 1);
         MTLSize tgSize = MTLSizeMake(threadGroupSize, 1, 1);
@@ -3523,7 +3684,7 @@ LEAN_EXPORT float scilean_metal_reduce_sum_f32(size_t n, b_lean_obj_arg x) {
             [encoder setBuffer:xbuf offset:0 atIndex:0];
             [encoder setBuffer:outbuf offset:0 atIndex:1];
             [encoder setBytes:&n32 length:sizeof(n32) atIndex:2];
-            [encoder setThreadgroupMemoryLength:threadGroupSize * sizeof(float) atIndex:0];
+            [encoder setThreadgroupMemoryLength:align16(threadGroupSize * sizeof(float)) atIndex:0];
 
             MTLSize gridSize = MTLSizeMake(threadGroupSize, 1, 1);
             MTLSize tgSize = MTLSizeMake(threadGroupSize, 1, 1);
@@ -3580,7 +3741,7 @@ LEAN_EXPORT float scilean_metal_reduce_sum_f32(size_t n, b_lean_obj_arg x) {
         [encoder setBuffer:partialBuf offset:0 atIndex:0];
         [encoder setBuffer:outbuf offset:0 atIndex:1];
         [encoder setBytes:&numBlocks32 length:sizeof(numBlocks32) atIndex:2];
-        [encoder setThreadgroupMemoryLength:numBlocks * sizeof(float) atIndex:0];
+        [encoder setThreadgroupMemoryLength:align16(numBlocks * sizeof(float)) atIndex:0];
 
         MTLSize finalGrid = MTLSizeMake(numBlocks, 1, 1);
         MTLSize finalTg = MTLSizeMake(numBlocks, 1, 1);
@@ -3625,7 +3786,7 @@ LEAN_EXPORT float scilean_metal_reduce_max_f32(size_t n, b_lean_obj_arg x) {
         [encoder setBuffer:xbuf offset:0 atIndex:0];
         [encoder setBuffer:outbuf offset:0 atIndex:1];
         [encoder setBytes:&n32 length:sizeof(n32) atIndex:2];
-        [encoder setThreadgroupMemoryLength:threadGroupSize * sizeof(float) atIndex:0];
+        [encoder setThreadgroupMemoryLength:align16(threadGroupSize * sizeof(float)) atIndex:0];
 
         MTLSize gridSize = MTLSizeMake(threadGroupSize, 1, 1);
         MTLSize tgSize = MTLSizeMake(threadGroupSize, 1, 1);
@@ -3671,7 +3832,7 @@ LEAN_EXPORT float scilean_metal_reduce_min_f32(size_t n, b_lean_obj_arg x) {
         [encoder setBuffer:xbuf offset:0 atIndex:0];
         [encoder setBuffer:outbuf offset:0 atIndex:1];
         [encoder setBytes:&n32 length:sizeof(n32) atIndex:2];
-        [encoder setThreadgroupMemoryLength:threadGroupSize * sizeof(float) atIndex:0];
+        [encoder setThreadgroupMemoryLength:align16(threadGroupSize * sizeof(float)) atIndex:0];
 
         MTLSize gridSize = MTLSizeMake(threadGroupSize, 1, 1);
         MTLSize tgSize = MTLSizeMake(threadGroupSize, 1, 1);
@@ -4021,7 +4182,7 @@ LEAN_EXPORT lean_obj_res scilean_metal_softmax_f32(
         [encoder setBuffer:partialsBuf offset:0 atIndex:0];
         [encoder setBuffer:resultBuf offset:0 atIndex:1];
         [encoder setBytes:&numBlocks32 length:sizeof(numBlocks32) atIndex:2];
-        [encoder setThreadgroupMemoryLength:numBlocks * sizeof(float) atIndex:0];
+        [encoder setThreadgroupMemoryLength:align16(numBlocks * sizeof(float)) atIndex:0];
         [encoder dispatchThreadgroups:MTLSizeMake(1, 1, 1)
                 threadsPerThreadgroup:MTLSizeMake(MIN(numBlocks, blockSize), 1, 1)];
 
@@ -4050,7 +4211,7 @@ LEAN_EXPORT lean_obj_res scilean_metal_softmax_f32(
         [encoder setBuffer:partialsBuf offset:0 atIndex:0];
         [encoder setBuffer:resultBuf offset:0 atIndex:1];
         [encoder setBytes:&numBlocks32 length:sizeof(numBlocks32) atIndex:2];
-        [encoder setThreadgroupMemoryLength:numBlocks * sizeof(float) atIndex:0];
+        [encoder setThreadgroupMemoryLength:align16(numBlocks * sizeof(float)) atIndex:0];
         [encoder dispatchThreadgroups:MTLSizeMake(1, 1, 1)
                 threadsPerThreadgroup:MTLSizeMake(MIN(numBlocks, blockSize), 1, 1)];
 
@@ -4492,7 +4653,7 @@ LEAN_EXPORT lean_obj_res scilean_metal_softmax_batched_f32(
         [encoder setBytes:&row_size32 length:sizeof(row_size32) atIndex:2];
 
         // Shared memory for row data
-        [encoder setThreadgroupMemoryLength:row_size * sizeof(float) atIndex:0];
+        [encoder setThreadgroupMemoryLength:align16(row_size * sizeof(float)) atIndex:0];
 
         // One threadgroup per row
         NSUInteger tgSize = MIN(pipeline.maxTotalThreadsPerThreadgroup, 256);
@@ -5428,186 +5589,6 @@ LEAN_EXPORT lean_obj_res scilean_gpu_sub_f32(
     }
 }
 
-// GEMM with first matrix transposed: C = A^T @ B (using MPS)
-// A is [k, m], treated as A^T [m, k], B is [k, n], result C is [m, n]
-// Uses Metal Performance Shaders for Apple-optimized transpose GEMM
-LEAN_EXPORT lean_obj_res scilean_gpu_gemm_tn_f32(
-    b_lean_obj_arg A_buf,
-    b_lean_obj_arg B_buf,
-    size_t m,
-    size_t k,
-    size_t n,
-    lean_obj_arg /* world */
-) {
-    if (!ensure_metal_initialized()) {
-        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
-    }
-
-    id<MTLBuffer> A = get_mtl_buffer(A_buf);
-    id<MTLBuffer> B = get_mtl_buffer(B_buf);
-    if (!A || !B) {
-        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
-    }
-
-    @autoreleasepool {
-        size_t output_size = m * n * sizeof(float);
-        id<MTLBuffer> C = get_pooled_buffer(output_size);
-        if (!C) {
-            C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
-        }
-
-        // MPS matrix descriptors
-        // A is stored as [k, m], will be transposed to [m, k]
-        MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
-            matrixDescriptorWithRows:k
-            columns:m
-            rowBytes:m * sizeof(float)
-            dataType:MPSDataTypeFloat32];
-
-        MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
-            matrixDescriptorWithRows:k
-            columns:n
-            rowBytes:n * sizeof(float)
-            dataType:MPSDataTypeFloat32];
-
-        MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
-            matrixDescriptorWithRows:m
-            columns:n
-            rowBytes:n * sizeof(float)
-            dataType:MPSDataTypeFloat32];
-
-        // Create MPS matrices
-        MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A descriptor:descA];
-        MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B descriptor:descB];
-        MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C descriptor:descC];
-
-        // Create matrix multiplication with A transposed
-        // C = A^T @ B where A^T is [m, k] and B is [k, n]
-        MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
-            initWithDevice:device
-            transposeLeft:true    // Transpose A!
-            transposeRight:false
-            resultRows:m
-            resultColumns:n
-            interiorColumns:k
-            alpha:1.0
-            beta:0.0];
-
-        bool in_batch = g_batch_mode;
-        // MPS can't encode while compute encoder is active - pause it
-        pause_batch_encoder_for_mps();
-
-        id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
-
-        // MPS encodes directly to command buffer (no compute encoder needed)
-        [matMul encodeToCommandBuffer:commandBuffer
-                           leftMatrix:matA
-                          rightMatrix:matB
-                         resultMatrix:matC];
-
-        if (!in_batch) {
-            [commandBuffer commit];
-            [commandBuffer waitUntilCompleted];
-        } else {
-            [g_batch_outputs addObject:C];
-            // Resume compute encoder for subsequent compute ops
-            resume_batch_encoder();
-        }
-
-        return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
-    }
-}
-
-// GEMM with second matrix transposed: C = A @ B^T (using MPS)
-// A is [m, k], B is [n, k], treated as B^T [k, n], result C is [m, n]
-// Uses Metal Performance Shaders for Apple-optimized transpose GEMM
-LEAN_EXPORT lean_obj_res scilean_gpu_gemm_nt_f32(
-    b_lean_obj_arg A_buf,
-    b_lean_obj_arg B_buf,
-    size_t m,
-    size_t k,
-    size_t n,
-    lean_obj_arg /* world */
-) {
-    if (!ensure_metal_initialized()) {
-        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
-    }
-
-    id<MTLBuffer> A = get_mtl_buffer(A_buf);
-    id<MTLBuffer> B = get_mtl_buffer(B_buf);
-    if (!A || !B) {
-        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
-    }
-
-    @autoreleasepool {
-        size_t output_size = m * n * sizeof(float);
-        id<MTLBuffer> C = get_pooled_buffer(output_size);
-        if (!C) {
-            C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
-        }
-
-        // MPS matrix descriptors
-        // A is [m, k], B is stored as [n, k] and will be transposed to [k, n]
-        MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
-            matrixDescriptorWithRows:m
-            columns:k
-            rowBytes:k * sizeof(float)
-            dataType:MPSDataTypeFloat32];
-
-        MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
-            matrixDescriptorWithRows:n
-            columns:k
-            rowBytes:k * sizeof(float)
-            dataType:MPSDataTypeFloat32];
-
-        MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
-            matrixDescriptorWithRows:m
-            columns:n
-            rowBytes:n * sizeof(float)
-            dataType:MPSDataTypeFloat32];
-
-        // Create MPS matrices
-        MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A descriptor:descA];
-        MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B descriptor:descB];
-        MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C descriptor:descC];
-
-        // Create matrix multiplication with B transposed
-        // C = A @ B^T where A is [m, k] and B^T is [k, n]
-        MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
-            initWithDevice:device
-            transposeLeft:false
-            transposeRight:true   // Transpose B!
-            resultRows:m
-            resultColumns:n
-            interiorColumns:k
-            alpha:1.0
-            beta:0.0];
-
-        bool in_batch = g_batch_mode;
-        // MPS can't encode while compute encoder is active - pause it
-        pause_batch_encoder_for_mps();
-
-        id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
-
-        // MPS encodes directly to command buffer (no compute encoder needed)
-        [matMul encodeToCommandBuffer:commandBuffer
-                           leftMatrix:matA
-                          rightMatrix:matB
-                         resultMatrix:matC];
-
-        if (!in_batch) {
-            [commandBuffer commit];
-            [commandBuffer waitUntilCompleted];
-        } else {
-            [g_batch_outputs addObject:C];
-            // Resume compute encoder for subsequent compute ops
-            resume_batch_encoder();
-        }
-
-        return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
-    }
-}
-
 // ============================================================
 // Batched GEMM - for multi-head attention
 // ============================================================
@@ -5701,15 +5682,23 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_f32(
     }
 }
 
-// Batched GEMM with A transposed: C[b] = A[b]^T @ B[b]
-// A is stored as [batch, k, m], B is [batch, k, n], C is [batch, m, n]
-LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_tn_f32(
+// Batched GEMM with layout metadata and transpose flags.
+// Strides and offsets are in elements.
+LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_layout_f32(
     b_lean_obj_arg A_buf,
     b_lean_obj_arg B_buf,
     size_t batch,
     size_t m,
     size_t k,
     size_t n,
+    size_t a_batch_stride,
+    size_t b_batch_stride,
+    size_t a_row_stride,
+    size_t b_row_stride,
+    size_t a_offset,
+    size_t b_offset,
+    uint8_t transposeA,
+    uint8_t transposeB,
     lean_obj_arg /* world */
 ) {
     if (!ensure_metal_initialized()) {
@@ -5722,54 +5711,62 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_tn_f32(
         return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
     }
 
+    bool tA = transposeA != 0;
+    bool tB = transposeB != 0;
+
+    size_t a_rows = tA ? k : m;
+    size_t a_cols = tA ? m : k;
+    size_t b_rows = tB ? n : k;
+    size_t b_cols = tB ? k : n;
+
+    size_t a_row_bytes = a_row_stride * sizeof(float);
+    size_t b_row_bytes = b_row_stride * sizeof(float);
+
+    if (a_row_bytes < a_cols * sizeof(float) || b_row_bytes < b_cols * sizeof(float)) {
+        return lean_io_result_mk_error(lean_mk_string("Invalid batched GEMM layout (row stride too small)"));
+    }
+
     @autoreleasepool {
         size_t output_size = batch * m * n * sizeof(float);
         id<MTLBuffer> C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
 
-        // A is stored as [batch, k, m] (transposed)
-        size_t a_batch_stride = k * m * sizeof(float);
-        size_t b_batch_stride = k * n * sizeof(float);
-        size_t c_batch_stride = m * n * sizeof(float);
+        size_t a_batch_stride_bytes = a_batch_stride * sizeof(float);
+        size_t b_batch_stride_bytes = b_batch_stride * sizeof(float);
+        size_t c_batch_stride_bytes = m * n * sizeof(float);
+
+        MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:a_rows
+            columns:a_cols
+            rowBytes:a_row_bytes
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:b_rows
+            columns:b_cols
+            rowBytes:b_row_bytes
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
+            matrixDescriptorWithRows:m
+            columns:n
+            rowBytes:n * sizeof(float)
+            dataType:MPSDataTypeFloat32];
+
+        MPSMatrixMultiplication* matMul = get_mps_gemm(tA, tB, m, k, n);
 
         bool in_batch = g_batch_mode;
-        // MPS can't encode while compute encoder is active - pause it
         pause_batch_encoder_for_mps();
 
         id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
 
         for (size_t b = 0; b < batch; b++) {
-            // A stored as [k, m], will be transposed to [m, k]
-            MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
-                matrixDescriptorWithRows:k
-                columns:m
-                rowBytes:m * sizeof(float)
-                dataType:MPSDataTypeFloat32];
+            size_t a_off = (a_offset * sizeof(float)) + b * a_batch_stride_bytes;
+            size_t b_off = (b_offset * sizeof(float)) + b * b_batch_stride_bytes;
+            size_t c_off = b * c_batch_stride_bytes;
 
-            MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
-                matrixDescriptorWithRows:k
-                columns:n
-                rowBytes:n * sizeof(float)
-                dataType:MPSDataTypeFloat32];
-
-            MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
-                matrixDescriptorWithRows:m
-                columns:n
-                rowBytes:n * sizeof(float)
-                dataType:MPSDataTypeFloat32];
-
-            MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A offset:b * a_batch_stride descriptor:descA];
-            MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B offset:b * b_batch_stride descriptor:descB];
-            MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C offset:b * c_batch_stride descriptor:descC];
-
-            MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
-                initWithDevice:device
-                transposeLeft:true  // Transpose A!
-                transposeRight:false
-                resultRows:m
-                resultColumns:n
-                interiorColumns:k
-                alpha:1.0
-                beta:0.0];
+            MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A offset:a_off descriptor:descA];
+            MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B offset:b_off descriptor:descB];
+            MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C offset:c_off descriptor:descC];
 
             [matMul encodeToCommandBuffer:commandBuffer
                                leftMatrix:matA
@@ -5782,96 +5779,6 @@ LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_tn_f32(
             [commandBuffer waitUntilCompleted];
         } else {
             [g_batch_outputs addObject:C];
-            // Resume compute encoder for subsequent compute ops
-            resume_batch_encoder();
-        }
-
-        return lean_io_result_mk_ok(wrap_gpu_buffer(C, output_size));
-    }
-}
-
-// Batched GEMM with B transposed: C[b] = A[b] @ B[b]^T
-// A is [batch, m, k], B is stored as [batch, n, k], C is [batch, m, n]
-LEAN_EXPORT lean_obj_res scilean_gpu_gemm_batched_nt_f32(
-    b_lean_obj_arg A_buf,
-    b_lean_obj_arg B_buf,
-    size_t batch,
-    size_t m,
-    size_t k,
-    size_t n,
-    lean_obj_arg /* world */
-) {
-    if (!ensure_metal_initialized()) {
-        return lean_io_result_mk_error(lean_mk_string("Metal not available"));
-    }
-
-    id<MTLBuffer> A = get_mtl_buffer(A_buf);
-    id<MTLBuffer> B = get_mtl_buffer(B_buf);
-    if (!A || !B) {
-        return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
-    }
-
-    @autoreleasepool {
-        size_t output_size = batch * m * n * sizeof(float);
-        id<MTLBuffer> C = [device newBufferWithLength:output_size options:MTLResourceStorageModeShared];
-
-        size_t a_batch_stride = m * k * sizeof(float);
-        // B is stored as [batch, n, k] (transposed)
-        size_t b_batch_stride = n * k * sizeof(float);
-        size_t c_batch_stride = m * n * sizeof(float);
-
-        bool in_batch = g_batch_mode;
-        // MPS can't encode while compute encoder is active - pause it
-        pause_batch_encoder_for_mps();
-
-        id<MTLCommandBuffer> commandBuffer = in_batch ? g_batch_command_buffer : [commandQueue commandBuffer];
-
-        for (size_t b = 0; b < batch; b++) {
-            MPSMatrixDescriptor* descA = [MPSMatrixDescriptor
-                matrixDescriptorWithRows:m
-                columns:k
-                rowBytes:k * sizeof(float)
-                dataType:MPSDataTypeFloat32];
-
-            // B stored as [n, k], will be transposed to [k, n]
-            MPSMatrixDescriptor* descB = [MPSMatrixDescriptor
-                matrixDescriptorWithRows:n
-                columns:k
-                rowBytes:k * sizeof(float)
-                dataType:MPSDataTypeFloat32];
-
-            MPSMatrixDescriptor* descC = [MPSMatrixDescriptor
-                matrixDescriptorWithRows:m
-                columns:n
-                rowBytes:n * sizeof(float)
-                dataType:MPSDataTypeFloat32];
-
-            MPSMatrix* matA = [[MPSMatrix alloc] initWithBuffer:A offset:b * a_batch_stride descriptor:descA];
-            MPSMatrix* matB = [[MPSMatrix alloc] initWithBuffer:B offset:b * b_batch_stride descriptor:descB];
-            MPSMatrix* matC = [[MPSMatrix alloc] initWithBuffer:C offset:b * c_batch_stride descriptor:descC];
-
-            MPSMatrixMultiplication* matMul = [[MPSMatrixMultiplication alloc]
-                initWithDevice:device
-                transposeLeft:false
-                transposeRight:true   // Transpose B!
-                resultRows:m
-                resultColumns:n
-                interiorColumns:k
-                alpha:1.0
-                beta:0.0];
-
-            [matMul encodeToCommandBuffer:commandBuffer
-                               leftMatrix:matA
-                              rightMatrix:matB
-                             resultMatrix:matC];
-        }
-
-        if (!in_batch) {
-            [commandBuffer commit];
-            [commandBuffer waitUntilCompleted];
-        } else {
-            [g_batch_outputs addObject:C];
-            // Resume compute encoder for subsequent compute ops
             resume_batch_encoder();
         }
 
@@ -5958,7 +5865,7 @@ LEAN_EXPORT lean_obj_res scilean_gpu_row_sum_f32(
         if (use_large) {
             // Large kernel: one threadgroup per column, 256 threads per threadgroup
             size_t tg_mem_size = 256 * sizeof(float);
-            [encoder setThreadgroupMemoryLength:tg_mem_size atIndex:0];
+            [encoder setThreadgroupMemoryLength:align16(tg_mem_size) atIndex:0];
             MTLSize gridSize = MTLSizeMake(cols, 1, 1);
             MTLSize tgSize = MTLSizeMake(256, 1, 1);
             [encoder dispatchThreadgroups:gridSize threadsPerThreadgroup:tgSize];
@@ -5991,19 +5898,20 @@ LEAN_EXPORT lean_obj_res scilean_gpu_row_sum_f32(
 // Output: new contiguous buffer in row-major order
 LEAN_EXPORT lean_obj_res scilean_gpu_copy_layout_f32(
     b_lean_obj_arg src_buf,
-    b_lean_obj_arg shape_arr,    // Array USize
-    b_lean_obj_arg strides_arr,  // Array USize
-    size_t offset,
+    b_lean_obj_arg shape_arr,    // Array Nat
+    b_lean_obj_arg strides_arr,  // Array Nat
+    b_lean_obj_arg offset_obj,
     lean_obj_arg /* world */
 ) {
     if (!ensure_metal_initialized()) {
         return lean_io_result_mk_error(lean_mk_string("Metal not available"));
     }
 
-    id<MTLBuffer> src = get_mtl_buffer(src_buf);
-    if (!src) {
+    GpuBufferData* src_data = unwrap_gpu_buffer(src_buf);
+    if (!src_data || !src_data->buffer) {
         return lean_io_result_mk_error(lean_mk_string("Invalid GpuBuffer"));
     }
+    id<MTLBuffer> src = src_data->buffer;
 
     // Extract shape and strides from Lean arrays
     size_t rank = lean_array_size(shape_arr);
@@ -6014,14 +5922,51 @@ LEAN_EXPORT lean_obj_res scilean_gpu_copy_layout_f32(
         return lean_io_result_mk_error(lean_mk_string("Shape and strides must have same length"));
     }
 
-    // Get the raw data pointers from scalar arrays
-    // For Array USize, elements are stored inline as size_t values
-    size_t* shape = (size_t*)lean_array_cptr(shape_arr);
-    size_t* strides = (size_t*)lean_array_cptr(strides_arr);
+    // Extract shape/strides values from Lean Array (Nat elements)
+    std::vector<size_t> shape(rank);
+    std::vector<size_t> strides(rank);
+    for (size_t i = 0; i < rank; i++) {
+        shape[i] = lean_usize_of_nat(lean_array_get_core(shape_arr, i));
+        strides[i] = lean_usize_of_nat(lean_array_get_core(strides_arr, i));
+    }
+    size_t offset = lean_usize_of_nat(offset_obj);
+
+    // Sanity checks: bounds/overflow against source buffer size
+    if (src_data->size_bytes % sizeof(float) != 0) {
+        return lean_io_result_mk_error(lean_mk_string("GpuBuffer size is not float-aligned"));
+    }
+    size_t src_elems = src_data->size_bytes / sizeof(float);
+    if (offset >= src_elems) {
+        return lean_io_result_mk_error(lean_mk_string("Layout offset out of bounds"));
+    }
+    size_t max_idx = offset;
+    for (size_t i = 0; i < rank; i++) {
+        size_t dim = shape[i];
+        if (dim == 0) {
+            return lean_io_result_mk_error(lean_mk_string("Empty tensor (shape has 0 dimension)"));
+        }
+        size_t extent = dim - 1;
+        if (extent > 0) {
+            if (strides[i] > 0 && extent > SIZE_MAX / strides[i]) {
+                return lean_io_result_mk_error(lean_mk_string("Layout stride overflow"));
+            }
+            size_t add = extent * strides[i];
+            if (max_idx > SIZE_MAX - add) {
+                return lean_io_result_mk_error(lean_mk_string("Layout index overflow"));
+            }
+            max_idx += add;
+        }
+    }
+    if (max_idx >= src_elems) {
+        return lean_io_result_mk_error(lean_mk_string("Layout out of bounds"));
+    }
 
     // Compute total number of elements (numel = product of shape)
     size_t numel = 1;
     for (size_t i = 0; i < rank; i++) {
+        if (shape[i] > 0 && numel > SIZE_MAX / shape[i]) {
+            return lean_io_result_mk_error(lean_mk_string("Tensor size overflow"));
+        }
         numel *= shape[i];
     }
 

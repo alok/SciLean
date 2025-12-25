@@ -12,6 +12,7 @@ Performance on M4: gemmSimd ~10 TFLOP/s, gemmTiled ~6 TFLOP/s at 2048x2048.
 
 import SciLean.FFI.Float32Array
 import SciLean.Util.Float
+import SciLean.VersoPrelude
 
 namespace SciLean.Metal
 
@@ -111,7 +112,7 @@ opaque slice (src : @& GpuBuffer) (offsetFloats countFloats : USize) : IO GpuBuf
     - offset: starting offset in src (in elements)
     Used by GpuBufferView.contiguous to materialize transposed views. -/
 @[extern "scilean_gpu_copy_layout_f32"]
-opaque copyLayout (src : @& GpuBuffer) (shape strides : @& Array USize) (offset : USize) : IO GpuBuffer
+opaque copyLayout (src : @& GpuBuffer) (shape strides : @& Array Nat) (offset : Nat) : IO GpuBuffer
 
 /-! ### GPU-to-GPU Operations (no CPU copies!) -/
 
@@ -120,6 +121,19 @@ opaque copyLayout (src : @& GpuBuffer) (shape strides : @& Array USize) (offset 
     Both inputs and output stay on GPU. -/
 @[extern "scilean_gpu_gemm_f32"]
 opaque gemm (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
+
+/-- Matrix multiply on GPU with layout metadata.
+    {lit}`aRowStride`/ {lit}`bRowStride` and offsets are in elements.
+    {lit}`transposeA`/ {lit}`transposeB` indicate stored buffers represent transposed matrices. -/
+@[extern "scilean_gpu_gemm_layout_f32"]
+opaque gemmLayout (A B : @& GpuBuffer) (m k n : USize)
+    (aRowStride bRowStride : USize) (aOffset bOffset : USize)
+    (transposeA transposeB : Bool) : IO GpuBuffer
+
+/-- Sparse CSR SpMV on GPU: {lit}`y = A * x`.
+    {lit}`rowPtr` and {lit}`colInd` are UInt32 buffers, {lit}`vals` and {lit}`x` are Float32. -/
+@[extern "scilean_gpu_csr_spmv_f32"]
+opaque csrSpmv (rowPtr colInd vals x : @& GpuBuffer) (nRows : USize) : IO GpuBuffer
 
 /-! ### AMX (Accelerate) Operations
 
@@ -135,27 +149,17 @@ Better for small matrices where GPU launch overhead dominates.
 opaque gemmAMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
 /-- GEMM with A transposed using AMX. -/
-@[extern "scilean_amx_gemm_tn_f32"]
-opaque gemmTN_AMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
+@[extern "scilean_amx_gemm_transpose_left_f32"]
+opaque gemmTransposeLeft_AMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
 /-- GEMM with B transposed using AMX. -/
-@[extern "scilean_amx_gemm_nt_f32"]
-opaque gemmNT_AMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
+@[extern "scilean_amx_gemm_transpose_right_f32"]
+opaque gemmTransposeRight_AMX (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
 /-- Auto-dispatch GEMM: uses AMX for small matrices, MPS for large.
     Heuristic: AMX when min dimension < 256 or < 1M FLOPs. -/
 @[extern "scilean_auto_gemm_f32"]
 opaque gemmAuto (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
-
-/-- Auto-dispatch GEMM with A transposed.
-    Automatically uses AMX for small matrices to avoid MPS encoder switching. -/
-@[extern "scilean_auto_gemm_tn_f32"]
-opaque gemmTN_Auto (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
-
-/-- Auto-dispatch GEMM with B transposed.
-    Automatically uses AMX for small matrices to avoid MPS encoder switching. -/
-@[extern "scilean_auto_gemm_nt_f32"]
-opaque gemmNT_Auto (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 
 /-- Element-wise add. -/
 @[extern "scilean_gpu_add_f32"]
@@ -299,17 +303,7 @@ opaque scale (n : USize) (alpha : Float) (x : @& GpuBuffer) : IO GpuBuffer
 @[extern "scilean_gpu_sub_f32"]
 opaque sub (x y : @& GpuBuffer) (n : USize) : IO GpuBuffer
 
-/-- GEMM with first matrix transposed.
-    A is stored as (k, m), returns C (m, n).
-    Supports batching. -/
-@[extern "scilean_gpu_gemm_tn_f32"]
-opaque gemmTN (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
-
-/-- GEMM with second matrix transposed.
-    A is (m, k), B is stored as (n, k), returns C (m, n).
-    Supports batching. -/
-@[extern "scilean_gpu_gemm_nt_f32"]
-opaque gemmNT (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
+/-! ## Batched GEMM -/
 
 /-- Batched GEMM for independent batch matrices.
     A is (batch, m, k), B is (batch, k, n), returns C (batch, m, n).
@@ -317,15 +311,13 @@ opaque gemmNT (A B : @& GpuBuffer) (m k n : USize) : IO GpuBuffer
 @[extern "scilean_gpu_gemm_batched_f32"]
 opaque gemmBatched (A B : @& GpuBuffer) (batch m k n : USize) : IO GpuBuffer
 
-/-- Batched GEMM with A transposed.
-    A is stored as (batch, k, m), B is (batch, k, n), returns C (batch, m, n). -/
-@[extern "scilean_gpu_gemm_batched_tn_f32"]
-opaque gemmBatchedTN (A B : @& GpuBuffer) (batch m k n : USize) : IO GpuBuffer
-
-/-- Batched GEMM with B transposed.
-    A is (batch, m, k), B is stored as (batch, n, k), returns C (batch, m, n). -/
-@[extern "scilean_gpu_gemm_batched_nt_f32"]
-opaque gemmBatchedNT (A B : @& GpuBuffer) (batch m k n : USize) : IO GpuBuffer
+/-- Batched GEMM with layout metadata for A and B.
+    Row strides, batch strides, and offsets are in elements.
+    {lit}`transposeA`/ {lit}`transposeB` indicate stored buffers represent transposed matrices. -/
+@[extern "scilean_gpu_gemm_batched_layout_f32"]
+opaque gemmBatchedLayout (A B : @& GpuBuffer) (batch m k n : USize)
+    (aBatchStride bBatchStride : USize) (aRowStride bRowStride : USize)
+    (aOffset bOffset : USize) (transposeA transposeB : Bool) : IO GpuBuffer
 
 /-- Sum all elements in buffer
     Supports batching. -/

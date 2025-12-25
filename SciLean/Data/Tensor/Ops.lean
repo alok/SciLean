@@ -5,6 +5,7 @@ Authors: SciLean contributors
 -/
 import SciLean.Data.Tensor.Basic
 import SciLean.Data.Tensor.Transfer
+import SciLean.VersoPrelude
 
 namespace SciLean
 
@@ -46,29 +47,35 @@ def relu (a : CpuTensor Float ι) : CpuTensor Float ι :=
 
 end CpuTensor
 
-/-! ## GPU Operations (1D tensors) -/
+/-! ## GPU Operations (element-wise) -/
 
 namespace GpuTensor
 
-/-- Element-wise addition on GPU -/
-def add (a b : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+/-- Element-wise addition on GPU (any shape). -/
+def add {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
+    (a b : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
   let a ← ensureContiguous a
   let b ← ensureContiguous b
-  let result ← Metal.GpuBuffer.add a.data.buffer b.data.buffer n.toUSize
-  return GpuTensor.fromContiguousBuffer (ι:=Idx n) result #[n]
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.add a.data.buffer b.data.buffer total.toUSize
+  return GpuTensor.fromContiguousBuffer (ι:=ι) result (IndexTypeShape.shape (ι:=ι))
 
-/-- Element-wise multiplication on GPU -/
-def mul (a b : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+/-- Element-wise multiplication on GPU (any shape). -/
+def mul {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
+    (a b : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
   let a ← ensureContiguous a
   let b ← ensureContiguous b
-  let result ← Metal.GpuBuffer.mul a.data.buffer b.data.buffer n.toUSize
-  return GpuTensor.fromContiguousBuffer (ι:=Idx n) result #[n]
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.mul a.data.buffer b.data.buffer total.toUSize
+  return GpuTensor.fromContiguousBuffer (ι:=ι) result (IndexTypeShape.shape (ι:=ι))
 
-/-- ReLU activation on GPU -/
-def relu (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+/-- ReLU activation on GPU (any shape). -/
+def relu {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
+    (a : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
   let a ← ensureContiguous a
-  let result ← Metal.GpuBuffer.relu a.data.buffer n.toUSize
-  return GpuTensor.fromContiguousBuffer (ι:=Idx n) result #[n]
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.relu a.data.buffer total.toUSize
+  return GpuTensor.fromContiguousBuffer (ι:=ι) result (IndexTypeShape.shape (ι:=ι))
 
 /-- Fused GEMM + bias + ReLU.
     Shapes: A {lean}`Idx m × Idx k`, B {lean}`Idx k × Idx n`, bias {lean}`Idx n`,
@@ -89,19 +96,21 @@ def softmax (a : GpuTensor Float (Idx m × Idx n)) : IO (GpuTensor Float (Idx m 
   let result ← Metal.GpuBuffer.softmax a.data.buffer m.toUSize n.toUSize
   return GpuTensor.fromContiguousBuffer (ι:=Idx m × Idx n) result #[m, n]
 
-/-- GELU activation on GPU using fused bias+gelu with zero bias.
+/-- GELU activation on GPU using fused bias+gelu with zero bias (any shape).
     For performance, prefer {lit}`biasGelu` when adding bias anyway. -/
-def gelu (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+def gelu {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
+    (a : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
   -- Use biasGelu with zero bias - the kernel handles this efficiently
   let a ← ensureContiguous a
-  let zeroBias ← Metal.CpuBuffer.zeros n |>.upload
-  let result ← Metal.GpuBuffer.biasGelu a.data.buffer zeroBias n.toUSize n.toUSize
-  return GpuTensor.fromContiguousBuffer (ι:=Idx n) result #[n]
+  let total := IndexTypeShape.numel (ι:=ι)
+  let zeroBias ← Metal.CpuBuffer.zeros total |>.upload
+  let result ← Metal.GpuBuffer.biasGelu a.data.buffer zeroBias total.toUSize total.toUSize
+  return GpuTensor.fromContiguousBuffer (ι:=ι) result (IndexTypeShape.shape (ι:=ι))
 
 /-- GEMM with A transposed.
     A is stored as {lean}`Idx k × Idx m`, B as {lean}`Idx k × Idx n`,
     returns {lean}`Idx m × Idx n`. -/
-def gemmTN (A : GpuTensor Float (Idx k × Idx m)) (B : GpuTensor Float (Idx k × Idx n)) :
+def gemmTransposeLeft (A : GpuTensor Float (Idx k × Idx m)) (B : GpuTensor Float (Idx k × Idx n)) :
     IO (GpuTensor Float (Idx m × Idx n)) := do
   let A_T := GpuTensor.transpose (m:=k) (k:=m) A
   GpuTensor.gemm A_T B
@@ -109,7 +118,7 @@ def gemmTN (A : GpuTensor Float (Idx k × Idx m)) (B : GpuTensor Float (Idx k ×
 /-- GEMM with B transposed.
     A is stored as {lean}`Idx m × Idx k`, B as {lean}`Idx n × Idx k`,
     returns {lean}`Idx m × Idx n`. -/
-def gemmNT (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx n × Idx k)) :
+def gemmTransposeRight (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx n × Idx k)) :
     IO (GpuTensor Float (Idx m × Idx n)) := do
   let B_T := GpuTensor.transpose (m:=n) (k:=k) B
   GpuTensor.gemm A B_T
@@ -125,14 +134,17 @@ def sub {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
   let result ← Metal.GpuBuffer.sub a.data.buffer b.data.buffer total.toUSize
   return GpuTensor.fromContiguousBuffer (ι:=ι) result (IndexTypeShape.shape (ι:=ι))
 
-/-- Scalar multiplication on GPU. -/
-def scale (alpha : Float) (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) := do
+/-- Scalar multiplication on GPU (any shape). -/
+def scale {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
+    (alpha : Float) (a : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
   let a ← ensureContiguous a
-  let result ← Metal.GpuBuffer.scale n.toUSize alpha a.data.buffer
-  return GpuTensor.fromContiguousBuffer (ι:=Idx n) result #[n]
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.scale total.toUSize alpha a.data.buffer
+  return GpuTensor.fromContiguousBuffer (ι:=ι) result (IndexTypeShape.shape (ι:=ι))
 
 /-- Negation on GPU (implemented as scale by -1). -/
-def neg (a : GpuTensor Float (Idx n)) : IO (GpuTensor Float (Idx n)) :=
+def neg {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
+    (a : GpuTensor Float ι) : IO (GpuTensor Float ι) :=
   scale (-1.0) a
 
 /-- AXPY on GPU (scaled sum, any shape). -/
@@ -146,11 +158,12 @@ def axpy {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
 
 /-! ### Reduction Operations -/
 
-/-- Sum all elements on GPU -/
-def sum (a : GpuTensor Float (Idx n)) : IO Float :=
-  do
-    let a ← ensureContiguous a
-    Metal.GpuBuffer.sum a.data.buffer n.toUSize
+/-- Sum all elements on GPU (any shape). -/
+def sum {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n]
+    (a : GpuTensor Float ι) : IO Float := do
+  let a ← ensureContiguous a
+  let total := IndexTypeShape.numel (ι:=ι)
+  Metal.GpuBuffer.sum a.data.buffer total.toUSize
 
 /-- Column-wise sum on GPU.
     For input shape {lean}`Idx m × Idx n`, sums over rows and returns {lean}`Idx n`.
@@ -298,8 +311,13 @@ def conv2d {batch inCh outCh inH inW kH kW strideH strideW padH padW : ℕ}
 
 /-! ### Buffer Operations -/
 
-/-- Slice a GPU tensor (GPU-to-GPU copy, not a view). -/
+/-- Slice a GPU tensor (O(1) view, no data copy). -/
 def slice (a : GpuTensor Float (Idx n)) (offset count : ℕ) : IO (GpuTensor Float (Idx count)) := do
+  let view := (⟨a.data.slice 0 offset count⟩ : GpuTensor Float (Idx count))
+  return view
+
+/-- Slice a GPU tensor (GPU-to-GPU copy). -/
+def sliceCopy (a : GpuTensor Float (Idx n)) (offset count : ℕ) : IO (GpuTensor Float (Idx count)) := do
   let a ← ensureContiguous a
   let result ← Metal.GpuBuffer.slice a.data.buffer offset.toUSize count.toUSize
   return GpuTensor.fromContiguousBuffer (ι:=Idx count) result #[count]
@@ -336,7 +354,8 @@ class TensorOpsIO (T : Type) where
   relu : T → IO T
 
 /-- GPU tensor operations (require {name}`IO`). -/
-instance : TensorOpsIO (GpuTensor Float (Idx n)) where
+instance {ι : Type} {n : ℕ} [IndexType ι n] [IndexTypeShape ι n] :
+    TensorOpsIO (GpuTensor Float ι) where
   add := GpuTensor.add
   mul := GpuTensor.mul
   relu := GpuTensor.relu

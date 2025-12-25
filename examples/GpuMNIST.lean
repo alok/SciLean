@@ -8,7 +8,7 @@ A 2-layer MLP trained entirely on GPU using Metal:
 
 Uses SciLean's Metal backend for all operations:
 - Forward: gemm → biasGelu → gemm → softmax
-- Backward: softmaxBackward → gemmTN/gemmNT → geluBackward → gemmTN/gemmNT
+-- Backward: softmaxBackward → layout-aware GEMM → geluBackward → layout-aware GEMM
 - Update: axpy (SGD)
 
 Type Safety: Uses {name}`CpuBuffer` and {name}`GpuTensor` to enforce explicit data transfers.
@@ -191,7 +191,7 @@ def backwardBatchInternal {batch : Nat} (weights : GpuWeights)
 
   -- dL/dW2 = d_o^T @ h
   -- Note: Using MPS for backward pass (AMX causes numerical instability - TODO: investigate)
-  let dw2 ← GpuTensor.gemmTN d_o h
+  let dw2 ← GpuTensor.gemmTransposeLeft d_o h
 
   -- dL/db2 = sum(d_o, axis=0)
   let db2 ← GpuTensor.colSum d_o
@@ -203,7 +203,7 @@ def backwardBatchInternal {batch : Nat} (weights : GpuWeights)
   let d_h_pre ← GpuTensor.geluBackward h_pre d_h
 
   -- dL/dW1 = d_h_pre^T @ x
-  let dw1 ← GpuTensor.gemmTN d_h_pre x
+  let dw1 ← GpuTensor.gemmTransposeLeft d_h_pre x
 
   -- dL/db1 = sum(d_h_pre, axis=0)
   let db1 ← GpuTensor.colSum d_h_pre
@@ -303,7 +303,7 @@ def backwardBatchDiag {batch : Nat} (weights : GpuWeights)
   debugBuffer "d_o (y-target)" d_o (batch * 10)
 
   -- dL/dW2 = d_o^T @ h
-  let dw2 ← GpuTensor.gemmTN d_o h
+  let dw2 ← GpuTensor.gemmTransposeLeft d_o h
   debugBuffer "dw2" dw2 (10 * 128)
 
   -- dL/db2 = sum(d_o, axis=0)
@@ -319,7 +319,7 @@ def backwardBatchDiag {batch : Nat} (weights : GpuWeights)
   debugBuffer "d_h_pre" d_h_pre (batch * 128)
 
   -- dL/dW1 = d_h_pre^T @ x
-  let dw1 ← GpuTensor.gemmTN d_h_pre x
+  let dw1 ← GpuTensor.gemmTransposeLeft d_h_pre x
   debugBuffer "dw1" dw1 (128 * 784)
 
   -- dL/db1 = sum(d_h_pre, axis=0)

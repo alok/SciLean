@@ -99,7 +99,7 @@ def testGemmNT : IO Unit := do
   let mpsCpu ← downloadFloat32 mpsC
 
   -- Run AMX GEMM NT
-  let amxC ← GpuTensor.gemmNT_AMX gpuA gpuB
+  let amxC ← GpuTensor.gemmTransposeRight_AMX gpuA gpuB
   let amxCpu ← downloadFloat32 amxC
 
   IO.println s!"  MPS result:"
@@ -149,7 +149,7 @@ def testGemmTN : IO Unit := do
   let mpsCpu ← downloadFloat32 mpsC
 
   -- Run AMX GEMM TN
-  let amxC ← GpuTensor.gemmTN_AMX gpuA gpuB
+  let amxC ← GpuTensor.gemmTransposeLeft_AMX gpuA gpuB
   let amxCpu ← downloadFloat32 amxC
 
   IO.println s!"  MPS result:"
