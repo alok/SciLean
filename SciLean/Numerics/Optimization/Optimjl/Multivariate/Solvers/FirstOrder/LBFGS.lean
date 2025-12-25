@@ -5,6 +5,7 @@ import SciLean.Data.DataArray
 import SciLean.Data.DataArray.Algebra
 import SciLean.Data.DataArray.TensorProduct
 import SciLean.Data.Vector
+import SciLean.VersoPrelude
 
 set_option linter.unusedVariables false
 
@@ -28,7 +29,7 @@ noncomputable section
 variable (R X)
 
 structure LBFGS (m : ℕ) extends Options R where
-  /-- Linear search that finds appropriate `α` `xₙ₊₁ = xₙ + α • sₙ` -/
+  /-- Linear search that finds appropriate {lit}`α` {lit}`xₙ₊₁ = xₙ + α • sₙ` -/
   lineSearch : LineSearch0Obj R := .mk (BackTracking R) {}
   -- /-- Guess initial `α` to try given function value and gradient -/
   -- alphaguess (φ₀ dφ₀ : R) /-(d : ObjectiveFunction R X)-/ : R := 1
@@ -45,35 +46,35 @@ namespace LBFGS
 
 structure State (R X : Type) (m : ℕ) [Zero X] [Neg X] [RealScalar R] [PlainDataType R]
    [BLAS (DataArray R) R R] where
-   /-- current position `xₙ₊₁` -/
+   /-- current position {lit}`xₙ₊₁` -/
    x : X
-   /-- previous position `xₙ`-/
+   /-- previous position {lit}`xₙ` -/
    x_previous : X := x
-   /-- current gradient `∇f(xₙ₊₁)` -/
+   /-- current gradient {lit}`∇f(xₙ₊₁)` -/
    g : X := 0
-   /-- previous gradient `∇f(xₙ)` -/
+   /-- previous gradient {lit}`∇f(xₙ)` -/
    g_previous : X := g
-   /-- current valus `f(xₙ₊₁)` -/
+   /-- current value {lit}`f(xₙ₊₁)` -/
    f_x : R
-   /-- previous valus `f(xₙ)` -/
+   /-- previous value {lit}`f(xₙ)` -/
    f_x_previous : R := f_x
-   /-- difference between positions `xₙ₊₁ - xₙ` -/
+   /-- difference between positions {lit}`xₙ₊₁ - xₙ` -/
    dx : X := 0
-   /-- difference between positions `xₙ₊₁ - xₙ` -/
+   /-- difference between positions {lit}`xₙ₊₁ - xₙ` -/
    dg : X := 0
-   /-- step direction `- (∇²f)⁻¹ ∇f` -/
+   /-- step direction {lit}`- (∇²f)⁻¹ ∇f` -/
    s : X := - g
-   /-- position difference `xₙ₊₁-xₙ` -/
+   /-- position difference {lit}`xₙ₊₁-xₙ` -/
    dx_history : Vector X m := ⊞ (i:Fin m) => (0:X)
-   /-- gradient difference `∇f(xₙ₊₁)-∇f(xₙ)`-/
+   /-- gradient difference {lit}`∇f(xₙ₊₁)-∇f(xₙ)` -/
    dg_history : Vector X m := ⊞ (i:Fin m) => (0:X)
-   /-- ρₙ := 1 / ⟪∇f(xₙ₊₁) - ∇f(xₙ), xₙ₊₁ - xₙ⟫ -/
+   /-- {lit}`ρₙ := 1 / ⟪∇f(xₙ₊₁) - ∇f(xₙ), xₙ₊₁ - xₙ⟫` -/
    ρ : R^[m] := (0 : R^[m])
    /-- Pseudo-iteration counter used for indexing the history buffers. -/
    pseudo_iteration : ℤ := 0
    -- /-- preconditioner scale -/
    -- precon : R := 1
-   /-- line search scalle `dx := α • s` -/
+   /-- line search scale {lit}`dx := α • s` -/
    alpha : R := 1
    f_calls : ℕ := 0
    g_calls : ℕ := 0
@@ -81,7 +82,7 @@ structure State (R X : Type) (m : ℕ) [Zero X] [Neg X] [RealScalar R] [PlainDat
 
 
 open Set in
-/-- This function updates search direction `s` from gradient `g` by so called "two loop recursion". -/
+/-- This function updates search direction {lit}`s` from gradient {lit}`g` by so called "two loop recursion". -/
 def twoloop (g : X) (k : ℤ) (m : ℕ)
     (ρ : Icc (k-m) (k-1) → R) (dx dg : Icc (k-m) (k-1) → X)
     /- (scaleinvH0 : Bool) (precon : R) -/ : X := Id.run do
@@ -182,7 +183,7 @@ def reset_search_direction (state : State R X m)
   return state
 
 
-/-- Find appropriate step length `α`. Resets the search direction if the it is invalid. -/
+/-- Find appropriate step length {lit}`α`. Resets the search direction if it is invalid. -/
 def perform_linesearch (method : LBFGS R m) (state : State R X m) (d : ObjectiveFunction R X) :
     (Except LineSearchError (State R X m)) := Id.run do
 
