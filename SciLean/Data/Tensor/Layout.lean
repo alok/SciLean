@@ -132,6 +132,16 @@ def isTransposed (l : TensorLayout) : Bool :=
   if n < 2 then false
   else l.strides.getD (n-2) 0 < l.strides.getD (n-1) 0
 
+/-- Column stride for the last dimension. -/
+def colStride (l : TensorLayout) : Nat :=
+  let n := l.rank
+  if n = 0 then 1
+  else l.strides.getD (n-1) 0
+
+/-- Check if the last dimension is contiguous (stride {lit}`1`). -/
+def isRowContiguous (l : TensorLayout) : Bool :=
+  l.colStride == 1
+
 /-- Get the row stride for 2D matrix operations (larger of last two strides) -/
 def rowStride (l : TensorLayout) : Nat :=
   let n := l.rank

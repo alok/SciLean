@@ -75,15 +75,12 @@ def fromContiguous (buffer : Metal.GpuBuffer) (shape : Array Nat) : GpuBufferVie
     Returns same buffer if already contiguous, otherwise copies data.
     Uses GPU layout copy kernel for efficient data movement. -/
 def contiguous (buf : GpuBufferView α) : IO (GpuBufferView α) := do
-  if buf.isContiguous then
+  if buf.isContiguous && buf.layout.offset == 0 then
     return buf
   else
-    -- Convert Nat arrays to USize arrays for FFI
-    let shapeU : Array USize := buf.layout.shape.map (·.toUSize)
-    let stridesU : Array USize := buf.layout.strides.map (·.toUSize)
-    let offsetU : USize := buf.layout.offset.toUSize
-    -- Call Metal layout copy kernel
-    let newBuffer ← Metal.GpuBuffer.copyLayout buf.buffer shapeU stridesU offsetU
+    -- Call Metal layout copy kernel (shape/strides are Nat arrays)
+    let newBuffer ← Metal.GpuBuffer.copyLayout
+      buf.buffer buf.layout.shape buf.layout.strides buf.layout.offset
     -- Return with contiguous layout
     let newLayout := TensorLayout.contiguous buf.layout.shape
     return ⟨newBuffer, newLayout⟩
