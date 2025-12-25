@@ -1,0 +1,15 @@
+GPU-Accelerated MNIST Training (Metal)
+========================================
+Using type-safe CpuBuffer/GpuTensor API (no implicit coercions!)
+Metal GPU: available
+Loading images from data/train-images-idx3-ubyte... done (19776ms)
+Loading labels from data/train-labels-idx1-ubyte... done (30ms)
+Loaded 60000 training samples to CPU
+Initializing weights on CPU... done
+Uploading to GPU (explicit transfer)... done
+DEBUG: After upload - b1.sizeBytes = 512 (expected 512)
+DEBUG: After upload - w1.sizeBytes = 401408 (expected 401408)
+DEBUG: cpuB1.sizeBytes = 512 (expected 512)
+Initial accuracy: 3.700000%
+
+Training (60000 samples, mini-batch=256)...

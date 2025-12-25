@@ -1,5 +1,42 @@
 # Experiment Log
 
+## 2025-12-25: GEMM focus sweep (M4Pro guard vs MPS vs Accelerate)
+
+**Timestamp:** 2025-12-25 01:27:46 -0800  
+**Commit:** 5160bf6b  
+**Branch:** metal-backend  
+**Worktree:** dirty (many local changes)  
+**Run dir:** doc/bench/runs/20251225-012746
+
+### Commands
+```bash
+lake build GEMMFocus
+.lake/build/bin/GEMMFocus
+```
+
+### Key Results
+- 2048×2048: MPS 8.9925ms (1.910 TFLOP/s), Accelerate 12.160ms (1.413 TFLOP/s)
+- 4096×4096: MPS 50.2285ms (2.736 TFLOP/s), Accelerate 77.857ms (1.765 TFLOP/s)
+- M4Pro raw/guard timings are sub-us; see run log for details
+
+## 2025-12-25: M4 kernel edge-case fix (fallback)
+
+**Timestamp:** 2025-12-25 01:02:04 -0800  
+**Commit:** ec77ec9a  
+**Branch:** metal-backend  
+**Worktree:** dirty (many local changes)  
+**Run dir:** doc/bench/runs/20251225-010107
+
+### Commands
+```bash
+lake build GEMMCorrectness
+.lake/build/bin/GEMMCorrectness
+```
+
+### Key Results
+- M4Pro correctness now matches MPS/Accelerate at 4×4 and 8×8.
+- Guarded M4/M4Pro/M4Max kernels now fall back to {name}`gemmAuto` when alignment rules are not met.
+
 ## 2025-12-25: Transfer timing fix + M4Pro size guard
 
 **Timestamp:** 2025-12-25 00:36:38 -0800  
@@ -29,24 +66,6 @@ uv run scripts/bench_regression.py --run-dir doc/bench/runs/20251225-003553
 
 ### Regression Check
 - `gpu_tensor.transfer_total.512` regression cleared (now −71.4% vs baseline)
-
-## 2025-12-25: M4 kernel edge-case fix (fallback)
-
-**Timestamp:** 2025-12-25 01:02:04 -0800  
-**Commit:** ec77ec9a  
-**Branch:** metal-backend  
-**Worktree:** dirty (many local changes)  
-**Run dir:** doc/bench/runs/20251225-010107
-
-### Commands
-```bash
-lake build GEMMCorrectness
-.lake/build/bin/GEMMCorrectness
-```
-
-### Key Results
-- M4Pro correctness now matches MPS/Accelerate at 4×4 and 8×8.
-- Guarded M4/M4Pro/M4Max kernels now fall back to {name}`gemmAuto` when alignment rules are not met.
 
 ## 2025-12-24: Full benchmark sweep (Lean + Python + Graph4)
 
@@ -129,6 +148,81 @@ cd ~/graph4 && ./.lake/build/bin/standalone_bench
 ### Regression Check (scripts/bench_regression.py)
 - One warning: `gpu_tensor.transfer_total.512` regressed +50.1% (1MB total 0.145ms vs 0.0967ms baseline).
 - All other tracked metrics improved or matched baseline.
+
+## 2025-12-24: GpuMNIST (Metal) run
+
+**Timestamp:** 2025-12-24 00:36:40 -0800  
+**Commit:** f907ed01  
+**Branch:** metal-backend  
+**Worktree:** dirty (many local changes)  
+**Run dir:** doc/bench/runs/20251224-003640
+
+### Commands
+```bash
+lake build GpuMNIST
+.lake/build/bin/GpuMNIST
+```
+
+### Key Results
+- Initial accuracy: 6.2%
+- Final accuracy: 97.8%
+- Epoch times: 165–320ms (avg 254.9ms)
+
+## 2025-12-23: GpuTensor + GemmView + GpuMNIST (Metal)
+
+**Timestamp:** 2025-12-23 23:51:11 -0800  
+**Commit:** f907ed01  
+**Branch:** metal-backend  
+**Worktree:** dirty (many local changes)  
+**Run dir:** doc/bench/runs/20251223-235111
+
+### Commands
+```bash
+lake build GpuTensorBenchmark GemmViewBenchmark GpuMNIST
+.lake/build/bin/GpuTensorBenchmark
+.lake/build/bin/GemmViewBenchmark
+.lake/build/bin/GpuMNIST
+```
+
+### Key Results
+
+**GpuTensorBenchmark**
+- Single GEMM: 256=0.297ms, 512=0.308ms, 1024=0.798ms
+- Chained GEMM: 256=0.402ms, 512=0.560ms
+- Transfer total: 256KB=0.0123ms, 1MB=0.0373ms, 4MB=0.158ms
+
+**GemmViewBenchmark**
+- Baseline gemm: 256=0.264ms, 512=0.511ms, 1024=0.599ms, 2048=1.702ms
+- Throughput: 256=0.13 TFLOP/s, 512=0.53 TFLOP/s, 1024=3.59 TFLOP/s, 2048=10.09 TFLOP/s
+
+**GpuMNIST (Metal)**
+- Initial accuracy: 3.7%
+- Output truncated before final accuracy (see run log)
+
+## 2025-12-23: GpuTensor + GemmView (early run)
+
+**Timestamp:** 2025-12-23 23:05:18 -0800  
+**Commit:** f907ed01  
+**Branch:** metal-backend  
+**Worktree:** dirty (many local changes)  
+**Run dir:** doc/bench/runs/20251223-230518
+
+### Commands
+```bash
+lake build GpuTensorBenchmark GemmViewBenchmark
+.lake/build/bin/GpuTensorBenchmark
+.lake/build/bin/GemmViewBenchmark
+```
+
+### Key Results
+
+**GpuTensorBenchmark**
+- Single GEMM: 256=243.725ms, 512=191.976ms, 1024=125.846ms
+- Chained GEMM: 256=316.615ms, 512=57.972ms
+- Transfer total: 256KB=0.01387ms, 1MB=0.03562ms, 4MB=0.38537ms
+
+**GemmViewBenchmark**
+- Output file empty (`GemmViewBenchmark.txt` is 0 bytes)
 
 ## 2025-12-21: GPU Benchmarks (current vs prev baseline)
 

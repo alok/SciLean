@@ -1,0 +1,46 @@
+=== Focused GEMM Analysis ===
+Testing M4Pro, MPS, and Accelerate at various sizes
+
+Matrix size: 128×128 (100 iterations, warmup 10)
+  M4Pro raw  : 0.000139 ms, 30.242296 TFLOP/s
+  M4Pro      : 0.000033 ms, 125.992911 TFLOP/s
+  Guard overhead: -75.996827%
+  MPS        : 0.516324 ms, 8.123395 GFLOP/s
+  Accelerate : 0.017889 ms, 234.462742 GFLOP/s
+
+Matrix size: 256×256 (100 iterations, warmup 10)
+  M4Pro raw  : 0.000167 ms, 200.348889 TFLOP/s
+  M4Pro      : 0.000045 ms, 751.835806 TFLOP/s
+  Guard overhead: -73.352042%
+  MPS        : 0.534841 ms, 62.737210 GFLOP/s
+  Accelerate : 0.055380 ms, 605.894402 GFLOP/s
+
+Matrix size: 512×512 (100 iterations, warmup 10)
+  M4Pro raw  : 0.000195 ms, 1379.492554 TFLOP/s
+  M4Pro      : 0.000045 ms, 5962.582319 TFLOP/s
+  Guard overhead: -76.864176%
+  MPS        : 0.786750 ms, 341.195368 GFLOP/s
+  Accelerate : 0.221676 ms, 1.210936 TFLOP/s
+
+Matrix size: 1024×1024 (40 iterations, warmup 10)
+  M4Pro raw  : 0.000350 ms, 6135.667566 TFLOP/s
+  M4Pro      : 0.000034 ms, 62426.850233 TFLOP/s
+  Guard overhead: -90.171429%
+  MPS        : 1.993025 ms, 1.077500 TFLOP/s
+  Accelerate : 1.459056 ms, 1.471831 TFLOP/s
+
+Matrix size: 2048×2048 (20 iterations, warmup 10)
+  M4Pro raw  : 0.000863 ms, 19916.379764 TFLOP/s
+  M4Pro      : 0.000033 ms, 515911.987508 TFLOP/s
+  Guard overhead: -96.139578%
+  MPS        : 8.992504 ms, 1.910466 TFLOP/s
+  Accelerate : 12.159989 ms, 1.412819 TFLOP/s
+
+Matrix size: 4096×4096 (20 iterations, warmup 10)
+  M4Pro raw  : 0.001025 ms, 134080.243375 TFLOP/s
+  M4Pro      : 0.000071 ms, 1939858.200028 TFLOP/s
+  Guard overhead: -93.088142%
+  MPS        : 50.228502 ms, 2.736274 TFLOP/s
+  Accelerate : 77.857193 ms, 1.765270 TFLOP/s
+
+Done!
