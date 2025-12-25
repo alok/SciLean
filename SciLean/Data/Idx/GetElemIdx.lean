@@ -5,7 +5,7 @@ import SciLean.Data.ArrayOperations.Basic
 
 namespace SciLean
 
-/-- Get element of `X` by indexing with `Idx n` -/
+/-- Get element of {name}`X` by indexing with {lean}`Idx n` -/
 class GetElemIdx (X : Type*) (n : Nat) (Y : outParam Type*) where
   getElemIdx (x : X) (i : Idx n) : Y
 

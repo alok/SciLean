@@ -1,5 +1,6 @@
 import SciLean.Data.IndexType.Basic
 import SciLean.Data.IndexType.Range
+import SciLean.VersoPrelude
 
 namespace SciLean
 

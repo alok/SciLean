@@ -1,6 +1,7 @@
 import Mathlib.Topology.Order
 
 import SciLean.Util.SorryProof
+import SciLean.Util.VersoExtensions
 import SciLean.Data.IndexType.Init
 
 namespace SciLean

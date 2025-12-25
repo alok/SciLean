@@ -1,6 +1,7 @@
 import Mathlib.Logic.Equiv.Defs
 
 import SciLean.Data.IndexType.Init
+import SciLean.VersoPrelude
 
 namespace SciLean.IndexType
 

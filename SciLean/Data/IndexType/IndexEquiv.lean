@@ -1,4 +1,5 @@
 import SciLean.Data.IndexType.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean
 

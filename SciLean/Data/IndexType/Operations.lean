@@ -3,6 +3,7 @@ import SciLean.Data.IndexType.Fold
 
 import Mathlib.Data.Finset.Basic
 import Mathlib.Algebra.BigOperators.Group.Finset.Defs
+import SciLean.VersoPrelude
 -- import SciLean.Data.IndexType.SumProduct
 
 namespace SciLean
