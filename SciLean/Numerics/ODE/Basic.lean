@@ -1,6 +1,7 @@
 import SciLean.Analysis.ODE.OdeSolve
 import SciLean.Meta.Notation.Do
 import SciLean.Util.Limit
+import SciLean.VersoPrelude
 
 set_option linter.unusedVariables false
 
@@ -16,11 +17,11 @@ variable
 set_default_scalar R
 open Notation
 
-/-- Can we integrate differential equation `∂ x t = f t (x t)` using `stepper` function?
+/-- Can we integrate differential equation {lit}`∂ x t = f t (x t)` using {lit}`stepper` function?
 
-The function `stepper t₀ Δt x₀` computes approximation of the solution `x (t₀+Δt)` under initial condition `x t₀ = x₀`
+The function {lit}`stepper t₀ Δt x₀` computes approximation of the solution {lit}`x (t₀+Δt)` under initial condition {lit}`x t₀ = x₀`
 
-TODO: refine the conditions, we probably want consistency and convergence. Maybe integrability in `f` too? or integrability of `f` should be specified somewhere else?
+TODO: refine the conditions, we probably want consistency and convergence. Maybe integrability in {lit}`f` too? or integrability of {lit}`f` should be specified somewhere else?
 -/
 structure IsOdeStepper (f : R → X → X) (stepper : R → R → X → X) : Prop where
   consistent : ∀ t x, (limit Δt' → 0, ∂ Δt:=Δt', stepper t Δt x) = f t x

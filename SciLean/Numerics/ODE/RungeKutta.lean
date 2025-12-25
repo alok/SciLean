@@ -1,13 +1,14 @@
 import SciLean.Numerics.ODE.Basic
 import SciLean.Numerics.ODE.Solvers
+import SciLean.VersoPrelude
 
 /-!
 # Explicit Runge–Kutta Steppers
 
 This file records that the standard explicit RK-family methods provided in
-`SciLean.Numerics.ODE.Solvers` are consistent ODE steppers.
+{lit}`SciLean.Numerics.ODE.Solvers` are consistent ODE steppers.
 
-We keep the proofs `sorry_proof`-friendly: SciLean is focused on functionality
+We keep the proofs {lit}`sorry_proof`-friendly: SciLean is focused on functionality
 and performance, not full verification.
 -/
 
@@ -59,4 +60,3 @@ where
 end rungeKutta4
 
 end SciLean
-
