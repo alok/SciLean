@@ -7,6 +7,7 @@ import SciLean.Lean.Meta.Basic
 import SciLean.Util.RewriteBy
 
 import Mathlib.Logic.Function.Basic
+import SciLean.VersoPrelude
 
 set_option linter.unusedVariables false
 

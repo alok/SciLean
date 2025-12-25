@@ -1,4 +1,5 @@
 import SciLean.Lean.Meta.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean
 
@@ -108,27 +109,27 @@ private partial def instantiate1AndPostImpl (e : Expr) (i : Nat) (val : Expr) (p
   | e => return .done e
 
 
-/-- Replaces free variable {given}`fvar` with {given}`val`. After replacement {given}`post` is called
-successively on the expressions with replaced {given}`fvar` as long as it keeps returning
+/-- Replaces free variable {lit}`fvar` with {lit}`val`. After replacement {lit}`post` is called
+successively on the expressions with replaced {lit}`fvar` as long as it keeps returning
 {name}`ReplacePost.yield`.
 
-Example use: replace {given}`x` with {syntax term}`(a,b,c)` in
-{syntax term}`fun y => x.1 + x.2.1 + y` and use {given}`post` to reduce projections,
-resulting in {syntax term}`fun y => a + b + y`.
+Example use: replace {lit}`x` with {lit}`(a,b,c)` in
+{lit}`fun y => x.1 + x.2.1 + y` and use {lit}`post` to reduce projections,
+resulting in {lit}`fun y => a + b + y`.
 -/
 def replaceFVarAndPost (e : Expr) (fvar : FVarId) (val : Expr) (post : Expr → MetaM ReplacePost)
   : MetaM Expr := do pure (← replaceFVarAndPostImpl e fvar val post).val
 
 
-/-- Instantiates the 0-th loose bound variable with {given}`val`. After replacement {given}`post` is called
+/-- Instantiates the 0-th loose bound variable with {lit}`val`. After replacement {lit}`post` is called
 successively on the expressions with replaced fvar as long as it keeps returning
 {name}`ReplacePost.yield`.
 
-Example use: replace {syntax term}`#0` with {syntax term}`(a,b,c)` in
-{syntax term}`fun y => #0.1 + #0.2.1 + y` and use {given}`post` to reduce projections,
-resulting in {syntax term}`fun y => a + b + y`.
+Example use: replace {lit}`#0` with {lit}`(a,b,c)` in
+{lit}`fun y => #0.1 + #0.2.1 + y` and use {lit}`post` to reduce projections,
+resulting in {lit}`fun y => a + b + y`.
 
-Unlike {name}`replaceFVarAndPost` this function can call {syntax term}`post e'` with {syntax term}`e'`
+Unlike {name}`replaceFVarAndPost` this function can call {lit}`post e'` with {lit}`e'`
 containing loose bound variables.
 -/
 def instantiate1AndPost (e : Expr) (val : Expr) (post : Expr → MetaM ReplacePost)
@@ -137,7 +138,7 @@ def instantiate1AndPost (e : Expr) (val : Expr) (post : Expr → MetaM ReplacePo
 
 
 /--
-Replaces all subexpressions in {given}`e` that satisfy {given}`f` with free variables.
+Replaces all subexpressions in {lit}`e` that satisfy {lit}`f` with free variables.
 
 This function replaces only subexpressions that have no bound variables. -/
 def replaceWithFVarsNoBVars (e : Expr) (f : Expr → MetaM Bool)

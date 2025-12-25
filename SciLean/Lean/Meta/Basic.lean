@@ -4,6 +4,7 @@ import Batteries.Lean.Expr
 
 import SciLean.Lean.Expr
 import SciLean.Lean.Array
+import SciLean.VersoPrelude
 
 namespace Lean
 
