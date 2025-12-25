@@ -1,5 +1,6 @@
 import SciLean.Algebra.TensorProduct.Basic
 import SciLean.Algebra.TensorProduct.Self
+import SciLean.VersoPrelude
 
 namespace SciLean
 

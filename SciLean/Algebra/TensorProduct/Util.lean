@@ -1,4 +1,5 @@
 import SciLean.Algebra.TensorProduct.Basic
+import SciLean.VersoPrelude
 
 set_option linter.unusedSectionVars false
 

@@ -1,11 +1,12 @@
 import SciLean.Algebra.TensorProduct.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 
 /-- Class providing matrix-matrix multiplication
 
-This takes `A : Z ⊗ Y` and `B : Y ⊗ X` and produces `A*B : Z ⊗ X`
+This takes {lit}`A : Z ⊗ Y` and {lit}`B : Y ⊗ X` and produces {lit}`A*B : Z ⊗ X`
  -/
 class TensorProductMul
   (R Z Y X ZY YX ZX : Type*) [RCLike R]
@@ -14,7 +15,7 @@ class TensorProductMul
   [TensorProductType R Z Y ZY] [TensorProductType R Y X YX] [TensorProductType R Z X ZX]
   where
 
-    /-- Matrix-matrix multiplication: `matMul a A B b C = a*A*B + b*C`
+    /-- Matrix-matrix multiplication: {lit}`matMul a A B b C = a*A*B + b*C`
 
     The type signature is the same as of the GEMM BLAS function.
     -/

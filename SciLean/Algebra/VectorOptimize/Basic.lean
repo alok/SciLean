@@ -1,6 +1,7 @@
 import SciLean.Algebra.VectorOptimize.Init
 import SciLean.Algebra.TensorProduct.Basic
 import SciLean.Algebra.MatrixType.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean
 

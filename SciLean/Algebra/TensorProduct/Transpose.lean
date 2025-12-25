@@ -1,12 +1,13 @@
 import SciLean.Algebra.TensorProduct.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 
 /--
-Class providing matrix transposition
+Class providing matrix transposition.
 
-This takes `A : Y ⊗ X` and produces `Aᵀ : X ⊗ Y`
+This takes {lit}`A : Y ⊗ X` and produces {lit}`Aᵀ : X ⊗ Y`.
  -/
 class TensorProductTranspose
   (R Y X YX XY : Type*) [RCLike R]
@@ -15,8 +16,8 @@ class TensorProductTranspose
   [TensorProductType R Y X YX] [TensorProductType R X Y XY]
   where
 
-    /-- Matrix transposition/conjugation
+    /-- Matrix transposition/conjugation.
 
-        conjTranspose A = Aᵀ  or  Aᴴ
+        {lit}`conjTranspose A = Aᵀ` or {lit}`Aᴴ`
     -/
     conjTranspose (A : YX) : XY
