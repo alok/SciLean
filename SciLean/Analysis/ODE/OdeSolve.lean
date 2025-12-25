@@ -4,11 +4,15 @@ import SciLean.Analysis.Calculus.FwdFDeriv
 import SciLean.Analysis.Calculus.HasFwdFDeriv
 import SciLean.Analysis.Calculus.HasRevFDeriv
 import SciLean.Analysis.Calculus.Notation.Deriv
+import Verso.Code.External
+import SciLean.Util.VersoExtensions
 -- import SciLean.Analysis.Calculus.Notation.RevDeriv
 
 set_option linter.unusedVariables false
 
 namespace SciLean
+
+open Verso.Code.External
 
 variable
   {R : Type _} [RCLike R]
@@ -30,13 +34,10 @@ structure HasUniqueOdeSolution (f : R → X → X) : Prop extends HasOdeSolution
 open Classical in
 /-- Solution of ordinary differentiale equation.
 
-Function `x := fun t => odeSolve f t₀ t x₀` satisfies ODE
-```
-∂ x t = f t (x t)
-```
-with initial condition `x t₀ = x₀`.
+Function {lit}`x := fun t => odeSolve f t₀ t x₀` satisfies ODE {lit}`∂ x t = f t (x t)`
+with initial condition {lit}`x t₀ = x₀`.
 
-Junk value is returned if `f` does define ODE with an unique solution.
+Junk value is returned if {lean}`f` does define ODE with an unique solution.
  -/
 noncomputable
 def odeSolve (f : R → X → X) (t₀ t : R) (x₀ : X) : X :=

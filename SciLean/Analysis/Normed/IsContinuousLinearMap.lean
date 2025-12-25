@@ -6,6 +6,7 @@ import Mathlib.Analysis.Calculus.FDeriv.Basic
 import Mathlib.Analysis.Calculus.FDeriv.Mul
 
 import SciLean.Algebra.IsLinearMap
+import SciLean.VersoPrelude
 
 namespace SciLean
 

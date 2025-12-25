@@ -1,6 +1,7 @@
 import Mathlib.Analysis.InnerProductSpace.Basic
 
 import SciLean.Analysis.Scalar.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean
 

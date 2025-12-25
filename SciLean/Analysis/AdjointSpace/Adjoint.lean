@@ -5,6 +5,7 @@ import SciLean.Analysis.Normed.Norm2
 
 import SciLean.Tactic.FunTrans.Elab
 import SciLean.Tactic.FunTrans.Attr
+import SciLean.VersoPrelude
 
 set_option linter.unusedVariables false
 

@@ -1,6 +1,7 @@
 import SciLean.Analysis.Calculus.Monad.FwdFDerivMonad
 import SciLean.Analysis.Calculus.Monad.RevFDerivMonad
 import SciLean.Analysis.Calculus.Monad.HasRevFDerivMonad
+import SciLean.VersoPrelude
 
 namespace SciLean
 
@@ -9,9 +10,9 @@ namespace SciLean
 
 /-- Identity monad used for differentiating through imperative code.
 
-When you write imperative code in `Id` monad and you want to differentiate it then please use `Id'`
-instead. This is due to unfortunate fact that `Id X` is defeq `X` and this confuses autodiff
-at some point. It leads to some unification issues that we were unable to solve. Using `Id'`
+When you write imperative code in the {lit}`Id` monad and you want to differentiate it then please use
+{lit}`Id'` instead. This is due to unfortunate fact that {lit}`Id X` is defeq {lit}`X` and this confuses
+autodiff at some point. It leads to some unification issues that we were unable to solve. Using {lit}`Id'`
 instead prevents defeq abuse and all these issues go away.
  -/
 structure Id' (X : Type) where
@@ -47,20 +48,18 @@ instance : DifferentiableMonad K Id' where
   DifferentiableM_bind := by intros; simp[bind]; sorry_proof
   DifferentiableM_pair y := by intros; simp[bind,pure]; fun_prop
 
-noncomputable
-instance : FwdFDerivMonad K Id' Id' where
+noncomputable instance : FwdFDerivMonad K Id' Id' where
   fwdFDerivM f := fun x dx => pure (fwdFDeriv K (fun x => (f x).run) x dx)
   fwdFDerivM_pure f := by simp[pure]
-  fwdFDerivM_bind := by simp[Id',Bind.bind]; sorry_proof
+  fwdFDerivM_bind := by simp[Bind.bind]; sorry_proof
   fwdFDerivM_pair y := by intros; simp; sorry_proof
 
-noncomputable
-instance : RevFDerivMonad K Id' Id' where
+noncomputable instance : RevFDerivMonad K Id' Id' where
   revFDerivM f := fun x =>
     let ydf := revFDeriv K (fun x => (f x).run) x
     pure (ydf.1, fun dy => pure (ydf.2 dy))
   revFDerivM_pure f := by simp[pure]
-  revFDerivM_bind := by simp[Id',Bind.bind]; sorry_proof
+  revFDerivM_bind := by simp[Bind.bind]; sorry_proof
   revFDerivM_pair y := by intros; simp; sorry_proof
 
 instance : HasRevFDerivMonad K Id' Id' where
@@ -69,7 +68,7 @@ instance : HasRevFDerivMonad K Id' Id' where
       (fun x => (f x).run)
       (fun x => let ydf := (f' x).run; (ydf.1, fun dy => (ydf.2 dy).run))
   HasRevFDerivM_pure f := by simp[pure]
-  HasRevFDerivM_bind := by intros; simp[Id',Bind.bind]; sorry_proof
+  HasRevFDerivM_bind := by intros; simp[Bind.bind]; sorry_proof
   HasRevFDerivM_pair y := by intros; simp; sorry_proof
 
 end SciLean
