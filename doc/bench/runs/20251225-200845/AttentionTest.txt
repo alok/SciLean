@@ -1,0 +1,23 @@
+===== AttentionTest =====
+=== Flash Attention Test ===
+
+Test 1: Small attention (seq=4, dim=8)
+  CPU output sum: 32.000000
+  GPU output sum: 32.000000
+  Uniform weights: PASS (max error 0.000000%, avg 0.000000%)
+
+Test 2: Medium attention (seq=16, dim=32)
+  CPU output sum: 10.265513
+  GPU output sum: 10.265514
+  Random values: PASS (max error 0.014932%, avg 0.000057%)
+
+Test 3: Causal attention (seq=8, dim=16)
+  CPU causal sum: -13.018750
+  GPU causal sum: -13.018750
+  Causal attention: PASS (max error 0.001124%, avg 0.000022%)
+
+Test 4: Batched softmax (32 rows × 64 cols)
+  Batched softmax: PASS (all rows sum to 1.0)
+
+=== Done ===
+

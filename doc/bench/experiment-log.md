@@ -1,5 +1,97 @@
 # Experiment Log
 
+## 2025-12-25: Full test + benchmark sweep
+
+**Timestamp:** 2025-12-25 20:08:45 -0800  
+**Commit:** 7cb01245  
+**Branch:** metal-backend  
+**Worktree:** clean (before run)  
+**Run dir:** doc/bench/runs/20251225-200845
+
+### Commands
+```bash
+lake test
+
+lake build BackendBenchmark MetalBenchmark GEMMBenchmark KernelGEMMBenchmark   Float32Benchmark RandBenchmark MetalMinimalBenchmark GEMMComparison   GEMMFocus GEMMCorrectness GpuTensorBenchmark KernelBenchmark   GemmViewBenchmark GpuBatchingBenchmark GpuMNIST AMXBenchmark   PodBenchmark StructVsTupleBenchmark LargeGEMM OverheadTest NestedPodStressTest   ProfileKMeans ProfileKMeansDirection ProfileTensorOps ProfileGMM ProfileLSTM   ComputeBackendTest BlasTest FloatTest ForLoopTest SurfaceMeshTests FloatMatrixTest   TestMinimal TestNpyRoundtrip VerifyPyTorchMNIST AttentionTest KernelTest   IntegrationTest GpuFusedKernelTest GpuTensorTest AMXTest SquareGemmTest   PodTypesTest StructMarshalingTest DerivePlainDataTypeTest Conv2DTest
+
+# Executables (see run dir for full logs)
+.lake/build/bin/BackendBenchmark
+.lake/build/bin/MetalBenchmark
+.lake/build/bin/GEMMBenchmark
+.lake/build/bin/KernelGEMMBenchmark
+.lake/build/bin/Float32Benchmark
+.lake/build/bin/RandBenchmark
+.lake/build/bin/MetalMinimalBenchmark
+.lake/build/bin/GEMMComparison
+.lake/build/bin/GEMMFocus
+.lake/build/bin/GEMMCorrectness
+.lake/build/bin/GpuTensorBenchmark
+.lake/build/bin/KernelBenchmark
+.lake/build/bin/GemmViewBenchmark
+.lake/build/bin/GpuBatchingBenchmark
+.lake/build/bin/GpuMNIST
+.lake/build/bin/AMXBenchmark
+.lake/build/bin/PodBenchmark
+.lake/build/bin/StructVsTupleBenchmark
+.lake/build/bin/NestedPodStressTest
+.lake/build/bin/LargeGEMM
+.lake/build/bin/OverheadTest
+.lake/build/bin/ProfileKMeans
+.lake/build/bin/ProfileKMeansDirection
+.lake/build/bin/ProfileTensorOps
+.lake/build/bin/ProfileGMM
+.lake/build/bin/ProfileLSTM
+.lake/build/bin/ComputeBackendTest
+.lake/build/bin/BlasTest
+.lake/build/bin/FloatTest
+.lake/build/bin/ForLoopTest
+.lake/build/bin/SurfaceMeshTests
+.lake/build/bin/FloatMatrixTest
+.lake/build/bin/TestMinimal
+.lake/build/bin/TestNpyRoundtrip
+.lake/build/bin/VerifyPyTorchMNIST
+.lake/build/bin/AttentionTest
+.lake/build/bin/KernelTest
+.lake/build/bin/IntegrationTest
+.lake/build/bin/GpuFusedKernelTest
+.lake/build/bin/GpuTensorTest
+.lake/build/bin/AMXTest
+.lake/build/bin/SquareGemmTest
+.lake/build/bin/PodTypesTest
+.lake/build/bin/StructMarshalingTest
+.lake/build/bin/DerivePlainDataTypeTest
+.lake/build/bin/Conv2DTest
+
+uv run benchmarks/compare_frameworks.py
+uv run benchmarks/mlx_pytorch_comparison.py
+uv run benchmarks/conv2d_comparison.py
+uv run scripts/bench_regression.py --run-dir doc/bench/runs/20251225-200845
+```
+
+### Key Results
+
+**GpuTensorBenchmark**
+- GEMM: 256 = 0.44477ms, 512 = 0.42694ms, 1024 = 0.83028ms
+- Transfer total: 256KB = 0.01174ms, 1MB = 0.04117ms, 4MB = 0.21388ms
+
+**GemmViewBenchmark (baseline)**
+- 256: 0.409314ms (0.08 TFLOP/s)
+- 512: 0.489575ms (0.55 TFLOP/s)
+- 1024: 0.820047ms (2.62 TFLOP/s)
+- 2048: 2.895427ms (5.93 TFLOP/s)
+
+**GpuMNIST**
+- Initial accuracy 7.4%, final accuracy 98.3%
+- Avg epoch time: 551.6ms
+
+**Regression check**
+- All tracked metrics reported OK vs baseline (see `bench_regression.txt`).
+
+### Notes
+- Build failures: ProfileTensorOps (missing `examples/Profile/TensorOps.lean`), ProfileKMeans/ProfileKMeansDirection (`FloatArray.mkEmpty` missing), ProfileGMM/ProfileLSTM (`data_synth`/`adjoint` issues), ForLoopTest (missing `tests/sum_speed_test.lean`), FloatMatrixTest (VectorType identifiers missing), SciLean.Data.Npy (String.Slice API change), GpuFusedKernelTest (syntax errors).
+- `compare_frameworks.py` timed out running `.lake/build/bin/Float32Benchmark` (120s timeout).
+- `graph4` standalone bench not found.
+
 ## 2025-12-25: GEMM focus sweep (M4Pro guard vs MPS vs Accelerate)
 
 **Timestamp:** 2025-12-25 01:27:46 -0800  

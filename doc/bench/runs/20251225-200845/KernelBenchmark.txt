@@ -1,0 +1,31 @@
+===== KernelBenchmark =====
+=== Kernel Performance Benchmark ===
+
+--- Timing verification ---
+1M loop iterations: 1530μs (acc=499999500000)
+Raw nanoseconds: start=71275434017083, end=71275435547458, diff=1530375
+
+--- Elementwise Operations (n=1M elements) ---
+Allocated 2x 1M Float arrays (16MB total)
+Verification: sum(x+y) = 999895.211301
+warmup: 0μs avg over 5 runs
+add (1M): 0μs avg over 100 runs
+mul (1M): 7836μs avg over 100 runs
+exp (1M): 10571μs avg over 100 runs
+sum (1M): 913μs avg over 100 runs
+
+--- Matrix Operations ---
+gemm 128x128 @ 128x128: 660μs avg over 50 runs
+gemm 512x512 @ 512x512: 34163μs avg over 10 runs
+gemv 128x128 @ 128: 5μs avg over 100 runs
+
+--- Fused Operations ---
+softmax (1K): 8μs avg over 100 runs
+softmax (512 - attention): 4μs avg over 100 runs
+
+--- Backward Pass (AD helpers) ---
+gemm_backward_A 128x128: 550μs avg over 50 runs
+gemm_backward_B 128x128: 548μs avg over 50 runs
+
+=== Benchmark Complete ===
+

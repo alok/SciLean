@@ -1,0 +1,25 @@
+===== GEMMCorrectness =====
+=== GEMM Correctness Check ===
+Computing C = A * B where A, B are all 1s
+
+Testing fill(4, 1.0)...
+  Fill result size: 16 bytes
+  Fill bytes: [0, 0, 128, 63]
+
+Matrix size: 4×4
+  M4Pro      : CORRECT (sum = 64.000000, expected = 64.000000, C[0,0] bits = 1082130432)
+  MPS        : CORRECT (sum = 64.000000, expected = 64.000000, C[0,0] bits = 1082130432)
+  Accelerate : CORRECT (sum = 64.000000, expected = 64.000000, C[0,0] bits = 1082130432)
+
+Matrix size: 8×8
+  M4Pro      : CORRECT (sum = 512.000000, expected = 512.000000, C[0,0] bits = 1090519040)
+  MPS        : CORRECT (sum = 512.000000, expected = 512.000000, C[0,0] bits = 1090519040)
+  Accelerate : CORRECT (sum = 512.000000, expected = 512.000000, C[0,0] bits = 1090519040)
+
+Matrix size: 64×64
+  M4Pro      : CORRECT (sum = 262144.000000, expected = 262144.000000, C[0,0] bits = 1115684864)
+  MPS        : CORRECT (sum = 262144.000000, expected = 262144.000000, C[0,0] bits = 1115684864)
+  Accelerate : CORRECT (sum = 262144.000000, expected = 262144.000000, C[0,0] bits = 1115684864)
+
+Done!
+
