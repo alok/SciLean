@@ -41,17 +41,32 @@ def benchmarkGemm {m k n : Nat} (caseName backendName : String)
   SciLean.Benchmark.logMetric "amx_gemm" "elapsed_ms" elapsedMs (unit? := some "ms") (params := params)
 
 def main : IO Unit := do
+  if !Metal.isAvailable () then
+    IO.println "Metal GPU not available"
+    return
+
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
+
   IO.println "═══════════════════════════════════════════════════════════════"
   IO.println "           AMX (Accelerate/CPU) vs MPS (GPU) GEMM"
   IO.println "═══════════════════════════════════════════════════════════════"
 
   -- MNIST-sized matrices (non-square to avoid MPS buffer size issue)
-  let tests := [
-    ("Layer 1 fwd [256,784]@[784,128]", 256, 784, 128, 500),
-    ("Layer 2 fwd [256,128]@[128,10]", 256, 128, 10, 5000),
-    ("Backward dW1 [128,256]@[256,784]", 128, 256, 784, 500),
-    ("Backward dW2 [10,256]@[256,128]", 10, 256, 128, 5000)
-  ]
+  let tests :=
+    if quick then
+      [
+        ("Layer 1 fwd [256,784]@[784,128]", 256, 784, 128, 100),
+        ("Layer 2 fwd [256,128]@[128,10]", 256, 128, 10, 300)
+      ]
+    else
+      [
+        ("Layer 1 fwd [256,784]@[784,128]", 256, 784, 128, 500),
+        ("Layer 2 fwd [256,128]@[128,10]", 256, 128, 10, 5000),
+        ("Backward dW1 [128,256]@[256,784]", 128, 256, 784, 500),
+        ("Backward dW2 [10,256]@[256,128]", 10, 256, 128, 5000)
+      ]
 
   for (name, m, k, n, iters) in tests do
     IO.println s!"\n{name}"

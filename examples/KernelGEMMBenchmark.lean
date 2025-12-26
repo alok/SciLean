@@ -51,6 +51,9 @@ def benchmarkUs (ref : IO.Ref Float) (name : String) (warmup n : Nat) (action : 
   return avgUs
 
 def runBenchmarks : IO Unit := do
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
   IO.println "╔════════════════════════════════════════════════════════════╗"
   IO.println "║          SciLean Kernel GEMM Benchmark                     ║"
   IO.println "║          F32 (NEON on ARM) vs F64 (scalar ikj)             ║"
@@ -58,7 +61,10 @@ def runBenchmarks : IO Unit := do
 
   let ref ← mkBlackHole
 
-  let sizes := [(64, 64, 64), (128, 128, 128), (256, 256, 256), (512, 512, 512)]
+  let sizes := if quick then
+      [(64, 64, 64), (128, 128, 128)]
+    else
+      [(64, 64, 64), (128, 128, 128), (256, 256, 256), (512, 512, 512)]
 
   for (m, k, n) in sizes do
     IO.println s!"\nGEMM: {m}×{k} @ {k}×{n} = {m}×{n}"
@@ -80,14 +86,14 @@ def runBenchmarks : IO Unit := do
     let flops := 2 * m * k * n
 
     -- Benchmark F64 Kernel
-    let usF64 ← benchmarkUs ref "Kernel F64 (ikj)" 3 10 do
+    let usF64 ← benchmarkUs ref "Kernel F64 (ikj)" 3 (if quick then 3 else 10) do
       let A ← Af64Ref
       let B ← Bf64Ref
       let result := Kernel.Typed.gemm .f64 A B m k n
       pure (Kernel.Typed.sum .f64 result)
 
     -- Benchmark F32 Kernel (NEON on ARM)
-    let usF32 ← benchmarkUs ref "Kernel F32 (NEON)" 3 10 do
+    let usF32 ← benchmarkUs ref "Kernel F32 (NEON)" 3 (if quick then 3 else 10) do
       let A ← Af32Ref
       let B ← Bf32Ref
       let result := Kernel.Typed.gemm .f32 A B m k n

@@ -116,7 +116,13 @@ def testDataArrayNGEMM : IO Unit := do
   suite.print
 
 def runBenchmarks : IO Unit := do
-  let sizes := [(64, 64, 64), (128, 128, 128), (256, 256, 256), (512, 512, 512)]
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
+  let sizes := if quick then
+      [(64, 64, 64), (128, 128, 128)]
+    else
+      [(64, 64, 64), (128, 128, 128), (256, 256, 256), (512, 512, 512)]
 
   IO.println "╔════════════════════════════════════════════════════════════╗"
   IO.println "║           SciLean BLAS GEMM Benchmark                      ║"
@@ -136,8 +142,10 @@ def runBenchmarks : IO Unit := do
       IO.println "ERROR: Results don't match!"
       continue
 
-    let naiveConfig : Benchmark.Config := { warmupIterations := 1, timedIterations := 3 }
-    let blasConfig : Benchmark.Config := { warmupIterations := 2, timedIterations := 10 }
+    let naiveConfig : Benchmark.Config :=
+      { warmupIterations := 1, timedIterations := if quick then 1 else 3 }
+    let blasConfig : Benchmark.Config :=
+      { warmupIterations := 1, timedIterations := if quick then 3 else 10 }
     let mut suite : Benchmark.Suite := { name := s!"GEMM {m}x{k}x{n}" }
 
     -- Naive
@@ -160,7 +168,8 @@ def runBenchmarks : IO Unit := do
     IO.println s!"GFLOPs/s: naive {Float.round (naiveGF * 100) / 100}, BLAS {Float.round (blasGF * 100) / 100}"
 
   -- Test high-level DataArrayN API
-  testDataArrayNGEMM
+  unless quick do
+    testDataArrayNGEMM
 
   IO.println "\nBenchmark complete!"
 

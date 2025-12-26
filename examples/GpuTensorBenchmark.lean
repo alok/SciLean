@@ -126,6 +126,14 @@ def benchTransfer (cpu : CpuBuffer) (iters : Nat) : IO (Float × Float) := do
   return (uploadMs, downloadMs)
 
 def main : IO Unit := do
+  if !Metal.isAvailable () then
+    IO.println "Metal GPU not available"
+    return
+
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
+
   IO.println ""
   IO.println "=============================================================="
   IO.println "  GpuTensor Benchmark: ByteArray vs GPU-Resident Buffers"
@@ -142,20 +150,23 @@ def main : IO Unit := do
   IO.println "------------------------------------------------------"
 
   -- 256x256 (256KB data)
-  let gpuTime256 ← benchGemmGpuTensor 256 256 256 100
-  let gpuMs256 := gpuTime256 * 1000.0 / 100.0
+  let iters256 := if quick then 20 else 100
+  let gpuTime256 ← benchGemmGpuTensor 256 256 256 iters256
+  let gpuMs256 := gpuTime256 * 1000.0 / iters256.toFloat
   IO.println s!"256x256         | (no sync)   | {fmt gpuMs256}ms  | {fmt gpuMs256}ms"
   logMs "gpu_tensor/gemm" "time_ms" "256x256" gpuMs256
 
   -- 512x512 (1MB data)
-  let gpuTime512 ← benchGemmGpuTensor 512 512 512 50
-  let gpuMs512 := gpuTime512 * 1000.0 / 50.0
+  let iters512 := if quick then 10 else 50
+  let gpuTime512 ← benchGemmGpuTensor 512 512 512 iters512
+  let gpuMs512 := gpuTime512 * 1000.0 / iters512.toFloat
   IO.println s!"512x512         | (no sync)   | {fmt gpuMs512}ms  | {fmt gpuMs512}ms"
   logMs "gpu_tensor/gemm" "time_ms" "512x512" gpuMs512
 
   -- 1024x1024 (4MB data)
-  let gpuTime1024 ← benchGemmGpuTensor 1024 1024 1024 20
-  let gpuMs1024 := gpuTime1024 * 1000.0 / 20.0
+  let iters1024 := if quick then 5 else 20
+  let gpuTime1024 ← benchGemmGpuTensor 1024 1024 1024 iters1024
+  let gpuMs1024 := gpuTime1024 * 1000.0 / iters1024.toFloat
   IO.println s!"1024x1024       | (no sync)   | {fmt gpuMs1024}ms  | {fmt gpuMs1024}ms"
   logMs "gpu_tensor/gemm" "time_ms" "1024x1024" gpuMs1024
 
@@ -170,14 +181,16 @@ def main : IO Unit := do
   IO.println "------------------------------------------------------"
 
   -- 256x256 chain - each copy is ~0.01ms, 4 copies = 0.04ms saved per chain
-  let gpuChain256 ← benchChainGpuTensor 256 100
-  let gpuChainMs256 := gpuChain256 * 1000.0 / 100.0
+  let chain256Iters := if quick then 20 else 100
+  let gpuChain256 ← benchChainGpuTensor 256 chain256Iters
+  let gpuChainMs256 := gpuChain256 * 1000.0 / chain256Iters.toFloat
   IO.println s!"256x256         | {fmt gpuChainMs256}ms       | ~0.04ms/iter (4x 0.01ms)"
   logMs "gpu_tensor/chain" "time_ms" "256x256" gpuChainMs256
 
   -- 512x512 chain - each copy is ~0.28ms, 4 copies = 1.1ms saved per chain
-  let gpuChain512 ← benchChainGpuTensor 512 50
-  let gpuChainMs512 := gpuChain512 * 1000.0 / 50.0
+  let chain512Iters := if quick then 10 else 50
+  let gpuChain512 ← benchChainGpuTensor 512 chain512Iters
+  let gpuChainMs512 := gpuChain512 * 1000.0 / chain512Iters.toFloat
   IO.println s!"512x512         | {fmt gpuChainMs512}ms       | ~1.1ms/iter (4x 0.28ms)"
   logMs "gpu_tensor/chain" "time_ms" "512x512" gpuChainMs512
 
@@ -200,19 +213,20 @@ def main : IO Unit := do
   IO.println "------------------------------------------------------"
 
   -- 256KB
-  let (uploadMs256k, downloadMs256k) ← benchTransfer cpu256k 200
+  let transferIters := if quick then 20 else 200
+  let (uploadMs256k, downloadMs256k) ← benchTransfer cpu256k transferIters
   IO.println s!"256KB (256x256)    | {fmt uploadMs256k}ms  | {fmt downloadMs256k}ms  | {fmt (uploadMs256k + downloadMs256k)}ms"
   logMs "gpu_tensor/transfer" "upload_ms" "256x256" uploadMs256k
   logMs "gpu_tensor/transfer" "download_ms" "256x256" downloadMs256k
 
   -- 1MB
-  let (uploadMs1m, downloadMs1m) ← benchTransfer cpu1m 100
+  let (uploadMs1m, downloadMs1m) ← benchTransfer cpu1m (if quick then 10 else 100)
   IO.println s!"1MB (512x512)      | {fmt uploadMs1m}ms  | {fmt downloadMs1m}ms  | {fmt (uploadMs1m + downloadMs1m)}ms"
   logMs "gpu_tensor/transfer" "upload_ms" "512x512" uploadMs1m
   logMs "gpu_tensor/transfer" "download_ms" "512x512" downloadMs1m
 
   -- 4MB
-  let (uploadMs4m, downloadMs4m) ← benchTransfer cpu4m 50
+  let (uploadMs4m, downloadMs4m) ← benchTransfer cpu4m (if quick then 5 else 50)
   IO.println s!"4MB (1024x1024)    | {fmt uploadMs4m}ms  | {fmt downloadMs4m}ms  | {fmt (uploadMs4m + downloadMs4m)}ms"
   logMs "gpu_tensor/transfer" "upload_ms" "1024x1024" uploadMs4m
   logMs "gpu_tensor/transfer" "download_ms" "1024x1024" downloadMs4m
