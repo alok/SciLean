@@ -57,9 +57,37 @@ def almostEqArr (x y : FloatArray) (tol : Float := 1e-5) : Bool := Id.run do
       return false
   true
 
+def requireFiles (paths : List System.FilePath) : IO Bool := do
+  let mut missing : List System.FilePath := []
+  for p in paths do
+    if !(← p.pathExists) then
+      missing := missing.concat p
+  if missing.isEmpty then
+    pure true
+  else
+    IO.println "Skipping PyTorch MNIST verification (missing test data):"
+    for p in missing do
+      IO.println s!"  - {p.toString}"
+    pure false
+
 def main : IO Unit := do
   IO.println "=== Verifying PyTorch MNIST Model in Lean ==="
   IO.println ""
+
+  let required : List System.FilePath :=
+    [System.FilePath.mk "data/mnist_weights/w1.npy",
+     System.FilePath.mk "data/mnist_weights/b1.npy",
+     System.FilePath.mk "data/mnist_weights/w2.npy",
+     System.FilePath.mk "data/mnist_weights/b2.npy",
+     System.FilePath.mk "data/mnist_weights/test_images.npy",
+     System.FilePath.mk "data/mnist_weights/test_logits.npy",
+     System.FilePath.mk "data/mnist_weights/test_preds.npy",
+     System.FilePath.mk "data/mnist_weights/test_labels.npy"]
+  let ok ← requireFiles required
+  unless ok do
+    IO.println ""
+    IO.println "=== Skipped ==="
+    return ()
 
   -- Load weights
   IO.println "Loading weights..."

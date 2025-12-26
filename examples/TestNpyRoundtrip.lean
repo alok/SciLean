@@ -10,9 +10,36 @@ open SciLean
 def almostEq (a b : Float) (tol : Float := 1e-10) : Bool :=
   (a - b).abs < tol
 
+def requireFiles (paths : List System.FilePath) : IO Bool := do
+  let mut missing : List System.FilePath := []
+  for p in paths do
+    if !(← p.pathExists) then
+      missing := missing.concat p
+  if missing.isEmpty then
+    pure true
+  else
+    IO.println "Skipping .npy roundtrip (missing test data):"
+    for p in missing do
+      IO.println s!"  - {p.toString}"
+    pure false
+
 def main : IO Unit := do
   IO.println "=== Testing .npy Roundtrip ==="
   IO.println ""
+
+  let required : List System.FilePath :=
+    [System.FilePath.mk "data/npy_test/test_1d.npy",
+     System.FilePath.mk "data/npy_test/test_2d.npy",
+     System.FilePath.mk "data/npy_test/test_A.npy",
+     System.FilePath.mk "data/npy_test/test_x.npy",
+     System.FilePath.mk "data/npy_test/test_y.npy",
+     System.FilePath.mk "data/npy_test/test_logits.npy",
+     System.FilePath.mk "data/npy_test/test_softmax.npy"]
+  let ok ← requireFiles required
+  unless ok do
+    IO.println ""
+    IO.println "=== Skipped ==="
+    return ()
 
   -- Test 1: Load 1D array
   IO.println "Test 1: Load 1D array"

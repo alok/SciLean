@@ -93,6 +93,13 @@ def main : IO Unit := do
   IO.println "║    Float32 (Native) vs Float64 (Conversion) Benchmark     ║"
   IO.println "╚═══════════════════════════════════════════════════════════╝"
 
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  let iters := if quick then 3 else 10
+  let gemmIters := if quick then 2 else 5
+  let sizes : List Nat := if quick then [100000, 1000000] else [100000, 1000000, 10000000]
+  let gemmSizes : List Nat := if quick then [256, 512] else [256, 512, 1024]
+  let kernelSizes : List Nat := if quick then [256, 512] else [256, 512, 1024, 2048]
+
   if !Metal.isAvailable () then
     IO.println "\nMetal GPU: Not available ✗"
     return
@@ -106,9 +113,9 @@ def main : IO Unit := do
   IO.println "FILL OPERATION"
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-  for size in [100000, 1000000, 10000000] do
-    let f64Ms ← timeFloatArray 10 (fun () => Metal.fill size.toUSize 3.14)
-    let f32Ms ← timeByteArray 10 (fun () => Metal.Float32.fill size.toUSize (3.14 : Float32))
+  for size in sizes do
+    let f64Ms ← timeFloatArray iters (fun () => Metal.fill size.toUSize 3.14)
+    let f32Ms ← timeByteArray iters (fun () => Metal.Float32.fill size.toUSize (3.14 : Float32))
     IO.println s!"  N={size}: Float64 {f64Ms.toString.take 8}ms, Float32 {f32Ms.toString.take 8}ms  ({formatSpeedup f64Ms f32Ms})"
     logMs "float32/fill" (params := [Benchmark.paramStr "dtype" "float64", Benchmark.paramNat "n" size]) f64Ms
     logMs "float32/fill" (params := [Benchmark.paramStr "dtype" "float32", Benchmark.paramNat "n" size]) f32Ms
@@ -118,13 +125,13 @@ def main : IO Unit := do
   IO.println "ADDITION"
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-  for size in [100000, 1000000, 10000000] do
+  for size in sizes do
     let a64 := generateFloat64Data size
     let b64 := generateFloat64Data size
     let a32 := generateFloat32Data size
     let b32 := generateFloat32Data size
-    let f64Ms ← timeFloatArray 10 (fun () => Metal.add size.toUSize a64 b64)
-    let f32Ms ← timeByteArray 10 (fun () => Metal.Float32.add size.toUSize a32 b32)
+    let f64Ms ← timeFloatArray iters (fun () => Metal.add size.toUSize a64 b64)
+    let f32Ms ← timeByteArray iters (fun () => Metal.Float32.add size.toUSize a32 b32)
     IO.println s!"  N={size}: Float64 {f64Ms.toString.take 8}ms, Float32 {f32Ms.toString.take 8}ms  ({formatSpeedup f64Ms f32Ms})"
     logMs "float32/add" (params := [Benchmark.paramStr "dtype" "float64", Benchmark.paramNat "n" size]) f64Ms
     logMs "float32/add" (params := [Benchmark.paramStr "dtype" "float32", Benchmark.paramNat "n" size]) f32Ms
@@ -134,11 +141,11 @@ def main : IO Unit := do
   IO.println "REDUCE SUM"
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-  for size in [100000, 1000000, 10000000] do
+  for size in sizes do
     let data64 := generateFloat64Data size
     let data32 := generateFloat32Data size
-    let f64Ms ← timeFloat 10 (fun () => Metal.reduceSum size.toUSize data64)
-    let f32Ms ← timeFloat32 10 (fun () => Metal.Float32.reduceSum size.toUSize data32)
+    let f64Ms ← timeFloat iters (fun () => Metal.reduceSum size.toUSize data64)
+    let f32Ms ← timeFloat32 iters (fun () => Metal.Float32.reduceSum size.toUSize data32)
     IO.println s!"  N={size}: Float64 {f64Ms.toString.take 8}ms, Float32 {f32Ms.toString.take 8}ms  ({formatSpeedup f64Ms f32Ms})"
     logMs "float32/reduce_sum" (params := [Benchmark.paramStr "dtype" "float64", Benchmark.paramNat "n" size]) f64Ms
     logMs "float32/reduce_sum" (params := [Benchmark.paramStr "dtype" "float32", Benchmark.paramNat "n" size]) f32Ms
@@ -148,13 +155,13 @@ def main : IO Unit := do
   IO.println "MATRIX MULTIPLY (GEMM) - Naive"
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-  for n in [256, 512, 1024] do
+  for n in gemmSizes do
     let matA64 := generateFloat64Data (n * n)
     let matB64 := generateFloat64Data (n * n)
     let matA32 := generateFloat32Data (n * n)
     let matB32 := generateFloat32Data (n * n)
-    let f64Ms ← timeFloatArray 5 (fun () => Metal.gemm n.toUSize n.toUSize n.toUSize matA64 matB64)
-    let f32Ms ← timeByteArray 5 (fun () => Metal.Float32.gemm n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let f64Ms ← timeFloatArray gemmIters (fun () => Metal.gemm n.toUSize n.toUSize n.toUSize matA64 matB64)
+    let f32Ms ← timeByteArray gemmIters (fun () => Metal.Float32.gemm n.toUSize n.toUSize n.toUSize matA32 matB32)
     let flops := 2.0 * n.toFloat * n.toFloat * n.toFloat / 1e9
     let gflops64 := if f64Ms > 0.001 then flops / (f64Ms / 1000.0) else 0.0
     let gflops32 := if f32Ms > 0.001 then flops / (f32Ms / 1000.0) else 0.0
@@ -170,29 +177,29 @@ def main : IO Unit := do
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   IO.println "(MPS = Metal Performance Shaders, Apple's optimized library)\n"
 
-  for n in [256, 512, 1024, 2048] do
+  for n in kernelSizes do
     let matA32 := generateFloat32Data (n * n)
     let matB32 := generateFloat32Data (n * n)
     let flops := 2.0 * n.toFloat * n.toFloat * n.toFloat / 1e9
 
     -- Naive
-    let naiveMs ← timeByteArray 5 (fun () => Metal.Float32.gemm n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let naiveMs ← timeByteArray gemmIters (fun () => Metal.Float32.gemm n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsNaive := if naiveMs > 0.001 then flops / (naiveMs / 1000.0) else 0.0
 
     -- Tiled
-    let tiledMs ← timeByteArray 5 (fun () => Metal.Float32.gemmTiled n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let tiledMs ← timeByteArray gemmIters (fun () => Metal.Float32.gemmTiled n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsTiled := if tiledMs > 0.001 then flops / (tiledMs / 1000.0) else 0.0
 
     -- Simdgroup (hardware matrix units)
-    let simdMs ← timeByteArray 5 (fun () => Metal.Float32.gemmSimd n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let simdMs ← timeByteArray gemmIters (fun () => Metal.Float32.gemmSimd n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsSimd := if simdMs > 0.001 then flops / (simdMs / 1000.0) else 0.0
 
     -- SimdOpt (shared memory prefetch + double buffering)
-    let simdOptMs ← timeByteArray 5 (fun () => Metal.Float32.gemmSimdOpt n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let simdOptMs ← timeByteArray gemmIters (fun () => Metal.Float32.gemmSimdOpt n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsSimdOpt := if simdOptMs > 0.001 then flops / (simdOptMs / 1000.0) else 0.0
 
     -- MPS (Apple's optimized library)
-    let mpsMs ← timeByteArray 5 (fun () => Metal.Float32.gemmMPS n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let mpsMs ← timeByteArray gemmIters (fun () => Metal.Float32.gemmMPS n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsMPS := if mpsMs > 0.001 then flops / (mpsMs / 1000.0) else 0.0
 
     let tiledSpeedup := if tiledMs > 0.001 then naiveMs / tiledMs else 0.0
