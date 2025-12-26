@@ -221,7 +221,7 @@ lean_exe FloatTest {
 lean_exe ForLoopTest {
   buildType := .release
   moreLinkArgs := #["-O3", "-UNDEBUG"]
-  root := `tests.sum_speed_test
+  root := `test.sum_speed_test
 }
 
 lean_exe SurfaceMeshTests {
@@ -242,6 +242,7 @@ lean_exe ProfileKMeansDirection {
 
 lean_exe ProfileTensorOps {
   root := `examples.Profile.TensorOps
+  moreLinkArgs := metalLinkArgs
 }
 
 lean_exe ProfileGMM {

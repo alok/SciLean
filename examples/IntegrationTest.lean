@@ -22,10 +22,10 @@ def main : IO Unit := do
   let z := ArrayOps.add x y
   IO.println s!"add: done"
 
-  let w := ArrayOps.mul x y
+  let _w := ArrayOps.mul x y
   IO.println s!"mul: done"
 
-  let expX := ArrayOps.exp x
+  let _expX := ArrayOps.exp x
   IO.println s!"exp: done"
 
   let sumZ := ArrayOps.sum z
@@ -36,15 +36,15 @@ def main : IO Unit := do
   let B : Float^[Idx 3, Idx 2] := ArrayOps.randUniform
   IO.println s!"Created matrices A[2,3] and B[3,2]"
 
-  let C := ArrayOps.gemm A B
+  let _C := ArrayOps.gemm A B
   IO.println s!"gemm A @ B: done"
 
-  let At := ArrayOps.transpose A
+  let _At := ArrayOps.transpose A
   IO.println s!"transpose A: done"
 
   -- Test matrix-vector multiply
   let v : Float^[Idx 3] := ArrayOps.randUniform
-  let Av := ArrayOps.gemv A v
+  let _Av := ArrayOps.gemv A v
   IO.println s!"gemv A @ v: done"
 
   -- Test softmax
@@ -55,11 +55,11 @@ def main : IO Unit := do
 
   -- Test backward helpers
   let dy : Float^[Idx 2] := ArrayOps.randUniform
-  let dx := gemv_backward_x A dy
+  let _dx := gemv_backward_x A dy
   IO.println s!"gemv_backward_x: done"
 
   let dC : Float^[Idx 2, Idx 2] := ArrayOps.randUniform
-  let dA := gemm_backward_A B dC
+  let _dA := gemm_backward_A B dC
   IO.println s!"gemm_backward_A: done"
 
   IO.println "\n=== All integration tests passed! ==="

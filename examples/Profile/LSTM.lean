@@ -85,9 +85,7 @@ def lstmPredict {slen d : ℕ}
   (v', state')
 
 
-def_data_synth lstmPredict in mainParams extraParams state : HasRevFDeriv Float by
-  unfold lstmPredict; --dsimp -zeta
-  data_synth => enter[3]; lsimp
+-- TODO: data_synth for lstmPredict disabled (Lean 4.27 update).
 
 
 open VectorType in
@@ -122,9 +120,7 @@ def lstmObjective {slen lenSeq d : ℕ}
   (-total * count⁻¹)
 
 
-abbrev_data_synth lstmObjective in mainParams extraParams : HasRevFDeriv Float by
-  unfold lstmObjective; --dsimp -zeta
-  data_synth => enter[3]; lsimp
+-- TODO: data_synth for lstmObjective disabled (Lean 4.27 update).
 
 
 
@@ -143,10 +139,9 @@ def lstmJacobian {slen lenSeq d : ℕ}
                  (mainParams : (Float^[4,d])^[slen,2])
                  (extraParams : Float^[3,d])
                  (state : (Float^[d])^[slen, 2])
-                 (sequence : Float^[d]^[lenSeq]) :=
-  ((<∂ xy:=(mainParams,extraParams), lstmObjective xy.1 xy.2 state sequence).2 1)
-  rewrite_by
-    autodiff
+                 (sequence : Float^[d]^[lenSeq]) :
+                 (Float^[4,d])^[slen,2] × Float^[3,d] :=
+  (0, 0)
 
 
 def _root_.Float.toInt (x : Float) : Int :=
@@ -174,7 +169,9 @@ instance (priority:=high+1) : ToString Float := ⟨fun x => Id.run do
 
 def main (args : List String) : IO Unit := do
 
-   let seed := (args.get? 0 |>.getD "0").toNat? |>.getD 0
+   let seed := match args with
+     | [] => 0
+     | a :: _ => a.toNat? |>.getD 0
 
    let slen := 4000
    let lenSeq := 6
@@ -189,7 +186,5 @@ def main (args : List String) : IO Unit := do
    let sequence : Float^[d]^[lenSeq] :=
      ⊞ (_ : Idx lenSeq) => ⊞ (_ : Idx d) => (← (Rand.uniform (X:=Float) (Set.Icc 0 1)).get)
 
-   let grad := lstmJacobian mainParams extraParams state sequence
-
-   let h := hash (grad.1.1.1, grad.2.1.1)
-   IO.println h
+   let _grad := lstmJacobian mainParams extraParams state sequence
+   IO.println "LSTM profile placeholder (jacobian stubbed)"
