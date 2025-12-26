@@ -1,0 +1,31 @@
+===== StructVsTupleBenchmark =====
+╔══════════════════════════════════════════════════════════════╗
+║     Struct vs Tuple PlainDataType Benchmark                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+Array size: 100000 elements, 100 iterations each
+
+Byte sizes:
+  Vec3:   12 bytes
+  Tuple3: 12 bytes
+  Vec4:   16 bytes
+  Tuple4: 16 bytes
+
+═══ Vec3 vs Tuple3 (12 bytes each) ═══
+  Vec3   (derived)  : 25ms (0.004000 M ops/s)
+  Vec3   (manual)   : 27ms (0.003704 M ops/s)
+  Tuple3 (raw)      : 25ms (0.004000 M ops/s)
+
+═══ Vec4 vs Tuple4 (16 bytes each) ═══
+  Vec4   (struct): 22ms (0.004545 M ops/s)
+  Tuple4 (raw)   : 22ms (0.004545 M ops/s)
+
+═══ Correctness Verification ═══
+Vec3 sum:   4999890432.000000
+Tuple3 sum: 4999890432.000000
+Match: true
+Vec4 sum:   4999890432.000000
+Tuple4 sum: 4999890432.000000
+Match: true
+
+✓ Done! If struct matches tuple performance, abstraction is zero-cost.

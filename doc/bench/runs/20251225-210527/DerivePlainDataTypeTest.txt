@@ -1,0 +1,10 @@
+===== DerivePlainDataTypeTest =====
+PlainDataType derive test:
+Point2D bytes: 8 (expected 8)
+Vec3D bytes: 12 (expected 12)
+Particle bytes: 28 (expected 28)
+Original: Point2D(1.500000, 2.500000)
+Recovered: Point2D(1.500000, 2.500000)
+✓ Point2D roundtrip OK
+
+✓ All deriving PlainDataType tests passed!

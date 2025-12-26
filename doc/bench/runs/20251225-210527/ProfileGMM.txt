@@ -1,0 +1,7 @@
+===== ProfileGMM =====
+GMM profile test
+k := 100, n := 1000, d := 64
+
+GMM                    time := 0.000125ms 	loss := 469345.113831
+GMM no matrix copy     time := 0.000166ms 	loss := 469345.113831
+GMM gradient           time := 0.000083ms 	loss := 0.000000

@@ -1,0 +1,16 @@
+===== KernelTest =====
+=== SciLean Kernel Test ===
+DType.f64 bytes: 8
+DType.f32 bytes: 4
+DType.bf16 bytes: 2
+Allocated f64[4]: 32 bytes
+Uniform random f64[4]: 32 bytes
+Normal random f64[4]: 32 bytes
+add f64[4]: 32 bytes
+mul f64[4]: 32 bytes
+sum: 1.998587
+gemm 2x3 @ 3x2 = 2x2: 32 bytes (expected 32)
+transpose 3x2 -> 2x3: 48 bytes
+softmax sum (should be ~1.0): 1.000000
+
+=== All tests passed! ===

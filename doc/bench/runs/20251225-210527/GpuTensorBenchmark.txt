@@ -1,0 +1,42 @@
+===== GpuTensorBenchmark =====
+
+==============================================================
+  GpuTensor Benchmark: ByteArray vs GPU-Resident Buffers
+==============================================================
+
+ByteArray: copies data CPU<->GPU on every operation
+GpuTensor: data stays on GPU, copies only at start/end
+
+--- Test 1: Single GEMM Operation ---
+(Note: ByteArray times show 0 because pure functions don't GPU sync)
+
+Config          | ByteArray   | GpuTensor   | GPU Time
+------------------------------------------------------
+256x256         | (no sync)   | 0.50463ms  | 0.50463ms
+512x512         | (no sync)   | 0.56944ms  | 0.56944ms
+1024x1024       | (no sync)   | 1.12584ms  | 1.12584ms
+
+--- Test 2: Chained GEMM (A*B then result*C) ---
+
+With ByteArray: 4 copies per chain (A,B up; AB down,up; AB*C down)
+With GpuTensor: 0 copies per chain (all stays on GPU)
+
+Size            | GpuTensor Chain | Est. Transfer Saved
+------------------------------------------------------
+256x256         | 0.67245ms       | ~0.04ms/iter (4x 0.01ms)
+512x512         | 0.73986ms       | ~1.1ms/iter (4x 0.28ms)
+
+--- Test 3: Transfer Overhead (Upload + Download) ---
+(Pre-creating data to exclude creation time from measurements)
+
+
+Size               | Upload     | Download   | Total
+------------------------------------------------------
+256KB (256x256)    | 0.00691ms  | 0.00821ms  | 0.01512ms
+1MB (512x512)      | 0.02416ms  | 0.02696ms  | 0.05113ms
+4MB (1024x1024)    | 0.09773ms  | 0.09329ms  | 0.19102ms
+
+==============================================================
+Summary: GpuTensor eliminates per-operation copy overhead.
+Speedup increases with more chained operations.
+==============================================================

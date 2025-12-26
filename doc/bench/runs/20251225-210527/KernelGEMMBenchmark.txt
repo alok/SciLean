@@ -1,0 +1,41 @@
+===== KernelGEMMBenchmark =====
+╔════════════════════════════════════════════════════════════╗
+║          SciLean Kernel GEMM Benchmark                     ║
+║          F32 (NEON on ARM) vs F64 (scalar ikj)             ║
+╚════════════════════════════════════════════════════════════╝
+
+
+GEMM: 64×64 @ 64×64 = 64×64
+--------------------------------------------------
+Kernel F64 (ikj): 77μs avg over 10 runs
+Kernel F32 (NEON): 24μs avg over 10 runs
+  Kernel F64: 6.8089 GFLOP/s
+  Kernel F32: 21.845 GFLOP/s
+  F32 is 3.208× faster than F64
+
+GEMM: 128×128 @ 128×128 = 128×128
+--------------------------------------------------
+Kernel F64 (ikj): 547μs avg over 10 runs
+Kernel F32 (NEON): 114μs avg over 10 runs
+  Kernel F64: 7.6678 GFLOP/s
+  Kernel F32: 36.792 GFLOP/s
+  F32 is 4.798× faster than F64
+
+GEMM: 256×256 @ 256×256 = 256×256
+--------------------------------------------------
+Kernel F64 (ikj): 4514μs avg over 10 runs
+Kernel F32 (NEON): 681μs avg over 10 runs
+  Kernel F64: 7.4334 GFLOP/s
+  Kernel F32: 49.272 GFLOP/s
+  F32 is 6.628× faster than F64
+
+GEMM: 512×512 @ 512×512 = 512×512
+--------------------------------------------------
+Kernel F64 (ikj): 38809μs avg over 10 runs
+Kernel F32 (NEON): 6132μs avg over 10 runs
+  Kernel F64: 6.9168 GFLOP/s
+  Kernel F32: 43.776 GFLOP/s
+  F32 is 6.328× faster than F64
+
+
+Benchmark complete!

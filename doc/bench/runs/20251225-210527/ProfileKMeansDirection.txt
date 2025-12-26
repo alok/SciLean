@@ -1,0 +1,7 @@
+===== ProfileKMeansDirection =====
+k-means profile test
+k := 1000, n := 10000, d := 16
+
+c implementation       time := 0.000041ms 	dir norm := 9796452.694900
+best lean impl         time := 0.000042ms 	dir norm := 9796452.694900
+SciLean no BLAS        time := 0.000042ms 	dir norm := 9796452.694900

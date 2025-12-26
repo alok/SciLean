@@ -1,0 +1,151 @@
+===== Float32Benchmark =====
+NOTE: SCILEAN_BENCH_QUICK=1
+╔═══════════════════════════════════════════════════════════╗
+║    Float32 (Native) vs Float64 (Conversion) Benchmark     ║
+╚═══════════════════════════════════════════════════════════╝
+
+Metal GPU: Available ✓
+
+Float64: Lean stores double, Metal uses float → conversion overhead
+Float32: Lean stores float via ByteArray → zero conversion
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILL OPERATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  N=100000: Float64 3.104611ms, Float32 0.263917ms  (Float32 11.76x faster)
+  N=1000000: Float64 0.605667ms, Float32 0.218944ms  (Float32 2.766x faster)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADDITION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  N=100000: Float64 0.236639ms, Float32 0.154208ms  (Float32 1.534x faster)
+  N=1000000: Float64 1.062180ms, Float32 0.665167ms  (Float32 1.596x faster)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REDUCE SUM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  N=100000: Float64 0.421569ms, Float32 0.240194ms  (Float32 1.755x faster)
+  N=1000000: Float64 1.670278ms, Float32 0.529319ms  (Float32 3.155x faster)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MATRIX MULTIPLY (GEMM) - Naive
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  256x256: Float64 0.5443ms (61.63 GFLOP/s), Float32 0.5104ms (65.73 GFLOP/s)
+  512x512: Float64 0.7572ms (354.4 GFLOP/s), Float32 1.0131ms (264.9 GFLOP/s)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GEMM KERNEL COMPARISON: Naive vs Tiled vs Simdgroup vs MPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+(MPS = Metal Performance Shaders, Apple's optimized library)
+
+  256×256 (0.033 GFLOPS):
+    Naive:   0.29964ms  111.98 GFLOP/s
+    Tiled:   0.32464ms  103.35 GFLOP/s  (0.92x)
+    Simd:    0.23743ms  141.31 GFLOP/s  (1.26x)
+    SimdOpt: 0.81645ms  41.097 GFLOP/s  (0.36x)
+    MPS:     10.3723ms  3.2349 GFLOP/s  (0.02x)
+
+  512×512 (0.268 GFLOPS):
+    Naive:   0.84210ms  318.76 GFLOP/s
+    Tiled:   0.47820ms  561.33 GFLOP/s  (1.76x)
+    Simd:    0.39777ms  674.85 GFLOP/s  (2.11x)
+    SimdOpt: 0.45068ms  595.61 GFLOP/s  (1.86x)
+    MPS:     0.72431ms  370.60 GFLOP/s  (1.16x)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+M4-OPTIMIZED GEMM (requires 128-aligned sizes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+(float4 loads, 128×128 tiles, no bounds checks)
+
+  1024×1024:
+    M4:   1.33305ms  1610.9 GFLOP/s
+    Simd: 0.93764ms  2290.3 GFLOP/s
+    MPS:  1.01384ms  2118.1 GFLOP/s
+
+  2048×2048:
+    M4:   3.28430ms  5230.9 GFLOP/s
+    Simd: 2.88760ms  5949.5 GFLOP/s
+    MPS:  2.07484ms  8280.0 GFLOP/s
+
+  4096×4096:
+    M4:   15.1961ms  9044.3 GFLOP/s
+    Simd: 16.0738ms  8550.4 GFLOP/s
+    MPS:  17.9876ms  7640.7 GFLOP/s
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LARGE MATRIX TEST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  3072×3072: M4 13.98372ms (4146.3 GFLOP/s), MPS 10.64373ms (5447.5 GFLOP/s)
+  4096×4096: M4 225.9152ms (608.36 GFLOP/s), MPS 33.46877ms (4106.4 GFLOP/s)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AXPY TEST (y = a*x + y) - all ByteArray, zero-copy FFI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  N=100000: 0.127367ms (1.5702 GFLOP/s)
+  N=1000000: 0.203125ms (9.8461 GFLOP/s)
+  N=10000000: 1.801246ms (11.103 GFLOP/s)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MPS (GPU) vs ACCELERATE (CPU/AMX) COMPARISON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MPS: Metal Performance Shaders - runs on GPU
+Accelerate: Apple's BLAS - runs on CPU with AMX coprocessor
+
+  256×256:
+    MPS (GPU):          0.382292ms  87.771 GFLOP/s
+    Accelerate (AMX):   0.055861ms  600.67 GFLOP/s
+    Winner: Accelerate (AMX)
+
+  512×512:
+    MPS (GPU):          0.395833ms  678.15 GFLOP/s
+    Accelerate (AMX):   0.113806ms  2358.7 GFLOP/s
+    Winner: Accelerate (AMX)
+
+  1024×1024:
+    MPS (GPU):          0.973361ms  2206.2 GFLOP/s
+    Accelerate (AMX):   0.619403ms  3467.0 GFLOP/s
+    Winner: Accelerate (AMX)
+
+  2048×2048:
+    MPS (GPU):          15.15598ms  1133.5 GFLOP/s
+    Accelerate (AMX):   8.279722ms  2074.9 GFLOP/s
+    Winner: Accelerate (AMX)
+
+  4096×4096:
+    MPS (GPU):          12.69812ms  10823. GFLOP/s
+    Accelerate (AMX):   25.18870ms  5456.3 GFLOP/s
+    Winner: MPS (GPU)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FLASH ATTENTION (Single-Head)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+softmax(Q @ K^T / sqrt(d)) @ V
+
+  seq=128, d=64: 3.600733ms (1.1648 GFLOP/s)
+  seq=256, d=64: 7.461775ms (2.2484 GFLOP/s)
+  seq=512, d=64: 15.89610ms (4.2217 GFLOP/s)
+  seq=1024, d=64: 33.46700ms (8.0208 GFLOP/s)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CAUSAL ATTENTION (masked)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  seq=128, d=64: 3.395112ms (0.6176 GFLOP/s)
+  seq=256, d=64: 7.004033ms (1.1976 GFLOP/s)
+  seq=512, d=64: 14.83012ms (2.2625 GFLOP/s)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SOFTMAX (comparison with MLX/PyTorch)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  N=10000: 0.190158ms
+  N=100000: 0.073971ms
+  N=1000000: 0.192125ms
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Benchmark complete!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Summary:
+  MPS (GPU): Apple's Metal Performance Shaders library
+  Accelerate (AMX): Apple's CPU BLAS using AMX coprocessor
+  Flash Attention: Custom Metal kernel for transformer attention
+  Both are highly optimized - comparing helps understand workload

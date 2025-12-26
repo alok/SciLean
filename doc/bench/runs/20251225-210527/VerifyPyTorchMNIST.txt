@@ -1,0 +1,14 @@
+===== VerifyPyTorchMNIST =====
+=== Verifying PyTorch MNIST Model in Lean ===
+
+Skipping PyTorch MNIST verification (missing test data):
+  - data/mnist_weights/w1.npy
+  - data/mnist_weights/b1.npy
+  - data/mnist_weights/w2.npy
+  - data/mnist_weights/b2.npy
+  - data/mnist_weights/test_images.npy
+  - data/mnist_weights/test_logits.npy
+  - data/mnist_weights/test_preds.npy
+  - data/mnist_weights/test_labels.npy
+
+=== Skipped ===

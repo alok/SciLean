@@ -1,0 +1,27 @@
+===== ComputeBackendTest =====
+=== Compute Backend Tests ===
+
+Compute Backend: Metal GPU
+
+Testing fill operation:
+  fill 5 3.14: PASS
+    Result: [3.140000, 3.140000, 3.140000, 3.140000, 3.140000]
+
+Testing negation:
+  neg [1,2,3]: PASS
+    Result: [-1.000000, -2.000000, -3.000000]
+
+Testing addition:
+  [1,2,3] + [4,5,6]: PASS
+    Result: [5.000000, 7.000000, 9.000000]
+
+Testing reduce sum:
+  sum [1,2,3,4]: PASS
+    Result: 10.000000
+
+Testing matrix multiply (2x2 @ 2x2):
+  gemm 2x2 @ 2x2: PASS
+    Result: [19.000000, 22.000000, 43.000000, 50.000000]
+    Expected: [19.000000, 22.000000, 43.000000, 50.000000]
+
+=== All tests complete ===

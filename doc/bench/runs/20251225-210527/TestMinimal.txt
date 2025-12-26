@@ -1,0 +1,2 @@
+===== TestMinimal =====
+Works after clean rebuild!

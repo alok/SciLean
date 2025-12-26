@@ -1,5 +1,100 @@
 # Experiment Log
 
+## 2025-12-25: Full test + benchmark sweep (post-fix)
+
+**Timestamp:** 2025-12-25 21:06:11 -0800  
+**Commit:** fb673616  
+**Branch:** metal-backend  
+**Worktree:** dirty (local changes)  
+**Run dir:** doc/bench/runs/20251225-210527
+
+### Commands
+```bash
+lake test
+
+lake build BackendBenchmark MetalBenchmark GEMMBenchmark KernelGEMMBenchmark \
+  Float32Benchmark RandBenchmark MetalMinimalBenchmark GEMMComparison \
+  GEMMFocus GEMMCorrectness GpuTensorBenchmark KernelBenchmark \
+  GemmViewBenchmark GpuBatchingBenchmark GpuMNIST AMXBenchmark \
+  PodBenchmark StructVsTupleBenchmark LargeGEMM OverheadTest NestedPodStressTest \
+  ProfileKMeans ProfileKMeansDirection ProfileTensorOps ProfileGMM ProfileLSTM \
+  ComputeBackendTest BlasTest FloatTest ForLoopTest SurfaceMeshTests FloatMatrixTest \
+  TestMinimal TestNpyRoundtrip VerifyPyTorchMNIST AttentionTest KernelTest \
+  IntegrationTest GpuFusedKernelTest GpuTensorTest AMXTest SquareGemmTest \
+  PodTypesTest StructMarshalingTest DerivePlainDataTypeTest Conv2DTest
+
+# Executables (see run dir for full logs)
+.lake/build/bin/BackendBenchmark
+.lake/build/bin/MetalBenchmark
+.lake/build/bin/GEMMBenchmark
+.lake/build/bin/KernelGEMMBenchmark
+SCILEAN_BENCH_QUICK=1 .lake/build/bin/Float32Benchmark
+.lake/build/bin/RandBenchmark
+.lake/build/bin/MetalMinimalBenchmark
+.lake/build/bin/GEMMComparison
+.lake/build/bin/GEMMFocus
+.lake/build/bin/GEMMCorrectness
+.lake/build/bin/GpuTensorBenchmark
+.lake/build/bin/KernelBenchmark
+.lake/build/bin/GemmViewBenchmark
+.lake/build/bin/GpuBatchingBenchmark
+.lake/build/bin/GpuMNIST
+.lake/build/bin/AMXBenchmark
+.lake/build/bin/PodBenchmark
+.lake/build/bin/StructVsTupleBenchmark
+.lake/build/bin/NestedPodStressTest
+.lake/build/bin/LargeGEMM
+.lake/build/bin/OverheadTest
+.lake/build/bin/ProfileKMeans
+.lake/build/bin/ProfileKMeansDirection
+.lake/build/bin/ProfileTensorOps
+.lake/build/bin/ProfileGMM
+.lake/build/bin/ProfileLSTM
+.lake/build/bin/ComputeBackendTest
+.lake/build/bin/BlasTest
+.lake/build/bin/FloatTest
+.lake/build/bin/ForLoopTest
+.lake/build/bin/SurfaceMeshTests
+.lake/build/bin/FloatMatrixTest
+.lake/build/bin/TestMinimal
+.lake/build/bin/TestNpyRoundtrip
+.lake/build/bin/VerifyPyTorchMNIST
+.lake/build/bin/AttentionTest
+.lake/build/bin/KernelTest
+.lake/build/bin/IntegrationTest
+.lake/build/bin/GpuFusedKernelTest
+.lake/build/bin/GpuTensorTest
+.lake/build/bin/AMXTest
+.lake/build/bin/SquareGemmTest
+.lake/build/bin/PodTypesTest
+.lake/build/bin/StructMarshalingTest
+.lake/build/bin/DerivePlainDataTypeTest
+.lake/build/bin/Conv2DTest
+```
+
+### Key Results
+
+**GpuTensorBenchmark**
+- GEMM: 256 = 0.50463ms, 512 = 0.56944ms, 1024 = 1.12584ms
+- Transfer total: 256KB = 0.01512ms, 1MB = 0.05113ms, 4MB = 0.19102ms
+
+**GemmViewBenchmark (2048)**
+- Direct gemm: 3.434945ms (~5.00 TFLOP/s)
+- Contiguous view: 2.458491ms
+
+**GpuMNIST**
+- Final accuracy: 98.1%
+- Epoch time: 451–726ms (10 epochs)
+
+**Float32Benchmark (quick)**
+- Flash attention seq=512, d=64: 15.89610ms (4.2217 GFLOP/s)
+- MPS 4096×4096: 12.69812ms vs Accelerate 25.18870ms
+
+### Notes
+- Executables were run with a 180s timeout guard; none timed out in this sweep.
+- `TestNpyRoundtrip` and `VerifyPyTorchMNIST` now skip when data files are missing.
+- `Float32Benchmark` was run with `SCILEAN_BENCH_QUICK=1` to keep runtime bounded.
+
 ## 2025-12-25: Full test + benchmark sweep
 
 **Timestamp:** 2025-12-25 20:08:45 -0800  

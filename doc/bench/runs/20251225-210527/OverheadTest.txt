@@ -1,0 +1,33 @@
+===== OverheadTest =====
+=== Metal Float32 FFI Verification ===
+ugetFloat32([0,0,128,63]) = 1.000000 (expected 1.0)
+Metal.Float32.fill 4 2.5 = [2.500000, 2.500000, 2.500000, 2.500000]
+
+=== Metal.Float32.add Verification ===
+a = [1.000000, 1.000000, 1.000000, 1.000000]
+b = [2.000000, 2.000000, 2.000000, 2.000000]
+a + b = [3.000000, 3.000000, 3.000000, 3.000000] (expected [3,3,3,3])
+
+=== Metal.Float32.reduceSum Verification ===
+sum([1,1,1,1]) = 4.000000 (expected 4.0)
+
+=== Metal Dispatch Overhead Measurement ===
+(Using result accumulation to prevent DCE)
+fill(n=1) overhead: 15 ns/call (accumulated size: 4000)
+add(n=1) overhead: 154 ns/call (accumulated size: 4000)
+reduceSum(n=1) overhead: 12 ns/call (accumulated sum: 1000.000000)
+
+=== Scaling with Size ===
+reduceSum(n=1): 12 ns/call, 83.333333 M elem/s (sum=1000.000000)
+reduceSum(n=10): 7 ns/call, 1428.571429 M elem/s (sum=10000.000000)
+reduceSum(n=100): 7 ns/call, 14285.714286 M elem/s (sum=100000.000000)
+reduceSum(n=1000): 64 ns/call, 15625.000000 M elem/s (sum=1000000.000000)
+reduceSum(n=10000): 447144 ns/call, 22.364160 M elem/s (sum=819200.000000)
+reduceSum(n=100000): 628280 ns/call, 159.164704 M elem/s (sum=10000000.000000)
+
+=== GEMM Scaling ===
+gemm(32×32): 395 µs, 0.165750 GFLOP/s (size=409600)
+gemm(64×64): 5258 µs, 0.099706 GFLOP/s (size=1638400)
+gemm(128×128): 1651 µs, 2.540178 GFLOP/s (size=6553600)
+gemm(256×256): 1396 µs, 24.034749 GFLOP/s (size=26214400)
+gemm(512×512): 2475 µs, 108.445275 GFLOP/s (size=10485760)
