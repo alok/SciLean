@@ -23,7 +23,7 @@ def main : IO Unit := do
   let testArr0 := ByteArray.replicateUInt32 1 0
   let testArr1 := pd.btype.toByteArray testArr0 0 sorry_proof testVal
   let readBack := pd.btype.fromByteArray testArr1 0 sorry_proof
-  IO.println s!"Roundtrip 0x{testVal.toNat.toDigits 16 |>.asString}: got 0x{readBack.toNat.toDigits 16 |>.asString}"
+  IO.println s!"Roundtrip 0x{String.ofList (testVal.toNat.toDigits 16)}: got 0x{String.ofList (readBack.toNat.toDigits 16)}"
 
   -- Test UInt64
   IO.println "\n=== UInt64 ==="
