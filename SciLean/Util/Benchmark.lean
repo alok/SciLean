@@ -64,6 +64,105 @@ def computeEnabled : IO Bool := do
 
 initialize enabledRef : IO.Ref (Option Bool) ← IO.mkRef none
 initialize runRef : IO.Ref (Option _root_.Wandb.Local.LocalRun) ← IO.mkRef none
+initialize codeLoggedRef : IO.Ref Bool ← IO.mkRef false
+
+def isEnabled : IO Bool := do
+  match (← enabledRef.get) with
+  | some v => pure v
+  | none =>
+      let v ← computeEnabled
+      enabledRef.set (some v)
+      pure v
+
+def shellQuote (s : String) : String :=
+  "'" ++ s.replace "'" "'\\''" ++ "'"
+
+def prepareSourceDir
+    (paths : _root_.Wandb.Local.RunPaths) : IO (Option (System.FilePath × String)) := do
+  let sourceDir := paths.filesDir / "scilean-source"
+  if (← sourceDir.pathExists) then
+    IO.FS.removeDirAll sourceDir
+  IO.FS.createDirAll sourceDir
+  let root := paths.rootDir.toString
+  let gitOk ←
+    try
+      let out ← IO.Process.output {
+        cmd := "git"
+        args := #["-C", root, "rev-parse", "--is-inside-work-tree"]
+      }
+      pure (out.exitCode == 0)
+    catch _ =>
+      pure false
+  if gitOk then
+    let cmd :=
+      s!"git -C {shellQuote root} archive --format=tar HEAD | tar -x -C {shellQuote sourceDir.toString}"
+    let out ←
+      try
+        IO.Process.output { cmd := "sh", args := #["-c", cmd] }
+      catch _ =>
+        pure { exitCode := 1, stdout := "", stderr := "" }
+    if out.exitCode == 0 then
+      return some (sourceDir, "git-archive")
+  let tarOk ←
+    try
+      let cmd :=
+        String.intercalate " " [
+          "tar -c",
+          "--exclude=.git",
+          "--exclude=.lake",
+          "--exclude=lake-packages",
+          "--exclude=build",
+          "--exclude=wandb",
+          "--exclude=.wandb",
+          "--exclude=doc/bench/runs",
+          "-C", shellQuote root, ".",
+          "| tar -x -C", shellQuote sourceDir.toString
+        ]
+      let out ← IO.Process.output { cmd := "sh", args := #["-c", cmd] }
+      pure (out.exitCode == 0)
+    catch _ =>
+      pure false
+  if tarOk then
+    return some (sourceDir, "tar")
+  return none
+
+def shouldUploadCodeArtifact : IO Bool := do
+  if !(← isEnabled) then
+    return false
+  match (← envBool? "SCILEAN_WANDB_LOG_CODE") with
+  | some false => return false
+  | _ => pure ()
+  let apiKey ← IO.getEnv "WANDB_API_KEY"
+  let project ← IO.getEnv "WANDB_PROJECT"
+  if apiKey.isNone || project.isNone then
+    return false
+  match (← IO.getEnv "WANDB_MODE").map String.toLower with
+  | some "disabled" | some "dryrun" | some "offline" => return false
+  | _ => return true
+
+def tryUploadCodeArtifact
+    (_paths : _root_.Wandb.Local.RunPaths)
+    (sourcePath : System.FilePath) : IO Unit := do
+  if !(← shouldUploadCodeArtifact) then
+    return ()
+  if (← codeLoggedRef.get) then
+    return ()
+  codeLoggedRef.set true
+  let some project ← IO.getEnv "WANDB_PROJECT"
+    | return ()
+  let name := s!"{project}/scilean-source"
+  let mut args : Array String := #["artifact", "put", sourcePath.toString, "--type", "code", "--name", name]
+  if let some runId := (← IO.getEnv "WANDB_RUN_ID") then
+    args := args ++ #["--id", runId]
+  if let some commit := (← IO.getEnv "SCILEAN_GIT_COMMIT") then
+    let short := (commit.take 8).toString
+    args := args ++ #["--alias", short]
+  let _ ←
+    try
+      IO.Process.output { cmd := "wandb", args := args }
+    catch _ =>
+      pure { exitCode := 1, stdout := "", stderr := "" }
+  pure ()
 
 def platformName : String :=
   if System.Platform.isOSX then
@@ -80,6 +179,7 @@ def optField (key : String) (value? : Option String) : List (String × _root_.Wa
 
 def initRun : IO _root_.Wandb.Local.LocalRun := do
   let run ← _root_.Wandb.Local.init
+  let sourceSnapshot ← prepareSourceDir run.paths
   let program ← IO.appPath
   let leanVersion := Lean.versionString
   let leanGithash := Lean.githash
@@ -106,19 +206,18 @@ def initRun : IO _root_.Wandb.Local.LocalRun := do
     ++ optField "lake_env" lakeEnv
     ++ optField "scilean_git_commit" scileanCommit
     ++ optField "scilean_git_branch" scileanBranch
+    ++ match sourceSnapshot with
+      | some (path, mode) =>
+          [("scilean_source_snapshot", _root_.Wandb.Json.str (path.fileName.getD path.toString)),
+           ("scilean_source_snapshot_mode", _root_.Wandb.Json.str mode)]
+      | none => []
   let metadata := _root_.Wandb.Json.obj metadataFields
   _root_.Wandb.Local.writeMetadata run.paths metadata
   _root_.Wandb.Local.writeConfig run.paths [("scilean_benchmark", _root_.Wandb.Json.bool true)]
   _root_.Wandb.Local.writeSummary run.paths (_root_.Wandb.Json.obj [])
+  if let some (path, _) := sourceSnapshot then
+    tryUploadCodeArtifact run.paths path
   pure run
-
-def isEnabled : IO Bool := do
-  match (← enabledRef.get) with
-  | some v => pure v
-  | none =>
-      let v ← computeEnabled
-      enabledRef.set (some v)
-      pure v
 
 def getRun : IO (Option _root_.Wandb.Local.LocalRun) := do
   if !(← isEnabled) then
