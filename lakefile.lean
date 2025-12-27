@@ -44,14 +44,14 @@ require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "v
 -- Pin ProofWidgets to a release tag so cloud releases are available
 require proofwidgets from git "https://github.com/leanprover-community/ProofWidgets4" @ "v0.0.84"
 
--- Use local LeanBLAS
-require leanblas from ".." / "LeanBLAS"
+-- LeanBLAS: BLAS bindings for scientific computing
+require leanblas from git "https://github.com/alok/LeanBLAS" @ "32f7738d5a31f169cc58d8d1abea47d97ff8d0c9"
 
--- LeanPlot for visualization (local dependency)
-require leanplot from ".." / "LeanPlot"
+-- LeanPlot for visualization
+require leanplot from git "https://github.com/alok/LeanPlot" @ "4cbd9bba689b120984139c1024bd141431c62337"
 
--- SorryProof for type-safe sorry macros (local dependency)
-require sorryproof from ".." / "SorryProof"
+-- SorryProof for type-safe sorry macros
+require sorryproof from git "https://github.com/alok/SorryProof" @ "585d89b635b06feab59f5c2a2010b594ec32eb4f"
 
 -- Link LeanBLAS's C FFI library into SciLean executables.
 --
