@@ -5,6 +5,9 @@ open SciLean
 
 def main : IO Unit := do
   IO.println "=== Metal Float32 FFI Verification ==="
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
 
   -- Verify ugetFloat32 works
   let arr := ByteArray.mk #[0x00, 0x00, 0x80, 0x3F]  -- 1.0f IEEE 754
@@ -42,7 +45,7 @@ def main : IO Unit := do
     let _ := Metal.Float32.fill 1 (1.0 : Float32)
 
   -- Measure fill (n=1) - accumulate sizes to force evaluation
-  let iters := 1000
+  let iters := if quick then 200 else 1000
   let fillStart ← IO.monoNanosNow
   let mut totalSize := 0
   for _ in [:iters] do
@@ -79,9 +82,10 @@ def main : IO Unit := do
   IO.println "=== Scaling with Size ==="
 
   -- Measure how overhead scales with size
-  for size in [1, 10, 100, 1000, 10000, 100000] do
+  let sizeList := if quick then [1, 100, 10000] else [1, 10, 100, 1000, 10000, 100000]
+  for size in sizeList do
     let arr := Metal.Float32.fill size.toUSize (1.0 : Float32)
-    let numIters := if size > 1000 then 100 else 1000
+    let numIters := if quick then 50 else if size > 1000 then 100 else 1000
 
     let scaleStart ← IO.monoNanosNow
     let mut sumAccum : Float32 := 0.0
@@ -98,10 +102,11 @@ def main : IO Unit := do
   IO.println ""
   IO.println "=== GEMM Scaling ==="
 
-  for n in [32, 64, 128, 256, 512] do
+  let gemmSizes := if quick then [32, 128, 256] else [32, 64, 128, 256, 512]
+  for n in gemmSizes do
     let amat := Metal.Float32.fill (n * n).toUSize (1.0 : Float32)
     let bmat := Metal.Float32.fill (n * n).toUSize (1.0 : Float32)
-    let numIters := if n > 256 then 10 else 100
+    let numIters := if quick then 20 else if n > 256 then 10 else 100
 
     let gemmStart ← IO.monoNanosNow
     let mut sizeAccum := 0
