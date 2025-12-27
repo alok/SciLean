@@ -361,7 +361,7 @@ lean_exe GpuFusedKernelTest where
   moreLinkArgs := metalLinkArgs
 
 lean_exe GpuTensorTest where
-  root := `test.gpu_tensor
+  root := `test.gpu_tensor_test
   moreLinkArgs := metalLinkArgs
 
 lean_exe GemmViewBenchmark where
