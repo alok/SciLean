@@ -104,6 +104,9 @@ def main : IO Unit := do
     IO.println "\nMetal GPU: Not available ✗"
     return
 
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
+
   IO.println "\nMetal GPU: Available ✓"
   IO.println "\nFloat64: Lean stores double, Metal uses float → conversion overhead"
   IO.println "Float32: Lean stores float via ByteArray → zero conversion\n"
@@ -237,21 +240,23 @@ def main : IO Unit := do
   IO.println "(float4 loads, 128×128 tiles, no bounds checks)"
   IO.println ""
 
-  for n in [1024, 2048, 4096] do
+  let m4Sizes := if quick then [1024, 2048] else [1024, 2048, 4096]
+  let m4Iters := if quick then 2 else 5
+  for n in m4Sizes do
     let matA32 := generateFloat32Data (n * n)
     let matB32 := generateFloat32Data (n * n)
     let flops := 2.0 * n.toFloat * n.toFloat * n.toFloat / 1e9
 
     -- M4 optimized (float4 loads, 128×128 tiles)
-    let m4Ms ← timeByteArray 5 (fun () => Metal.Float32.gemmM4 n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let m4Ms ← timeByteArray m4Iters (fun () => Metal.Float32.gemmM4 n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsM4 := if m4Ms > 0.001 then flops / (m4Ms / 1000.0) else 0.0
 
     -- Simd for comparison
-    let simdMs ← timeByteArray 5 (fun () => Metal.Float32.gemmSimd n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let simdMs ← timeByteArray m4Iters (fun () => Metal.Float32.gemmSimd n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsSimd := if simdMs > 0.001 then flops / (simdMs / 1000.0) else 0.0
 
     -- MPS for comparison
-    let mpsMs ← timeByteArray 5 (fun () => Metal.Float32.gemmMPS n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let mpsMs ← timeByteArray m4Iters (fun () => Metal.Float32.gemmMPS n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsMPS := if mpsMs > 0.001 then flops / (mpsMs / 1000.0) else 0.0
 
     IO.println s!"  {n}×{n}:"
@@ -272,15 +277,17 @@ def main : IO Unit := do
   IO.println "LARGE MATRIX TEST"
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-  for n in [3072, 4096] do
+  let largeSizes := if quick then [2048] else [3072, 4096]
+  let largeIters := if quick then 1 else 3
+  for n in largeSizes do
     let matA32 := generateFloat32Data (n * n)
     let matB32 := generateFloat32Data (n * n)
     let flops := 2.0 * n.toFloat * n.toFloat * n.toFloat / 1e9
 
-    let m4Ms ← timeByteArray 3 (fun () => Metal.Float32.gemmM4 n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let m4Ms ← timeByteArray largeIters (fun () => Metal.Float32.gemmM4 n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsM4 := if m4Ms > 0.001 then flops / (m4Ms / 1000.0) else 0.0
 
-    let mpsMs ← timeByteArray 3 (fun () => Metal.Float32.gemmMPS n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let mpsMs ← timeByteArray largeIters (fun () => Metal.Float32.gemmMPS n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsMPS := if mpsMs > 0.001 then flops / (mpsMs / 1000.0) else 0.0
 
     IO.println s!"  {n}×{n}: M4 {m4Ms.toString.take 8}ms ({gflopsM4.toString.take 6} GFLOP/s), MPS {mpsMs.toString.take 8}ms ({gflopsMPS.toString.take 6} GFLOP/s)"
