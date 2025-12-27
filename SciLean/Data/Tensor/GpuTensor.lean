@@ -7,8 +7,11 @@ import SciLean.FFI.Metal.GpuBufferView
 import SciLean.Data.DataArray
 import SciLean.Data.IndexType.Shape
 import SciLean.Monad.TensorM
+import SciLean.VersoPrelude
 
 -- Type-safe layout-aware GPU tensor with shape encoded in the type
+
+set_option doc.verso false
 
 namespace SciLean
 
@@ -20,6 +23,25 @@ structure GpuTensor (α : Type) [PlainDataType α] (ι : Type) {n : outParam ℕ
 
 instance [PlainDataType α] [IndexType ι n] : Nonempty (GpuTensor α ι) :=
   ⟨⟨Classical.arbitrary _⟩⟩
+
+/-! ## Type Notation for GPU Tensors -/
+
+/-- Postfix `@metal` notation for GPU tensor types.
+    `Float^[m, n]@metal` becomes `GpuTensor Float (Idx m × Idx n)` -/
+syntax (name:=gpuTensorPostfix) (priority:=high+1) term "@metal" : term
+
+open Lean Meta Elab Term in
+elab_rules (kind:=gpuTensorPostfix) : term
+| `($x @metal) => do
+  -- Elaborate the base type (e.g., Float^[m,n] → DataArrayN Float (Idx m × Idx n))
+  let baseType ← elabTerm x none
+  -- Extract element type and index type from DataArrayN
+  let baseType ← whnfD baseType
+  match baseType.getAppFnArgs with
+  | (``SciLean.DataArrayN, #[α, _, ι, _, _]) =>
+    mkAppOptM ``SciLean.GpuTensor #[α, none, ι, none, none]
+  | _ =>
+    throwError "expected DataArrayN type for @metal, got {baseType}"
 
 namespace GpuTensor
 
@@ -126,13 +148,145 @@ def fromContiguous (buffer : Metal.GpuBuffer) [IndexTypeShape ι n] : GpuTensor 
 /-- Get underlying {name}`Metal.GpuBuffer`. -/
 def toGpuBuffer (t : GpuTensor α ι) : Metal.GpuBuffer := t.data.buffer
 
+/-! ## Element-wise Operations -/
+
+/-- Element-wise addition on GPU (any shape). -/
+def add [IndexTypeShape ι n] (a b : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
+  let a ← ensureContiguous a
+  let b ← ensureContiguous b
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.add a.data.buffer b.data.buffer total.toUSize
+  return ⟨GpuBufferView.fromContiguous result (IndexTypeShape.shape (ι:=ι))⟩
+
+/-- Element-wise subtraction on GPU (any shape). -/
+def sub [IndexTypeShape ι n] (a b : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
+  let a ← ensureContiguous a
+  let b ← ensureContiguous b
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.sub a.data.buffer b.data.buffer total.toUSize
+  return ⟨GpuBufferView.fromContiguous result (IndexTypeShape.shape (ι:=ι))⟩
+
+/-- Element-wise multiplication on GPU (any shape). -/
+def mul [IndexTypeShape ι n] (a b : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
+  let a ← ensureContiguous a
+  let b ← ensureContiguous b
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.mul a.data.buffer b.data.buffer total.toUSize
+  return ⟨GpuBufferView.fromContiguous result (IndexTypeShape.shape (ι:=ι))⟩
+
+/-- Element-wise negation on GPU (any shape). -/
+def neg [IndexTypeShape ι n] (a : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
+  let a ← ensureContiguous a
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.scale total.toUSize (-1.0) a.data.buffer
+  return ⟨GpuBufferView.fromContiguous result (IndexTypeShape.shape (ι:=ι))⟩
+
+/-- ReLU activation on GPU (any shape). -/
+def relu [IndexTypeShape ι n] (a : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
+  let a ← ensureContiguous a
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.relu a.data.buffer total.toUSize
+  return ⟨GpuBufferView.fromContiguous result (IndexTypeShape.shape (ι:=ι))⟩
+
+/-- Scalar multiplication on GPU. -/
+def scale [IndexTypeShape ι n] (s : Float) (a : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
+  let a ← ensureContiguous a
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.scale total.toUSize s a.data.buffer
+  return ⟨GpuBufferView.fromContiguous result (IndexTypeShape.shape (ι:=ι))⟩
+
+/-- AXPY operation: result = alpha * x + y -/
+def axpy [IndexTypeShape ι n] (alpha : Float) (x y : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
+  let x ← ensureContiguous x
+  let y ← ensureContiguous y
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.axpy total.toUSize alpha x.data.buffer y.data.buffer
+  return ⟨GpuBufferView.fromContiguous result (IndexTypeShape.shape (ι:=ι))⟩
+
 end GpuTensor
 
--- Matrix operations for layout-aware tensors
+/-! ## Matrix Operations -/
 
 namespace GpuTensor
 
+variable {α : Type} [PlainDataType α]
+variable {ι : Type} {n : ℕ} [IndexType ι n]
 variable {m k p : ℕ}
+
+/-- Softmax activation on GPU (applied row-wise).
+    For input shape Idx m × Idx n, softmax is applied to each row independently. -/
+def softmax (a : GpuTensor Float (Idx m × Idx k)) : IO (GpuTensor Float (Idx m × Idx k)) := do
+  let a ← ensureContiguous a
+  let result ← Metal.GpuBuffer.softmax a.data.buffer m.toUSize k.toUSize
+  return ⟨GpuBufferView.fromContiguous result #[m, k]⟩
+
+/-- GELU activation on GPU using fused bias+gelu with zero bias (any shape). -/
+def gelu [IndexTypeShape ι n] (a : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
+  let a ← ensureContiguous a
+  let total := IndexTypeShape.numel (ι:=ι)
+  -- Create zero bias buffer from empty ByteArray sized correctly
+  let zeroBytes := ByteArray.mk (Array.replicate (total * 4) 0)  -- 4 bytes per Float32
+  let zeroBias ← Metal.GpuBuffer.fromByteArray zeroBytes
+  let result ← Metal.GpuBuffer.biasGelu a.data.buffer zeroBias total.toUSize 1
+  return ⟨GpuBufferView.fromContiguous result (IndexTypeShape.shape (ι:=ι))⟩
+
+/-- GELU backward pass on GPU (any shape). -/
+def geluBackward [IndexTypeShape ι n] (x dout : GpuTensor Float ι) : IO (GpuTensor Float ι) := do
+  let x ← ensureContiguous x
+  let dout ← ensureContiguous dout
+  let total := IndexTypeShape.numel (ι:=ι)
+  let result ← Metal.GpuBuffer.geluBackward x.data.buffer dout.data.buffer total.toUSize
+  return ⟨GpuBufferView.fromContiguous result (IndexTypeShape.shape (ι:=ι))⟩
+
+/-- Fused GEMM + bias + ReLU.
+    Shapes: A Idx m × Idx k, B Idx k × Idx p, bias Idx p,
+    returns Idx m × Idx p. -/
+def gemmBiasRelu (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx k × Idx p))
+    (bias : GpuTensor Float (Idx p)) : IO (GpuTensor Float (Idx m × Idx p)) := do
+  let A ← ensureContiguous A
+  let B ← ensureContiguous B
+  let bias ← ensureContiguous bias
+  let result ← Metal.GpuBuffer.gemmBiasRelu A.data.buffer B.data.buffer bias.data.buffer
+    m.toUSize k.toUSize p.toUSize
+  return ⟨GpuBufferView.fromContiguous result #[m, p]⟩
+
+/-- Bias add: y = x + bias (broadcast bias across rows).
+    Input shape Idx m × Idx k, bias shape Idx k, output shape Idx m × Idx k. -/
+def biasAdd (x : GpuTensor Float (Idx m × Idx k)) (bias : GpuTensor Float (Idx k)) :
+    IO (GpuTensor Float (Idx m × Idx k)) := do
+  let x ← ensureContiguous x
+  let bias ← ensureContiguous bias
+  let result ← Metal.GpuBuffer.biasAdd x.data.buffer bias.data.buffer (m * k).toUSize k.toUSize
+  return ⟨GpuBufferView.fromContiguous result #[m, k]⟩
+
+/-- Sum columns: reduce across rows.
+    Input shape Idx m × Idx k, output shape Idx k. -/
+def colSum (x : GpuTensor Float (Idx m × Idx k)) : IO (GpuTensor Float (Idx k)) := do
+  let x ← ensureContiguous x
+  let result ← Metal.GpuBuffer.colSum x.data.buffer m.toUSize k.toUSize
+  return ⟨GpuBufferView.fromContiguous result #[k]⟩
+
+/-- GEMM with A transposed.
+    A stored as Idx k × Idx m, B as Idx k × Idx p, result is Idx m × Idx p. -/
+def gemmTransposeLeft (A : GpuTensor Float (Idx k × Idx m)) (B : GpuTensor Float (Idx k × Idx p)) :
+    IO (GpuTensor Float (Idx m × Idx p)) := do
+  let A ← ensureContiguous A
+  let B ← ensureContiguous B
+  let result ← Metal.GpuBuffer.gemmTransposeLeft_AMX A.data.buffer B.data.buffer
+    m.toUSize k.toUSize p.toUSize
+  return ⟨GpuBufferView.fromContiguous result #[m, p]⟩
+
+/-- GEMM with B transposed.
+    A stored as Idx m × Idx k, B as Idx p × Idx k, result is Idx m × Idx p. -/
+def gemmTransposeRight (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx p × Idx k)) :
+    IO (GpuTensor Float (Idx m × Idx p)) := do
+  let A ← ensureContiguous A
+  let B ← ensureContiguous B
+  let result ← Metal.GpuBuffer.gemmTransposeRight_AMX A.data.buffer B.data.buffer
+    m.toUSize k.toUSize p.toUSize
+  return ⟨GpuBufferView.fromContiguous result #[m, p]⟩
+
+variable {batch : ℕ}
 
 /-- Layout-aware matrix multiply in {name}`TensorMT`.
     Uses layout views when allowed by policy/caps and records copy statistics. -/

@@ -5,5 +5,4 @@ Authors: SciLean contributors
 -/
 
 import SciLean.Data.Tensor.Basic
-import SciLean.Data.Tensor.Transfer
-import SciLean.Data.Tensor.Ops
+import SciLean.Data.Tensor.GpuTensor
