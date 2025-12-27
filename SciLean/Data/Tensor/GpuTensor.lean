@@ -203,6 +203,15 @@ def axpy [IndexTypeShape ι n] (alpha : Float) (x y : GpuTensor Float ι) : IO (
   let result ← Metal.GpuBuffer.axpy total.toUSize alpha x.data.buffer y.data.buffer
   return ⟨GpuBufferView.fromContiguous result (IndexTypeShape.shape (ι:=ι))⟩
 
+/-! ## CPU Transfer -/
+
+/-- Download GPU tensor to CPU as DataArrayN.
+    Creates a contiguous array by copying data from GPU. -/
+def toDataArrayN (t : GpuTensor α ι) : IO (DataArrayN α ι) := do
+  let t' ← ensureContiguous t
+  let bytes ← Metal.GpuBuffer.toByteArray t'.data.buffer
+  return ⟨⟨bytes, sorry_proof⟩, sorry_proof⟩
+
 end GpuTensor
 
 /-! ## Matrix Operations -/

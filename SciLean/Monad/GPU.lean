@@ -103,12 +103,18 @@ def alloc {α : Type} [PlainDataType α] {ι : Type} {n : ℕ}
 def upload {α : Type} [PlainDataType α] {ι : Type} {n : ℕ}
     [IndexType ι n] [IndexTypeShape ι n]
     (cpu : CpuTensor α ι) : GPU (GpuTensor α ι) :=
-  ⟨cpu.toGpu⟩
+  ⟨do
+    let bytes := cpu.data.data.byteData
+    let gpuBuf ← Metal.GpuBuffer.fromByteArray bytes
+    pure (GpuTensor.fromContiguous (ι:=ι) gpuBuf)⟩
 
 /-- Transfer a GPU tensor to CPU. -/
 def download {α : Type} [PlainDataType α] {ι : Type} {n : ℕ} [IndexType ι n]
     (gpu : GpuTensor α ι) : GPU (CpuTensor α ι) :=
-  ⟨gpu.toCpu⟩
+  ⟨do
+    let gpu' ← GpuTensor.ensureContiguous gpu
+    let bytes ← Metal.GpuBuffer.toByteArray gpu'.data.buffer
+    pure ⟨⟨⟨bytes, sorry_proof⟩, sorry_proof⟩⟩⟩
 
 /-! ## GPU Tensor Operations -/
 
