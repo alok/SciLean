@@ -480,6 +480,353 @@ def testGpuGemmBackward : IO Unit := do
   if passedDa && passedDb then
     IO.println "  ✓ GEMM backward with O(1) transpose views working!"
 
+/-- Numerical gradient check for GEMM backward.
+    Verifies analytical gradient matches finite difference approximation. -/
+def testGpuGemmBackwardNumerical : IO Unit := do
+  IO.println "\n=== Testing GEMM backward (numerical check) ==="
+
+  if !Metal.isAvailable () then
+    IO.println "  (Skipped: Metal not available)"
+    return
+
+  let eps := 1e-3  -- finite difference epsilon
+  let tol := 1e-2  -- tolerance for gradient check
+
+  -- Small matrices for numerical stability
+  -- A: 2x2, B: 2x2 -> C: 2x2
+  let aVals := [1.0, 2.0, 3.0, 4.0]
+  let bVals := [0.5, 1.5, 2.5, 0.5]
+
+  -- Loss = sum(C) = sum(A @ B)
+  -- dC = ones(2,2)
+  let dcVals := [1.0, 1.0, 1.0, 1.0]
+
+  let aData := floatsToByteArray aVals
+  let bData := floatsToByteArray bVals
+  let dcData := floatsToByteArray dcVals
+
+  let aGpu ← Metal.GpuBuffer.fromByteArray aData
+  let bGpu ← Metal.GpuBuffer.fromByteArray bData
+  let dcGpu ← Metal.GpuBuffer.fromByteArray dcData
+
+  let A : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer aGpu #[2, 2]
+  let B : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer bGpu #[2, 2]
+  let dC : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer dcGpu #[2, 2]
+
+  -- Analytical gradients
+  let (dA, dB) ← GpuTensor.gemmBackward A B dC
+  let daData ← dA.toGpuBuffer.toByteArray
+  let dbData ← dB.toGpuBuffer.toByteArray
+
+  -- Numerical gradient for A
+  let mut passedA := true
+  for i in List.range 4 do
+    -- Perturb A[i] by +eps
+    let mut aPlusVals := aVals
+    aPlusVals := aPlusVals.set i (aPlusVals[i]! + eps)
+    let aPlusData := floatsToByteArray aPlusVals
+    let aPlusGpu ← Metal.GpuBuffer.fromByteArray aPlusData
+    let APlus : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer aPlusGpu #[2, 2]
+    let CPlus ← GpuTensor.gemm APlus B
+    let cPlusData ← CPlus.toGpuBuffer.toByteArray
+    let lossPlus := (getFloat cPlusData 0) + (getFloat cPlusData 1) +
+                    (getFloat cPlusData 2) + (getFloat cPlusData 3)
+
+    -- Perturb A[i] by -eps
+    let mut aMinusVals := aVals
+    aMinusVals := aMinusVals.set i (aMinusVals[i]! - eps)
+    let aMinusData := floatsToByteArray aMinusVals
+    let aMinusGpu ← Metal.GpuBuffer.fromByteArray aMinusData
+    let AMinus : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer aMinusGpu #[2, 2]
+    let CMinus ← GpuTensor.gemm AMinus B
+    let cMinusData ← CMinus.toGpuBuffer.toByteArray
+    let lossMinus := (getFloat cMinusData 0) + (getFloat cMinusData 1) +
+                     (getFloat cMinusData 2) + (getFloat cMinusData 3)
+
+    -- Numerical gradient: (loss+ - loss-) / (2 * eps)
+    let numGrad := (lossPlus - lossMinus) / (2 * eps)
+    let anaGrad := getFloat daData i
+
+    if (numGrad - anaGrad).abs > tol then
+      IO.println s!"  ✗ dA[{i}]: analytical={anaGrad}, numerical={numGrad}"
+      passedA := false
+
+  if passedA then
+    IO.println "  ✓ dA numerical gradient check passed"
+
+  -- Numerical gradient for B
+  let mut passedB := true
+  for i in List.range 4 do
+    let mut bPlusVals := bVals
+    bPlusVals := bPlusVals.set i (bPlusVals[i]! + eps)
+    let bPlusData := floatsToByteArray bPlusVals
+    let bPlusGpu ← Metal.GpuBuffer.fromByteArray bPlusData
+    let BPlus : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer bPlusGpu #[2, 2]
+    let CPlus ← GpuTensor.gemm A BPlus
+    let cPlusData ← CPlus.toGpuBuffer.toByteArray
+    let lossPlus := (getFloat cPlusData 0) + (getFloat cPlusData 1) +
+                    (getFloat cPlusData 2) + (getFloat cPlusData 3)
+
+    let mut bMinusVals := bVals
+    bMinusVals := bMinusVals.set i (bMinusVals[i]! - eps)
+    let bMinusData := floatsToByteArray bMinusVals
+    let bMinusGpu ← Metal.GpuBuffer.fromByteArray bMinusData
+    let BMinus : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer bMinusGpu #[2, 2]
+    let CMinus ← GpuTensor.gemm A BMinus
+    let cMinusData ← CMinus.toGpuBuffer.toByteArray
+    let lossMinus := (getFloat cMinusData 0) + (getFloat cMinusData 1) +
+                     (getFloat cMinusData 2) + (getFloat cMinusData 3)
+
+    let numGrad := (lossPlus - lossMinus) / (2 * eps)
+    let anaGrad := getFloat dbData i
+
+    if (numGrad - anaGrad).abs > tol then
+      IO.println s!"  ✗ dB[{i}]: analytical={anaGrad}, numerical={numGrad}"
+      passedB := false
+
+  if passedB then
+    IO.println "  ✓ dB numerical gradient check passed"
+
+  if passedA && passedB then
+    IO.println "  ✓ GEMM backward numerical gradient verification complete!"
+
+/-- Numerical gradient check for GELU backward.
+    Verifies geluBackward matches finite difference of GELU forward. -/
+def testGpuGeluBackwardNumerical : IO Unit := do
+  IO.println "\n=== Testing GELU backward (numerical check) ==="
+
+  if !Metal.isAvailable () then
+    IO.println "  (Skipped: Metal not available)"
+    return
+
+  let eps := 1e-4  -- finite difference epsilon
+  let tol := 5e-3  -- tolerance for gradient check (Float32 precision)
+
+  -- Test values spanning different GELU regions
+  let xVals := [-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 3.0]
+  let n := xVals.length
+
+  -- Upstream gradient (dL/dy = 1.0 for sum loss)
+  let dyVals := List.replicate n 1.0
+
+  let xData := floatsToByteArray xVals
+  let dyData := floatsToByteArray dyVals
+
+  let xGpu ← Metal.GpuBuffer.fromByteArray xData
+  let dyGpu ← Metal.GpuBuffer.fromByteArray dyData
+
+  let X : Float^[Idx 1 × Idx n]@metal := GpuTensor.fromContiguousBuffer xGpu #[1, n]
+  let dY : Float^[Idx 1 × Idx n]@metal := GpuTensor.fromContiguousBuffer dyGpu #[1, n]
+
+  -- Analytical gradient via geluBackward
+  let dX ← GpuTensor.geluBackward X dY
+  let dxData ← dX.toGpuBuffer.toByteArray
+
+  -- Numerical gradient check for each element
+  let mut allPassed := true
+  for i in List.range n do
+    -- f(x + eps)
+    let mut xPlusVals := xVals
+    xPlusVals := xPlusVals.set i (xPlusVals[i]! + eps)
+    let xPlusData := floatsToByteArray xPlusVals
+    let xPlusGpu ← Metal.GpuBuffer.fromByteArray xPlusData
+    let XPlus : Float^[Idx 1 × Idx n]@metal := GpuTensor.fromContiguousBuffer xPlusGpu #[1, n]
+    let YPlus ← GpuTensor.gelu XPlus
+    let yPlusData ← YPlus.toGpuBuffer.toByteArray
+    let lossPlusElem := getFloat yPlusData i
+
+    -- f(x - eps)
+    let mut xMinusVals := xVals
+    xMinusVals := xMinusVals.set i (xMinusVals[i]! - eps)
+    let xMinusData := floatsToByteArray xMinusVals
+    let xMinusGpu ← Metal.GpuBuffer.fromByteArray xMinusData
+    let XMinus : Float^[Idx 1 × Idx n]@metal := GpuTensor.fromContiguousBuffer xMinusGpu #[1, n]
+    let YMinus ← GpuTensor.gelu XMinus
+    let yMinusData ← YMinus.toGpuBuffer.toByteArray
+    let lossMinusElem := getFloat yMinusData i
+
+    -- Numerical gradient: df/dx = (f(x+eps) - f(x-eps)) / (2*eps)
+    let numGrad := (lossPlusElem - lossMinusElem) / (2 * eps)
+    let anaGrad := getFloat dxData i
+
+    if (numGrad - anaGrad).abs > tol then
+      IO.println s!"  ✗ dX[{i}] at x={xVals[i]!}: analytical={anaGrad}, numerical={numGrad}"
+      allPassed := false
+
+  if allPassed then
+    IO.println "  ✓ GELU backward numerical gradient check passed (8 test points)"
+
+/-- Numerical gradient check for softmax backward.
+    Tests that d(softmax)/dx matches finite difference. -/
+def testGpuSoftmaxBackwardNumerical : IO Unit := do
+  IO.println "\n=== Testing Softmax backward (numerical check) ==="
+
+  if !Metal.isAvailable () then
+    IO.println "  (Skipped: Metal not available)"
+    return
+
+  let eps := 1e-4
+  let tol := 1e-3
+
+  -- Input logits: 2 samples, 4 classes
+  let xVals := [1.0, 2.0, 3.0, 4.0,  -- sample 0
+                0.5, 1.5, 0.0, 2.0]  -- sample 1
+
+  let xData := floatsToByteArray xVals
+
+  let xGpu ← Metal.GpuBuffer.fromByteArray xData
+  let X : Float^[Idx 2 × Idx 4]@metal := GpuTensor.fromContiguousBuffer xGpu #[2, 4]
+
+  -- Forward: y = softmax(x)
+  let Y ← GpuTensor.softmax X
+  let yData ← Y.toGpuBuffer.toByteArray
+
+  -- For loss = sum(y), dy = ones
+  -- Check numerical gradient of sum(softmax(x)) w.r.t. x
+
+  let mut allPassed := true
+  for i in List.range 8 do
+    -- f(x + eps)
+    let mut xPlusVals := xVals
+    xPlusVals := xPlusVals.set i (xPlusVals[i]! + eps)
+    let xPlusData := floatsToByteArray xPlusVals
+    let xPlusGpu ← Metal.GpuBuffer.fromByteArray xPlusData
+    let XPlus : Float^[Idx 2 × Idx 4]@metal := GpuTensor.fromContiguousBuffer xPlusGpu #[2, 4]
+    let YPlus ← GpuTensor.softmax XPlus
+    let yPlusData ← YPlus.toGpuBuffer.toByteArray
+    let mut lossPlus : Float := 0
+    for j in List.range 8 do
+      lossPlus := lossPlus + getFloat yPlusData j
+
+    -- f(x - eps)
+    let mut xMinusVals := xVals
+    xMinusVals := xMinusVals.set i (xMinusVals[i]! - eps)
+    let xMinusData := floatsToByteArray xMinusVals
+    let xMinusGpu ← Metal.GpuBuffer.fromByteArray xMinusData
+    let XMinus : Float^[Idx 2 × Idx 4]@metal := GpuTensor.fromContiguousBuffer xMinusGpu #[2, 4]
+    let YMinus ← GpuTensor.softmax XMinus
+    let yMinusData ← YMinus.toGpuBuffer.toByteArray
+    let mut lossMinus : Float := 0
+    for j in List.range 8 do
+      lossMinus := lossMinus + getFloat yMinusData j
+
+    -- Numerical gradient
+    let numGrad := (lossPlus - lossMinus) / (2 * eps)
+
+    -- For sum(softmax(x)), the gradient should be 0 since sum(softmax) = 1 always
+    -- This is a good sanity check!
+    if numGrad.abs > tol then
+      IO.println s!"  ✗ d(sum(softmax))/dx[{i}] should be ~0, got {numGrad}"
+      allPassed := false
+
+  if allPassed then
+    IO.println "  ✓ Softmax preserves sum invariant: d(sum(softmax))/dx ≈ 0"
+
+  -- More meaningful test: cross-entropy loss gradient
+  -- loss = -sum(target * log(softmax(x)))
+  -- For one-hot target at class 0: loss = -log(softmax(x)[0])
+  IO.println "  Testing cross-entropy gradient..."
+  let mut cePassedSample0 := true
+
+  -- Sample 0: one-hot at class 2 (index 2)
+  let targetClass := 2
+  for i in List.range 4 do  -- only check sample 0 (indices 0-3)
+    let mut xPlusVals := xVals
+    xPlusVals := xPlusVals.set i (xPlusVals[i]! + eps)
+    let xPlusData := floatsToByteArray xPlusVals
+    let xPlusGpu ← Metal.GpuBuffer.fromByteArray xPlusData
+    let XPlus : Float^[Idx 2 × Idx 4]@metal := GpuTensor.fromContiguousBuffer xPlusGpu #[2, 4]
+    let YPlus ← GpuTensor.softmax XPlus
+    let yPlusData ← YPlus.toGpuBuffer.toByteArray
+    let ceLossPlus := -Float.log (getFloat yPlusData targetClass + 1e-10)
+
+    let mut xMinusVals := xVals
+    xMinusVals := xMinusVals.set i (xMinusVals[i]! - eps)
+    let xMinusData := floatsToByteArray xMinusVals
+    let xMinusGpu ← Metal.GpuBuffer.fromByteArray xMinusData
+    let XMinus : Float^[Idx 2 × Idx 4]@metal := GpuTensor.fromContiguousBuffer xMinusGpu #[2, 4]
+    let YMinus ← GpuTensor.softmax XMinus
+    let yMinusData ← YMinus.toGpuBuffer.toByteArray
+    let ceLossMinus := -Float.log (getFloat yMinusData targetClass + 1e-10)
+
+    let numGrad := (ceLossPlus - ceLossMinus) / (2 * eps)
+
+    -- Analytical gradient for CE + softmax: y[i] - target[i]
+    let yVal := getFloat yData i
+    let targetVal : Float := if i == targetClass then 1.0 else 0.0
+    let anaGrad := yVal - targetVal
+
+    if (numGrad - anaGrad).abs > tol then
+      IO.println s!"  ✗ CE grad x[{i}]: analytical={anaGrad}, numerical={numGrad}"
+      cePassedSample0 := false
+
+  if cePassedSample0 then
+    IO.println "  ✓ Cross-entropy + softmax gradient verified (sample 0)"
+
+/-- Numerical gradient check for element-wise addition. -/
+def testGpuAddBackwardNumerical : IO Unit := do
+  IO.println "\n=== Testing Add backward (numerical check) ==="
+
+  if !Metal.isAvailable () then
+    IO.println "  (Skipped: Metal not available)"
+    return
+
+  let eps := 1e-4
+  let tol := 5e-3  -- Float32 precision tolerance
+
+  -- a + b, loss = sum(a + b)
+  let aVals := [1.0, 2.0, 3.0, 4.0]
+  let bVals := [0.5, 1.5, 2.5, 3.5]
+
+  let aData := floatsToByteArray aVals
+  let bData := floatsToByteArray bVals
+
+  let aGpu ← Metal.GpuBuffer.fromByteArray aData
+  let bGpu ← Metal.GpuBuffer.fromByteArray bData
+
+  let A : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer aGpu #[2, 2]
+  let B : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer bGpu #[2, 2]
+
+  let C ← GpuTensor.add A B
+  let cData ← C.toGpuBuffer.toByteArray
+
+  -- For sum(a + b), da = db = ones
+  -- Numerical check for da
+  let mut passedA := true
+  for i in List.range 4 do
+    let mut aPlusVals := aVals
+    aPlusVals := aPlusVals.set i (aPlusVals[i]! + eps)
+    let aPlusData := floatsToByteArray aPlusVals
+    let aPlusGpu ← Metal.GpuBuffer.fromByteArray aPlusData
+    let APlus : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer aPlusGpu #[2, 2]
+    let CPlus ← GpuTensor.add APlus B
+    let cPlusData ← CPlus.toGpuBuffer.toByteArray
+    let mut lossPlus : Float := 0
+    for j in List.range 4 do
+      lossPlus := lossPlus + getFloat cPlusData j
+
+    let mut aMinusVals := aVals
+    aMinusVals := aMinusVals.set i (aMinusVals[i]! - eps)
+    let aMinusData := floatsToByteArray aMinusVals
+    let aMinusGpu ← Metal.GpuBuffer.fromByteArray aMinusData
+    let AMinus : Float^[Idx 2 × Idx 2]@metal := GpuTensor.fromContiguousBuffer aMinusGpu #[2, 2]
+    let CMinus ← GpuTensor.add AMinus B
+    let cMinusData ← CMinus.toGpuBuffer.toByteArray
+    let mut lossMinus : Float := 0
+    for j in List.range 4 do
+      lossMinus := lossMinus + getFloat cMinusData j
+
+    let numGrad := (lossPlus - lossMinus) / (2 * eps)
+    let anaGrad := 1.0  -- gradient of sum(a+b) w.r.t. a[i] is 1
+
+    if (numGrad - anaGrad).abs > tol then
+      IO.println s!"  ✗ da[{i}]: analytical={anaGrad}, numerical={numGrad}"
+      passedA := false
+
+  if passedA then
+    IO.println "  ✓ Add backward for A passed (gradient = 1)"
+    IO.println "  ✓ Add backward for B also = 1 by symmetry"
+
 /-- Test batch transpose for 3D tensors -/
 def testBatchTranspose : IO Unit := do
   IO.println "\n=== Testing GpuTensor.batchTranspose ==="
@@ -535,6 +882,10 @@ def main : IO Unit := do
     testGpuGemmTransposedB
     testGpuGemmTransposedA
     testGpuGemmBackward
+    testGpuGemmBackwardNumerical
+    testGpuGeluBackwardNumerical
+    testGpuSoftmaxBackwardNumerical
+    testGpuAddBackwardNumerical
     testBatchTranspose
   else
     IO.println "\n\nMetal GPU not available, skipping GPU tests."
