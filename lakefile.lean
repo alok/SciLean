@@ -271,24 +271,20 @@ lean_exe KernelGEMMBenchmark where
 lean_exe SimpleMNIST where
   root := `examples.SimpleMNIST
 
--- LeanBLAS FFI library path for local dependency
-def leanblasLibPath : FilePath := ".." / "LeanBLAS" / ".lake" / "build" / "lib"
-
 lean_exe DependentMNIST where
   root := `examples.DependentMNIST
-  -- Explicitly link LeanBLAS FFI for local path dependency
-  moreLinkArgs := #["-L" ++ leanblasLibPath.toString, "-lleanblasc"]
+  moreLinkObjs := #[libleanblasc]
 
 lean_exe TestMinimal where
   root := `examples.TestMinimal
 
 lean_exe TestNpyRoundtrip where
   root := `examples.TestNpyRoundtrip
-  moreLinkArgs := #["-L" ++ leanblasLibPath.toString, "-lleanblasc"]
+  moreLinkObjs := #[libleanblasc]
 
 lean_exe VerifyPyTorchMNIST where
   root := `examples.VerifyPyTorchMNIST
-  moreLinkArgs := #["-L" ++ leanblasLibPath.toString, "-lleanblasc"]
+  moreLinkObjs := #[libleanblasc]
 
 lean_exe Float32Benchmark where
   root := `examples.Float32Benchmark
@@ -296,8 +292,7 @@ lean_exe Float32Benchmark where
 
 lean_exe Numpy100 where
   root := `examples.Numpy100
-  -- LeanBLAS needs explicit linking for local path dependency
-  moreLinkArgs := #["-L" ++ leanblasLibPath.toString, "-lleanblasc"]
+  moreLinkObjs := #[libleanblasc]
 
 lean_exe RandBenchmark where
   buildType := .release
