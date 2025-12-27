@@ -405,3 +405,7 @@ lean_exe StructVsTupleBenchmark where
 lean_exe NestedPodStressTest where
   buildType := .release
   root := `test.nested_pod_stress_test
+
+lean_exe VerificationTest where
+  root := `test.verification_test
+  moreLinkObjs := #[libleanblasc]
