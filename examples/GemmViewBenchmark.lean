@@ -32,10 +32,14 @@ def toGpuMatrix (m k : Nat) (data : ByteArray) : IO (Float^[Idx m × Idx k]@meta
   return GpuTensor.fromContiguousBuffer (ι:=Idx m × Idx k) gpuBuf #[m, k]
 
 /-- Benchmark configuration for GPU ops -/
-def gpuConfig : Benchmark.Config := { warmupIterations := 5, timedIterations := 20 }
+def gpuConfig (quick : Bool) : Benchmark.Config :=
+  if quick then
+    { warmupIterations := 2, timedIterations := 5 }
+  else
+    { warmupIterations := 5, timedIterations := 20 }
 
 /-- Generic benchmark runner using raw GPU buffers -/
-def benchmarkGemmRaw (m k n : Nat) : IO Unit := do
+def benchmarkGemmRaw (config : Benchmark.Config) (m k n : Nat) : IO Unit := do
   IO.println s!"\n═══════════════════════════════════════════════════════════════"
   IO.println s!"  GEMM Benchmark: {m}×{k} @ {k}×{n} → {m}×{n}"
   IO.println s!"═══════════════════════════════════════════════════════════════"
@@ -61,13 +65,13 @@ def benchmarkGemmRaw (m k n : Nat) : IO Unit := do
   let mut suite : Benchmark.Suite := { name := s!"GEMM {m}×{k}×{n}" }
 
   -- 1. Direct gemm (baseline - what contiguous would use)
-  let directResult ← Benchmark.run "Direct gemm (baseline)" gpuConfig fun () => do
+  let directResult ← Benchmark.run "Direct gemm (baseline)" config fun () => do
     let _ ← GpuTensor.gemm aGpu bGpu
     pure ()
   suite := suite.add directResult
 
   -- 2. Contiguous view (should be same as direct)
-  let viewContiguousResult ← Benchmark.run "Contiguous view" gpuConfig fun () => do
+  let viewContiguousResult ← Benchmark.run "Contiguous view" config fun () => do
     -- Contiguous A and B → dispatch to gemm
     if aGpu.isContiguous && bGpu.isContiguous then
       let _ ← GpuTensor.gemm aGpu bGpu
@@ -75,19 +79,19 @@ def benchmarkGemmRaw (m k n : Nat) : IO Unit := do
   suite := suite.add viewContiguousResult
 
   -- 3. A transposed view (layout-aware GEMM)
-  let aTResult ← Benchmark.run "A^T view (layout)" gpuConfig fun () => do
+  let aTResult ← Benchmark.run "A^T view (layout)" config fun () => do
     let _ ← GpuTensor.gemm aT bGpu
     pure ()
   suite := suite.add aTResult
 
   -- 4. B transposed view (layout-aware GEMM)
-  let bTResult ← Benchmark.run "B^T view (layout)" gpuConfig fun () => do
+  let bTResult ← Benchmark.run "B^T view (layout)" config fun () => do
     let _ ← GpuTensor.gemm aGpu bT
     pure ()
   suite := suite.add bTResult
 
   -- 5. Transposed A view
-  let viewTNResult ← Benchmark.run "A^T view" gpuConfig fun () => do
+  let viewTNResult ← Benchmark.run "A^T view" config fun () => do
     -- Simulates: detect transposed, use layout-aware GEMM
     if aT.isTransposed && !bGpu.isTransposed then
       let _ ← GpuTensor.gemm aT bGpu
@@ -95,14 +99,14 @@ def benchmarkGemmRaw (m k n : Nat) : IO Unit := do
   suite := suite.add viewTNResult
 
   -- 6. Transposed B view
-  let viewNTResult ← Benchmark.run "B^T view" gpuConfig fun () => do
+  let viewNTResult ← Benchmark.run "B^T view" config fun () => do
     if !aGpu.isTransposed && bT.isTransposed then
       let _ ← GpuTensor.gemm aGpu bT
     pure ()
   suite := suite.add viewNTResult
 
   -- 7. GEMM backward (2 gemm calls using O(1) transpose)
-  let backwardResult ← Benchmark.run "Backward (dA + dB)" gpuConfig fun () => do
+  let backwardResult ← Benchmark.run "Backward (dA + dB)" config fun () => do
     -- dA = dC @ B^T
     let _ ← GpuTensor.gemm dcGpu (GpuTensor.transpose bGpu)
     -- dB = A^T @ dC
@@ -121,18 +125,22 @@ def benchmarkGemmRaw (m k n : Nat) : IO Unit := do
   IO.println s!  "  Performance: ~{Float.round (tflops * 100) / 100} TFLOPs/s"
 
 /-- Benchmark constant-time transpose overhead (pure metadata, no GPU). -/
-def benchmarkTransposeOverhead : IO Unit := do
+def benchmarkTransposeOverhead (quick : Bool) : IO Unit := do
   IO.println s!"\n═══════════════════════════════════════════════════════════════"
   IO.println s!"  O(1) Transpose Overhead (metadata only, no GPU)"
   IO.println s!"═══════════════════════════════════════════════════════════════"
 
-  let sizes := [256, 512, 1024, 2048, 4096]
+  let sizes := if quick then [256, 512, 1024] else [256, 512, 1024, 2048, 4096]
 
   for size in sizes do
     let layout := TensorLayout.contiguous #[size, size]
 
     -- Measure transpose time (pure metadata manipulation)
-    let transposeConfig : Benchmark.Config := { warmupIterations := 1000, timedIterations := 10000 }
+    let transposeConfig : Benchmark.Config :=
+      if quick then
+        { warmupIterations := 200, timedIterations := 1000 }
+      else
+        { warmupIterations := 1000, timedIterations := 10000 }
 
     let result ← Benchmark.run s!"transpose {size}×{size}" transposeConfig fun () => do
       let transposed := layout.transpose
@@ -145,7 +153,7 @@ def benchmarkTransposeOverhead : IO Unit := do
   IO.println "\n  (Transpose is O(1) - just swaps two array elements)"
 
 /-- Benchmark isTransposed check overhead -/
-def benchmarkDispatchOverhead : IO Unit := do
+def benchmarkDispatchOverhead (quick : Bool) : IO Unit := do
   IO.println s!"\n═══════════════════════════════════════════════════════════════"
   IO.println s!"  Dispatch Overhead (layout checks)"
   IO.println s!"═══════════════════════════════════════════════════════════════"
@@ -153,7 +161,11 @@ def benchmarkDispatchOverhead : IO Unit := do
   let layout := TensorLayout.contiguous #[1024, 1024]
   let transposed := layout.transpose
 
-  let checkConfig : Benchmark.Config := { warmupIterations := 1000, timedIterations := 10000 }
+  let checkConfig : Benchmark.Config :=
+    if quick then
+      { warmupIterations := 200, timedIterations := 1000 }
+    else
+      { warmupIterations := 1000, timedIterations := 10000 }
 
   let contiguousCheck ← Benchmark.run "isContiguous check" checkConfig fun () => do
     let _ := layout.isContiguous
@@ -171,6 +183,9 @@ def main : IO Unit := do
   if !Metal.isAvailable () then
     IO.println "Metal GPU not available, cannot run benchmarks"
     return
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
 
   IO.println "╔═══════════════════════════════════════════════════════════════╗"
   IO.println "║           GPU GEMM Benchmark (Views vs Contiguous)                ║"
@@ -179,14 +194,17 @@ def main : IO Unit := do
   IO.println "╚═══════════════════════════════════════════════════════════════╝"
 
   -- Test multiple sizes
-  benchmarkGemmRaw 256 256 256
-  benchmarkGemmRaw 512 512 512
-  benchmarkGemmRaw 1024 1024 1024
-  benchmarkGemmRaw 2048 2048 2048
+  let config := gpuConfig quick
+  let sizes := if quick then
+      [(256, 256, 256), (512, 512, 512), (1024, 1024, 1024)]
+    else
+      [(256, 256, 256), (512, 512, 512), (1024, 1024, 1024), (2048, 2048, 2048)]
+  for (m, k, n) in sizes do
+    benchmarkGemmRaw config m k n
 
   -- Measure overhead
-  benchmarkTransposeOverhead
-  benchmarkDispatchOverhead
+  benchmarkTransposeOverhead quick
+  benchmarkDispatchOverhead quick
 
   IO.println "\n══════════════════════════════════════════════════════════════════"
   IO.println "  Benchmark Complete"

@@ -44,6 +44,9 @@ def main : IO Unit := do
     return
 
   IO.println "\nMetal GPU: Available"
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
   IO.println ""
 
   -- GEMM Comparison
@@ -52,25 +55,27 @@ def main : IO Unit := do
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   IO.println ""
 
-  for n in [512, 1024, 2048] do
+  let gemmSizes := if quick then [512, 1024] else [512, 1024, 2048]
+  let gemmIters := if quick then 2 else 5
+  for n in gemmSizes do
     let matA32 := generateFloat32Data (n * n)
     let matB32 := generateFloat32Data (n * n)
     let flops := 2.0 * n.toFloat * n.toFloat * n.toFloat / 1e9
 
     -- Naive
-    let naiveMs ← timeByteArray 5 (fun () => Metal.Float32.gemm n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let naiveMs ← timeByteArray gemmIters (fun () => Metal.Float32.gemm n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsNaive := if naiveMs > 0.001 then flops / (naiveMs / 1000.0) else 0.0
 
     -- Tiled
-    let tiledMs ← timeByteArray 5 (fun () => Metal.Float32.gemmTiled n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let tiledMs ← timeByteArray gemmIters (fun () => Metal.Float32.gemmTiled n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsTiled := if tiledMs > 0.001 then flops / (tiledMs / 1000.0) else 0.0
 
     -- Simdgroup
-    let simdMs ← timeByteArray 5 (fun () => Metal.Float32.gemmSimd n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let simdMs ← timeByteArray gemmIters (fun () => Metal.Float32.gemmSimd n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsSimd := if simdMs > 0.001 then flops / (simdMs / 1000.0) else 0.0
 
     -- MPS (Apple's optimized library)
-    let mpsMs ← timeByteArray 5 (fun () => Metal.Float32.gemmMPS n.toUSize n.toUSize n.toUSize matA32 matB32)
+    let mpsMs ← timeByteArray gemmIters (fun () => Metal.Float32.gemmMPS n.toUSize n.toUSize n.toUSize matA32 matB32)
     let gflopsMPS := if mpsMs > 0.001 then flops / (mpsMs / 1000.0) else 0.0
 
     IO.println s!"  {n}×{n} ({flops.toString.take 5} GFLOPS):"
@@ -96,13 +101,15 @@ def main : IO Unit := do
   IO.println "softmax(Q @ K^T / sqrt(d)) @ V"
   IO.println ""
 
-  for (seqLen, headDim) in [(128, 64), (256, 64), (512, 64), (1024, 64)] do
+  let attnSizes := if quick then [(128, 64), (256, 64)] else [(128, 64), (256, 64), (512, 64), (1024, 64)]
+  let attnIters := if quick then 3 else 10
+  for (seqLen, headDim) in attnSizes do
     let Q := generateFloat32Data (seqLen * headDim)
     let K := generateFloat32Data (seqLen * headDim)
     let V := generateFloat32Data (seqLen * headDim)
     let flops := 4.0 * seqLen.toFloat * seqLen.toFloat * headDim.toFloat / 1e9
 
-    let attnMs ← timeByteArray 10 (fun () =>
+    let attnMs ← timeByteArray attnIters (fun () =>
       Metal.Float32.flashAttention seqLen.toUSize headDim.toUSize Q K V)
     let gflops := if attnMs > 0.001 then flops / (attnMs / 1000.0) else 0.0
     IO.println s!"  seq={seqLen}, d={headDim}: {attnMs.toString.take 8}ms ({gflops.toString.take 6} GFLOP/s)"
@@ -120,13 +127,15 @@ def main : IO Unit := do
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   IO.println ""
 
-  for (seqLen, headDim) in [(128, 64), (256, 64), (512, 64)] do
+  let causalSizes := if quick then [(128, 64), (256, 64)] else [(128, 64), (256, 64), (512, 64)]
+  let causalIters := if quick then 3 else 10
+  for (seqLen, headDim) in causalSizes do
     let Q := generateFloat32Data (seqLen * headDim)
     let K := generateFloat32Data (seqLen * headDim)
     let V := generateFloat32Data (seqLen * headDim)
     let flops := 2.0 * seqLen.toFloat * seqLen.toFloat * headDim.toFloat / 1e9
 
-    let attnMs ← timeByteArray 10 (fun () =>
+    let attnMs ← timeByteArray causalIters (fun () =>
       Metal.Float32.flashAttentionCausal seqLen.toUSize headDim.toUSize Q K V)
     let gflops := if attnMs > 0.001 then flops / (attnMs / 1000.0) else 0.0
     IO.println s!"  seq={seqLen}, d={headDim}: {attnMs.toString.take 8}ms ({gflops.toString.take 6} GFLOP/s)"
@@ -144,9 +153,11 @@ def main : IO Unit := do
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   IO.println ""
 
-  for n in [10000, 100000, 1000000] do
+  let softmaxSizes := if quick then [10000, 100000] else [10000, 100000, 1000000]
+  let softmaxIters := if quick then 3 else 10
+  for n in softmaxSizes do
     let data := generateFloat32Data n
-    let sftmxMs ← timeByteArray 10 (fun () => Metal.Float32.softmax n.toUSize data)
+    let sftmxMs ← timeByteArray softmaxIters (fun () => Metal.Float32.softmax n.toUSize data)
     IO.println s!"  N={n}: {sftmxMs.toString.take 8}ms"
     logMs "metal_minimal/softmax" "time_ms" (params := [Benchmark.paramNat "n" n]) sftmxMs
 
@@ -157,13 +168,15 @@ def main : IO Unit := do
   IO.println "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   IO.println ""
 
-  for n in [100000, 1000000, 10000000] do
+  let reduceSizes := if quick then [100000, 1000000] else [100000, 1000000, 10000000]
+  let reduceIters := if quick then 3 else 10
+  for n in reduceSizes do
     let data := generateFloat32Data n
     let start ← IO.monoNanosNow
-    for _ in [:10] do
+    for _ in [:reduceIters] do
       let _ := Metal.Float32.reduceSum n.toUSize data
     let stop ← IO.monoNanosNow
-    let ms := (stop - start).toFloat / 1000000.0 / 10.0
+    let ms := (stop - start).toFloat / 1000000.0 / reduceIters.toFloat
     IO.println s!"  N={n}: {ms.toString.take 8}ms"
     logMs "metal_minimal/reduce_sum" "time_ms" (params := [Benchmark.paramNat "n" n]) ms
 

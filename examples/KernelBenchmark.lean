@@ -75,9 +75,8 @@ def main : IO Unit := do
   -- ============================================================================
   -- Elementwise Operations
   -- ============================================================================
-  IO.println s!"--- Elementwise Operations (n={n} elements) ---"
-
   let n : Nat := if quick then 100000 else 1000000
+  IO.println s!"--- Elementwise Operations (n={n} elements) ---"
   let x : Float^[Idx n] := ArrayOps.randUniform
   let y : Float^[Idx n] := ArrayOps.randUniform
   IO.println s!"Allocated 2x {n} Float arrays ({2*n*8/1024/1024}MB total)"

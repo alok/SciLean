@@ -133,21 +133,29 @@ def main : IO Unit := do
     IO.println "Metal GPU not available"
     return
 
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
+
   IO.println "=== GPU Batching Benchmark ==="
   IO.println ""
 
   -- Warmup
   IO.println "Warming up GPU..."
-  let _ ← runUnbatched 10 1024
-  let _ ← runBatched 10 1024
+  let warmupIters := if quick then 3 else 10
+  let warmupSize := if quick then 512 else 1024
+  let _ ← runUnbatched warmupIters warmupSize
+  let _ ← runBatched warmupIters warmupSize
 
   IO.println ""
   IO.println "--- Test 1: Multiple iterations (3 ops each) ---"
   IO.println "Each iteration does: relu → add → mul"
   IO.println ""
 
-  for numIters in [10, 50, 100] do
-    let size := 10000
+  let iterCases := if quick then [10, 20] else [10, 50, 100]
+  let iterSize := if quick then 5000 else 10000
+  for numIters in iterCases do
+    let size := iterSize
     let unbatchedTime ← runUnbatched numIters size
     let batchedTime ← runBatched numIters size
     let speedup := unbatchedTime / (if batchedTime < 0.001 then 0.001 else batchedTime)
@@ -165,8 +173,10 @@ def main : IO Unit := do
   IO.println "Chain of N relu operations"
   IO.println ""
 
-  for chainLen in [10, 50, 100, 200] do
-    let size := 100000
+  let chainCases := if quick then [10, 50] else [10, 50, 100, 200]
+  let chainSize := if quick then 20000 else 100000
+  for chainLen in chainCases do
+    let size := chainSize
     let unbatchedTime ← runChainUnbatched chainLen size
     let batchedTime ← runChainBatched chainLen size
 
