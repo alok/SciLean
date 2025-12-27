@@ -2,6 +2,7 @@ import Lean.Meta.Tactic.Simp
 
 import Mathlib.Lean.Meta.RefinedDiscrTree
 import Mathlib.Lean.Meta.RefinedDiscrTree.Lookup
+import SciLean.VersoPrelude
 
 namespace SciLean
 
@@ -19,39 +20,37 @@ inductive ArgGuard where
   | notId
   /-- Argument can't be constant function -/
   | notConst
-  /-- Argument can't be application of `name` -/
+  /-- Argument cannot be an application of the given name. -/
   | notAppOf (name : Name)
   deriving Inhabited, BEq, Repr
 
 
-/-- Same as SimpTheorem but works with RefinedDiscrTree rather than with normal DescrTree.
+/-- Same as {name}`SimpTheorem` but works with {name}`RefinedDiscrTree` rather than with normal {lit}`DiscrTree`.
 
-It has one additional feature and that is argument guard. For example, you can say that do not apply
-this theorem if theorem argument `f` unifies to identity function.
+It has one additional feature: an argument guard. For example, you can say not to apply this theorem
+if an argument unifies to the identity function.
 -/
 structure RefinedSimpTheorem where
   keys        : List (RefinedDiscrTree.Key × RefinedDiscrTree.LazyEntry) := []
   /--
     It stores universe parameter names for universe polymorphic proofs.
     Recall that it is non-empty only when we elaborate an expression provided by the user.
-    When `proof` is just a constant, we can use the universe parameter names stored in the declaration.
+    When the proof is just a constant, we can use the universe parameter names stored in the declaration.
    -/
   levelParams : Array Name := #[]
   proof       : Expr
   priority    : Nat  := eval_prio default
   post        : Bool := true
-  /-- `perm` is true if lhs and rhs are identical modulo permutation of variables. -/
+  /-- perm is true if lhs and rhs are identical modulo permutation of variables. -/
   perm        : Bool := false
   /--
-    `origin` is mainly relevant for producing trace messages.
-    It is also viewed an `id` used to "erase" `simp` theorems from `SimpTheorems`.
+    origin is mainly relevant for producing trace messages.
+    It is also viewed as an id used to "erase" simp theorems from {name}`SimpTheorems`.
   -/
   origin      : Origin
-  /-- `rfl` is true if `proof` is by `Eq.refl` or `rfl`. -/
+  /-- rfl is true if the proof is by {name}`Eq.refl` or rfl. -/
   rfl         : Bool
-  /-- Array of `(theorem argument id, argument guard)` specifying additional constraints on when
-  to apply this theorem. For example, if the theorem has arugument `(f : X → X)` with index `3` then
-  `guards := #[(3,.notId)]` will stop applying this theorem if `f` unifies to identity function. -/
+  /-- Additional constraints on when to apply this theorem. -/
   guards      : Array (Nat × ArgGuard) := #[]
   deriving Inhabited
 
@@ -88,7 +87,7 @@ structure RefinedSimpTheorems where
   deriving Inhabited
 
 
-/-- -/
+/-- Register the refined simp theorems extension. -/
 initialize refinedSimpTheoremsExt : SimpleScopedEnvExtension RefinedSimpTheorem RefinedSimpTheorems ←
   registerSimpleScopedEnvExtension {
     name     := by exact decl_name%
@@ -130,8 +129,7 @@ def addTheorem (declName : Name) (attrKind : AttributeKind := .global)
   refinedSimpTheoremsExt.add thm attrKind
 
 
-/-- Check if `thm` can be applied to `e` and if the theorem argument `A : W → Set X` is not
-a constant function. -/
+/-- Check if a theorem can be applied to an expression and whether guarded arguments are admissible. -/
 def theoremGuard (e : Expr) (thm : RefinedSimpTheorem) : MetaM Bool := do
   if thm.guards.size = 0 then return true
 
@@ -152,20 +150,20 @@ def theoremGuard (e : Expr) (thm : RefinedSimpTheorem) : MetaM Bool := do
           | continue
         if body == .bvar 0 then
           trace[Meta.Tactic.simp.guard] "not applying {← ppOrigin thm.origin} to \
-                          {← ppExpr e} bacause {← ppExpr x} is identity function"
+                          {← ppExpr e} because {← ppExpr x} is identity function"
           return false
       | .notConst =>
         let .lam _ _ body _ := x
           | continue
         if ¬body.hasLooseBVars then
           trace[Meta.Tactic.simp.guard] "not applying {← ppOrigin thm.origin} to \
-                          {← ppExpr e} bacause {← ppExpr x} is constant function"
+                          {← ppExpr e} because {← ppExpr x} is constant function"
           return false
 
       | .notAppOf n =>
         if x.isAppOf n then
           trace[Meta.Tactic.simp.guard] "not applying {← ppOrigin thm.origin} to \
-                          {← ppExpr e} bacause {← ppExpr x} is application of {n}"
+                          {← ppExpr e} because {← ppExpr x} is application of {n}"
           return false
         continue
     return true
@@ -237,7 +235,7 @@ unsafe def elabGuards (declName : Name) (guardStx : Syntax) : TermElabM (Array (
   | _ =>
     throwUnsupportedSyntax
 
-/-- Initialization of `funProp` attribute -/
+/-- Initialization of {lit}`rsimp` attribute -/
 unsafe initialize funPropAttr : Unit ←
   registerBuiltinAttribute {
     name  := `rsimp

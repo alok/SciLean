@@ -1,0 +1,27 @@
+===== AMXBenchmark =====
+═══════════════════════════════════════════════════════════════
+           AMX (Accelerate/CPU) vs MPS (GPU) GEMM
+═══════════════════════════════════════════════════════════════
+
+Layer 1 fwd [256,784]@[784,128]
+  AMX: 342.534827 GFLOP/s (75ms / 500 iters)
+  MPS: 74.680558 GFLOP/s (344ms / 500 iters)
+  Auto: 94.448941 GFLOP/s (272ms / 500 iters)
+
+Layer 2 fwd [256,128]@[128,10]
+  AMX: 72.817778 GFLOP/s (45ms / 5000 iters)
+  MPS: 1.667583 GFLOP/s (1965ms / 5000 iters)
+  Auto: 84.020513 GFLOP/s (39ms / 5000 iters)
+
+Backward dW1 [128,256]@[256,784]
+  AMX: 475.742815 GFLOP/s (54ms / 500 iters)
+  MPS: 113.172300 GFLOP/s (227ms / 500 iters)
+  Auto: 106.597975 GFLOP/s (241ms / 500 iters)
+
+Backward dW2 [10,256]@[256,128]
+  AMX: 117.028571 GFLOP/s (28ms / 5000 iters)
+  MPS: 1.346815 GFLOP/s (2433ms / 5000 iters)
+  Auto: 131.072000 GFLOP/s (25ms / 5000 iters)
+
+═══════════════════════════════════════════════════════════════
+Done!

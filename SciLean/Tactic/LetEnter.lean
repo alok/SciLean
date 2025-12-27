@@ -1,5 +1,6 @@
 import Lean.Elab.Tactic.Simp
 import Lean.Elab.Tactic.Conv.Basic
+import SciLean.VersoPrelude
 
 namespace Lean.Elab.Tactic.Conv
 open Meta
@@ -27,9 +28,9 @@ private def pre (letName : Name) (state : IO.Ref (MVarId ⊕ Nat)) (e : Expr) : 
     return Simp.Step.visit { expr := e }
 
 
-/-- Conv tactic `enter_let x` focuses on the value of let binding `let x := _`
+/-- Conv tactic {lit}`enter_let x` focuses on the value of let binding {lit}`let x := _`
 
-`enter_let x n` focuses on `(n-1)`th occurrence of let binding `let x := _`
+{lit}`enter_let x n` focuses on {lit}`(n-1)`th occurrence of let binding {lit}`let x := _`
 -/
 syntax (name := let_enter) " enter_let" ident (num)? : conv
 

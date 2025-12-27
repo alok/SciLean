@@ -9,6 +9,7 @@ import SciLean.Data.ArrayOperations.Operations
 import SciLean.FFI.BLAS
 
 import SciLean.Analysis.Scalar.FloatAsReal
+import SciLean.VersoPrelude
 
 namespace SciLean.DataArrayN
 
@@ -26,7 +27,7 @@ variable
 ----------------------------------------------------------------------------------------------------
 
 /--
-Sum over middle dimension `J` of rank-3 tensor `R^[I,J,K]`
+Sum over middle dimension {lit}`J` of rank-3 tensor {lit}`R^[I,J,K]`
 
 TODO: Maybe implement this with BLAS or something if too slow
 -/
@@ -64,7 +65,7 @@ def replicateMiddleR (x : R^[I,K]) : R^[I,J,K] := Id.run do
   ⟨data, sorry_proof⟩
 
 /--
-Add `y : R^[J]` scaled by `a : R` to `x : R^[I,J,K]` at `(i,:,k)`
+Add {lit}`y : R^[J]` scaled by {lit}`a : R` to {lit}`x : R^[I,J,K]` at {lit}`(i,:,k)`
 -/
 def scalAddMiddleR (x : R^[I,J,K]) (i : I) (k : K) (a : R) (y : R^[J]) : R^[I,J,K] := Id.run do
   let mut x := x
@@ -138,7 +139,7 @@ def contractRightAddR (a : R) (x : R^[I,J]) (y : R^[J]) (b : R) (z : R^[I]) : R^
 /--
 Matrix-matrix multiplication (naive fallback)
 
-Computes: `z := a * x * y + b * z`
+Computes: {lit}`z := a * x * y + b * z`
 -/
 def contractMiddleAddRNaive (a : R) (x : R^[I,J]) (y : R^[J,K]) (b : R) (z : R^[I,K]) : R^[I,K] := Id.run do
   let mut z := z
@@ -167,7 +168,7 @@ def fromFloatArray {ι : Type} {n} [IndexType ι n] (x : FloatArray) : Float^[ι
 /--
 Matrix-matrix multiplication using BLAS dgemm (Float only).
 
-Computes: `z := a * x * y + b * z`
+Computes: {lit}`z := a * x * y + b * z`
 
 This is significantly faster than naive loops for large matrices.
 -/
@@ -186,9 +187,9 @@ def contractMiddleAddRFloat
 /--
 Matrix-matrix multiplication
 
-Uses `BLAS.LevelThreeData.gemm` (row-major).
+Uses {name}`BLAS.LevelThreeData.gemm` (row-major).
 
-For a pure Lean fallback, see `contractMiddleAddRNaive`.
+For a pure Lean fallback, see {name}`contractMiddleAddRNaive`.
 -/
 def contractMiddleAddR (a : R) (x : R^[I,J]) (y : R^[J,K]) (b : R) (z : R^[I,K]) : R^[I,K] :=
   let data :=
@@ -200,7 +201,7 @@ def contractMiddleAddR (a : R) (x : R^[I,J]) (y : R^[J,K]) (b : R) (z : R^[I,K])
 -- Numpy-style wrappers ----------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
 
-/-- Matrix multiplication (Numpy: `@`). -/
+/-- Matrix multiplication (Numpy: {lit}`@`). -/
 abbrev matmul (A : R^[I,J]) (B : R^[J,K]) : R^[I,K] :=
   contractMiddleAddR 1 A B 0 (0 : R^[I,K])
 

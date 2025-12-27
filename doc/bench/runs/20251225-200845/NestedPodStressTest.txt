@@ -1,0 +1,39 @@
+===== NestedPodStressTest =====
+╔══════════════════════════════════════════════════════════════╗
+║         Deeply Nested POD Stress Test                         ║
+╚══════════════════════════════════════════════════════════════╝
+
+=== Level 1: Basic types ===
+Point2D size: 8 bytes (expected 8)
+Point3D size: 12 bytes (expected 12)
+Point2D roundtrip: ✓
+Point3D roundtrip: ✓
+
+=== Level 2: Nested once ===
+Line2D size: 16 bytes (expected 16 = 2×8)
+Triangle3D size: 36 bytes (expected 36 = 3×12)
+AABB size: 24 bytes (expected 24 = 2×12)
+Line2D roundtrip: ✓
+Triangle3D roundtrip: ✓
+
+=== Level 3: Nested twice ===
+Ray size: 32 bytes (expected 32 = 2×12 + 2×4)
+BoundedTriangle size: 64 bytes (expected 64 = 36 + 24 + 4)
+Ray roundtrip: ✓
+BoundedTriangle roundtrip: ✓
+
+=== Level 4: Deep nesting (3+ levels) ===
+SceneObject size: 80 bytes (expected 80 = 64 + 12 + 4)
+RayHit size: 64 bytes (expected 64 = 32 + 12 + 12 + 4 + 4)
+SceneObject roundtrip: ✓
+RayHit roundtrip: ✓
+
+=== Performance: Deep nested serialization ===
+SceneObject size: 80 bytes
+Array size: 10000 elements = 800000 bytes
+Serialize 100×10000 objects: 9ms (8888.888889 MB/s)
+Deserialize 100×10000 objects: 0ms (inf MB/s)
+
+═══ Summary ═══
+✓ All nested POD tests passed!
+

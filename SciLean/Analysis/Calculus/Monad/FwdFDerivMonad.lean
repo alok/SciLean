@@ -1,47 +1,38 @@
 import SciLean.Analysis.Calculus.FwdFDeriv
 import SciLean.Analysis.Calculus.Monad.DifferentiableMonad
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 
-/-- `FwdFDerivMonad K m m'` states that the monad `m'` allows us to compute forward mode derivative
-of functions in the monad `m`. The rought idea is that if the monad `m` stores some state `S` then
-the monad `m'` should store `S⨯S` corresponding to the state and its derivative. Concretelly, for
-`m = StateM S` we have `m' = StateM S×S`.
+/-- {lit}`FwdFDerivMonad K m m'` states that the monad {lit}`m'` allows us to compute forward mode derivative
+of functions in the monad {lit}`m`. The rough idea is that if the monad {lit}`m` stores some state {lit}`S` then
+the monad {lit}`m'` should store {lit}`S⨯S` corresponding to the state and its derivative. Concretely, for
+{lit}`m = StateM S` we have {lit}`m' = StateM S×S`.
 
-This class provides two main functions, such that monadic function `(f : X → m Y)`:
-  - `fwdFDerivM K f` is generalization of forward mode derivative of `f`
-  - `DifferentiableM K f` is generalization of differentiability of `f`
+This class provides two main functions, such that monadic function {lit}`(f : X → m Y)`:
+  - {lit}`fwdFDerivM K f` is a generalization of the forward mode derivative of {lit}`f`
+  - {lit}`DifferentiableM K f` is a generalization of differentiability of {lit}`f`
 
-For `StateM S` the `fwdFDerivM` and `DifferentiableM` is:
-```
-   fwdFDerivM K f
-   =
-   fun x dx (s,ds) =>
-     let ((y,s),(dy,ds)) := fwdFDeriv K (fun (x,s) => f x s) (x,s) (dx,ds)
-     ((y,dy),(s,ds))
+For {lit}`StateM S` the {lit}`fwdFDerivM` and {lit}`DifferentiableM` are:
+{lit}`fwdFDerivM K f = fun x dx (s,ds) =>
+  let ((y,s),(dy,ds)) := fwdFDeriv K (fun (x,s) => f x s) (x,s) (dx,ds)
+  ((y,dy),(s,ds))`
+and
+{lit}`DifferentiableM K f = Differentiable K (fun (x,s) => f x s)`.
+In short, {lit}`fwdFDerivM` also differentiates w.r.t. the state variable and {lit}`DifferentiableM` checks
+that a function is differentiable also w.r.t. the state variable too.
 
-   DifferentiableM K f
-   =
-   Differentiable K (fun (x,s) => f x s)
-```
-In short, `fwdFDerviM` also differentiates w.r.t. to the state variable and `DifferentiableM` checks
-that a function is differentiable also w.r.t. to the state variable too.
-
-The nice property of this general definition is that it generalized to monad tranformer `StateT`.
+The nice property of this general definition is that it generalizes to the monad transformer {lit}`StateT`.
 Therefore we can nest state monads and still differentiate them.
 -/
 class FwdFDerivMonad (K : Type) [RCLike K] (m : Type → Type) (m' : outParam $ Type → Type) [Monad m] [Monad m'] [DifferentiableMonad K m] where
   /-- Forward mode derivative for monadic functions.
 
-  For state monad, `m = StateM S`, this derivative also differentiates w.r.t to the state variable
-  ```
-    fwdFDerivM K f
-    =
-    fun x dx (s,ds) =>
-      let ((y,s),(dy,ds)) := fwdFDeriv K (fun (x,s) => f x s) (x,s) (dx,ds)
-      ((y,dy),(s,ds))
-  ```
+  For the state monad {lit}`m = StateM S`, this derivative also differentiates w.r.t. the state variable:
+  {lit}`fwdFDerivM K f = fun x dx (s,ds) =>
+    let ((y,s),(dy,ds)) := fwdFDeriv K (fun (x,s) => f x s) (x,s) (dx,ds)
+    ((y,dy),(s,ds))`
   -/
   fwdFDerivM {X Y : Type} [NormedAddCommGroup X] [NormedSpace K X] [NormedAddCommGroup Y] [NormedSpace K Y]
     (f : X → m Y) (x dx : X) : m' (Y × Y)
@@ -91,8 +82,8 @@ variable
 
 open FwdFDerivMonad
 
-/-- Monadic derivative of a value. For example, in case of state monad the value `x : StateM S X`
-is a function in `S` and it makes sense to take derivative of it. -/
+/-- Monadic derivative of a value. For example, in case of the state monad the value
+{lit}`x : StateM S X` is a function in {lit}`S` and it makes sense to take derivative of it. -/
 def fwdFDerivValM (x : m X) : m' (X × X) := do
   fwdFDerivM K (fun _ : Unit => x) () ()
 

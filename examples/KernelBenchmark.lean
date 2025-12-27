@@ -3,6 +3,7 @@
   This measures raw throughput of the C kernel for common operations.
 -/
 import SciLean.Kernel.Integration
+import SciLean.Util.Benchmark
 
 open SciLean SciLean.Kernel
 
@@ -37,8 +38,18 @@ def benchmark (ref : IO.Ref Float) (name : String) (n : Nat) (action : IO Float)
 
   let avgUs := totalNs / n / 1000
   IO.println s!"{name}: {avgUs}μs avg over {n} runs"
+  Benchmark.logMetric
+    "kernel"
+    "avg_us"
+    avgUs.toFloat
+    (unit? := some "us")
+    (params := [Benchmark.paramStr "case" name])
 
 def main : IO Unit := do
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
+
   IO.println "=== Kernel Performance Benchmark ==="
   IO.println ""
 
@@ -53,22 +64,22 @@ def main : IO Unit := do
   IO.println "--- Timing verification ---"
   let startNs ← IO.monoNanosNow
   let mut acc : Nat := 0
-  for i in [:1000000] do
+  for i in [: (if quick then 100000 else 1000000)] do
     acc := acc + i
   let endNs ← IO.monoNanosNow
-  IO.println s!"1M loop iterations: {(endNs - startNs) / 1000}μs (acc={acc})"
+  let iterCount := if quick then 100000 else 1000000
+  IO.println s!"{iterCount} loop iterations: {(endNs - startNs) / 1000}μs (acc={acc})"
   IO.println s!"Raw nanoseconds: start={startNs}, end={endNs}, diff={endNs - startNs}"
   IO.println ""
 
   -- ============================================================================
   -- Elementwise Operations
   -- ============================================================================
-  IO.println "--- Elementwise Operations (n=1M elements) ---"
-
-  let n : Nat := 1000000
+  let n : Nat := if quick then 100000 else 1000000
+  IO.println s!"--- Elementwise Operations (n={n} elements) ---"
   let x : Float^[Idx n] := ArrayOps.randUniform
   let y : Float^[Idx n] := ArrayOps.randUniform
-  IO.println s!"Allocated 2x 1M Float arrays (16MB total)"
+  IO.println s!"Allocated 2x {n} Float arrays ({2*n*8/1024/1024}MB total)"
 
   -- Verify add produces correct result
   let z := ArrayOps.add x y
@@ -86,24 +97,24 @@ def main : IO Unit := do
     let z := ArrayOps.add x' y'
     pure (ArrayOps.sum z)
 
-  benchmark ref "add (1M)" 100 do
+  benchmark ref "add (1M)" (if quick then 20 else 100) do
     let x' ← xRef
     let y' ← yRef
     let z := ArrayOps.add x' y'
     pure (ArrayOps.sum z)
 
-  benchmark ref "mul (1M)" 100 do
+  benchmark ref "mul (1M)" (if quick then 20 else 100) do
     let x' ← xRef
     let y' ← yRef
     let z := ArrayOps.mul x' y'
     pure (ArrayOps.sum z)
 
-  benchmark ref "exp (1M)" 100 do
+  benchmark ref "exp (1M)" (if quick then 20 else 100) do
     let x' ← xRef
     let z := ArrayOps.exp x'
     pure (ArrayOps.sum z)
 
-  benchmark ref "sum (1M)" 100 do
+  benchmark ref "sum (1M)" (if quick then 20 else 100) do
     let x' ← xRef
     pure (ArrayOps.sum x')
 
@@ -124,7 +135,7 @@ def main : IO Unit := do
   let A128Ref : IO (Float^[Idx m, Idx k]) := pure A128
   let B128Ref : IO (Float^[Idx k, Idx n']) := pure B128
 
-  benchmark ref "gemm 128x128 @ 128x128" 50 do
+  benchmark ref "gemm 128x128 @ 128x128" (if quick then 10 else 50) do
     let A ← A128Ref
     let B ← B128Ref
     let C := ArrayOps.gemm A B
@@ -139,7 +150,7 @@ def main : IO Unit := do
   let A512Ref : IO (Float^[Idx m2, Idx k2]) := pure A512
   let B512Ref : IO (Float^[Idx k2, Idx n2]) := pure B512
 
-  benchmark ref "gemm 512x512 @ 512x512" 10 do
+  benchmark ref "gemm 512x512 @ 512x512" (if quick then 3 else 10) do
     let A ← A512Ref
     let B ← B512Ref
     let C := ArrayOps.gemm A B
@@ -149,7 +160,7 @@ def main : IO Unit := do
   let v128 : Float^[Idx k] := ArrayOps.randUniform
   let v128Ref : IO (Float^[Idx k]) := pure v128
 
-  benchmark ref "gemv 128x128 @ 128" 100 do
+  benchmark ref "gemv 128x128 @ 128" (if quick then 20 else 100) do
     let A ← A128Ref
     let v ← v128Ref
     let y := ArrayOps.gemv A v
@@ -165,7 +176,7 @@ def main : IO Unit := do
   let logits1k : Float^[Idx 1000] := ArrayOps.randUniform
   let logits1kRef : IO (Float^[Idx 1000]) := pure logits1k
 
-  benchmark ref "softmax (1K)" 100 do
+  benchmark ref "softmax (1K)" (if quick then 20 else 100) do
     let l ← logits1kRef
     let p := ArrayOps.softmax l
     pure (ArrayOps.sum p)
@@ -174,7 +185,7 @@ def main : IO Unit := do
   let logits512 : Float^[Idx 512] := ArrayOps.randUniform
   let logits512Ref : IO (Float^[Idx 512]) := pure logits512
 
-  benchmark ref "softmax (512 - attention)" 100 do
+  benchmark ref "softmax (512 - attention)" (if quick then 20 else 100) do
     let l ← logits512Ref
     let p := ArrayOps.softmax l
     pure (ArrayOps.sum p)
@@ -189,13 +200,13 @@ def main : IO Unit := do
   let dC128 : Float^[Idx m, Idx n'] := ArrayOps.randUniform
   let dC128Ref : IO (Float^[Idx m, Idx n']) := pure dC128
 
-  benchmark ref "gemm_backward_A 128x128" 50 do
+  benchmark ref "gemm_backward_A 128x128" (if quick then 10 else 50) do
     let B ← B128Ref
     let dC ← dC128Ref
     let dA := gemm_backward_A B dC
     pure (ArrayOps.sum dA)
 
-  benchmark ref "gemm_backward_B 128x128" 50 do
+  benchmark ref "gemm_backward_B 128x128" (if quick then 10 else 50) do
     let A ← A128Ref
     let dC ← dC128Ref
     let dB := gemm_backward_B A dC

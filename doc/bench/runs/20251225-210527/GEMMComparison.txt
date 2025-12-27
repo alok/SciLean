@@ -1,0 +1,49 @@
+===== GEMMComparison =====
+=== GEMM Kernel Comparison ===
+Comparing all available GEMM implementations
+
+Matrix size: 256×256 (n=20 iterations)
+  Naive      : 1.006404 ms, 33.340917 GFLOP/s
+  Tiled      : 0.609756 ms, 55.029277 GFLOP/s
+  Simd       : 0.649364 ms, 51.672763 GFLOP/s
+  SimdOpt    : 0.662606 ms, 50.640097 GFLOP/s
+  M4         : 0.613233 ms, 54.717264 GFLOP/s
+  M4Pro      : 5.056993 ms, 6.635254 GFLOP/s
+  M4Max      : 1.850016 ms, 18.137374 GFLOP/s
+  MPS        : 1.315797 ms, 25.501222 GFLOP/s
+  Accelerate : 0.142185 ms, 235.991363 GFLOP/s
+
+Matrix size: 512×512 (n=20 iterations)
+  Naive      : 1.965966 ms, 136.541250 GFLOP/s
+  Tiled      : 1.656777 ms, 162.022684 GFLOP/s
+  Simd       : 1.041964 ms, 257.624501 GFLOP/s
+  SimdOpt    : 1.195420 ms, 224.553258 GFLOP/s
+  M4         : 0.968172 ms, 277.260090 GFLOP/s
+  M4Pro      : 1.002560 ms, 267.750016 GFLOP/s
+  M4Max      : 1.172043 ms, 229.032088 GFLOP/s
+  MPS        : 1.291460 ms, 207.854255 GFLOP/s
+  Accelerate : 0.478306 ms, 561.221176 GFLOP/s
+
+Matrix size: 1024×1024 (n=10 iterations)
+  Naive      : 8.729654 ms, 245.998713 GFLOP/s
+  Tiled      : 6.865150 ms, 312.809428 GFLOP/s
+  Simd       : 4.188700 ms, 512.684997 GFLOP/s
+  SimdOpt    : 3.861054 ms, 556.191042 GFLOP/s
+  M4         : 3.720816 ms, 577.153949 GFLOP/s
+  M4Pro      : 3.221062 ms, 666.700501 GFLOP/s
+  M4Max      : 3.547470 ms, 605.356394 GFLOP/s
+  MPS        : 3.360616 ms, 639.014885 GFLOP/s
+  Accelerate : 2.375333 ms, 904.076880 GFLOP/s
+
+Matrix size: 2048×2048 (n=5 iterations)
+  Naive      : 64.363341 ms, 266.920096 GFLOP/s
+  Tiled      : 33.981733 ms, 505.561891 GFLOP/s
+  Simd       : 27.815291 ms, 617.641181 GFLOP/s
+  SimdOpt    : 23.123975 ms, 742.946193 GFLOP/s
+  M4         : 16.453908 ms, 1.044121 TFLOP/s
+  M4Pro      : 17.276866 ms, 994.385740 GFLOP/s
+  M4Max      : 17.875175 ms, 961.102153 GFLOP/s
+  MPS        : 15.231900 ms, 1.127887 TFLOP/s
+  Accelerate : 22.175441 ms, 774.725030 GFLOP/s
+
+Done!

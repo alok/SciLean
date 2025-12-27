@@ -1,12 +1,12 @@
 /-
 Float utilities for SciLean
 
-Lean 4 stdlib doesn't provide Float.inf/negInf, so we define them here
-using IEEE 754 division by zero semantics.
+Note: Float.inf is now provided by Batteries.Lean.Float.
+This file provides additional utilities if needed.
 -/
 
-/-- IEEE 754 positive infinity -/
-def Float.inf : Float := 1.0 / 0.0
+-- Re-export Float.inf from Batteries (for backwards compatibility)
+-- Users should prefer Batteries.Lean.Float directly
 
-/-- IEEE 754 negative infinity -/
-def Float.negInf : Float := -1.0 / 0.0
+-- If negInf is not in Batteries, define it here
+-- Otherwise this can be removed entirely

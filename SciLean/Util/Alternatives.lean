@@ -1,8 +1,9 @@
 import Lean
+import SciLean.VersoPrelude
 namespace SciLean
 
 /--
-Gadget structure providing a term that is either `a` or `b`.
+Gadget structure providing a term that is either {lit}`a` or {lit}`b`.
 
 Sometimes you know that a certain term has multiple alternative forms and you do not want to pick one or the other. The decision which version should
 -/
@@ -19,20 +20,12 @@ theorem Alternatives.pick_fst {α} {a b : α} (ap : Alternatives a b)
 theorem Alternatives.pick_snd {α} {a b : α} (ap : Alternatives a b)
   : ap.choose = b := by unfold Alternatives.choose; rw [ap.eq]
 
-/-- Term equal either to `x` or `y`.
+/-- Term equal either to {lit}`x` or {lit}`y`.
 
-Pick `x` by calling tactic `alternatives_fst` or `y` by calling `alternatives_snd`
+Pick {lit}`x` by calling tactic {lit}`alternatives_fst` or {lit}`y` by calling {lit}`alternatives_snd`.
 
-Example:
-
-```
-alternatives
-  fst: 8
-  snd: 2^3
-  by native_decide
-```
-
-This is a term equal to `8` or `2^3`, each form might be usefull in different scenarios.
+Example: {lean}`Alternatives.choose 8 (2^3) (Alternatives.mk (by native_decide))`
+is a term equal to {lit}`8` or {lit}`2^3`.
 -/
 macro " alternatives " linebreak " fst: " a:term linebreak " snd: " b:term  linebreak " by " proof:tacticSeq : term =>
   `(Alternatives.choose $a $b (Alternatives.mk (by $proof)))

@@ -1,6 +1,7 @@
 import SciLean.Data.DataArray.DataArray
 import SciLean.Data.Int64
 import Mathlib.Control.Random
+import SciLean.VersoPrelude
 
 namespace SciLean
 
@@ -68,10 +69,10 @@ instance [Random Id α] [Random Id β] : Random Id (α × β) where
     let b ← rand β
     return (a,b)
 
-/-- Generate a random `DataArrayN` by sampling `nI` times from `rand R`.
+/-- Generate a random {lit}`DataArrayN` by sampling {lit}`nI` times from {lit}`rand R`.
 
-This iterates over the linear index type `Idx nI` to avoid needing a `FoldM` instance
-for the potentially composite index type `I`.
+This iterates over the linear index type {lit}`Idx nI` to avoid needing a {lit}`FoldM` instance
+for the potentially composite index type {lit}`I`.
 -/
 instance {I : Type} {nI : Nat} [IndexType I nI]
     {R : Type} [PlainDataType R] [Random Id R] :

@@ -4,7 +4,7 @@ open Lean
 
 namespace SciLean
 
-/-- Gives a name based on `baseName` that's not already in the list. -/
+/-- Gives a name based on {given}`baseName` that's not already in the list. -/
 partial def mkUnusedName (names : List Name) (baseName : Name) : Name :=
   if not (names.contains baseName) then
     baseName

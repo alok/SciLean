@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "date": "2025-12-21",
+    "commit": "dabf641c5ad93fea2e68d73ff0e2062023ca2ead",
+    "note": "Extracted from doc/bench/experiment-log.md (GpuTensor/GemmView/GpuMNIST baseline)"
+  },
+  "metrics": {
+    "gpu_tensor.gemm.256": {"value": 2.15104, "unit": "ms", "better": "lower", "warn_pct": 0.2},
+    "gpu_tensor.gemm.512": {"value": 1.19882, "unit": "ms", "better": "lower", "warn_pct": 0.2},
+    "gpu_tensor.gemm.1024": {"value": 2.53737, "unit": "ms", "better": "lower", "warn_pct": 0.2},
+    "gpu_tensor.chain.256": {"value": 2.80291, "unit": "ms", "better": "lower", "warn_pct": 0.2},
+    "gpu_tensor.chain.512": {"value": 1.31492, "unit": "ms", "better": "lower", "warn_pct": 0.2},
+    "gpu_tensor.transfer_total.256": {"value": 0.03587, "unit": "ms", "better": "lower", "warn_pct": 0.3},
+    "gpu_tensor.transfer_total.512": {"value": 0.09666, "unit": "ms", "better": "lower", "warn_pct": 0.3},
+    "gpu_tensor.transfer_total.1024": {"value": 0.71904, "unit": "ms", "better": "lower", "warn_pct": 0.3},
+
+    "gemm_view.baseline_ms.256": {"value": 0.3436, "unit": "ms", "better": "lower", "warn_pct": 0.3},
+    "gemm_view.baseline_ms.512": {"value": 2.123737, "unit": "ms", "better": "lower", "warn_pct": 0.3},
+    "gemm_view.baseline_ms.1024": {"value": 1.249760, "unit": "ms", "better": "lower", "warn_pct": 0.3},
+    "gemm_view.baseline_ms.2048": {"value": 4.734677, "unit": "ms", "better": "lower", "warn_pct": 0.3},
+
+    "gemm_view.tflops.256": {"value": 0.100, "unit": "TFLOPs/s", "better": "higher", "warn_pct": 0.3},
+    "gemm_view.tflops.512": {"value": 0.130, "unit": "TFLOPs/s", "better": "higher", "warn_pct": 0.3},
+    "gemm_view.tflops.1024": {"value": 1.720, "unit": "TFLOPs/s", "better": "higher", "warn_pct": 0.3},
+    "gemm_view.tflops.2048": {"value": 3.630, "unit": "TFLOPs/s", "better": "higher", "warn_pct": 0.3},
+
+    "gpu_mnist.initial_accuracy": {"value": 13.1, "unit": "percent", "better": "higher", "warn_pct": 0.5},
+    "gpu_mnist.final_accuracy": {"value": 84.0, "unit": "percent", "better": "higher", "warn_pct": 0.1},
+    "gpu_mnist.epoch_time_ms_avg": {"value": 979.0, "unit": "ms", "better": "lower", "warn_pct": 0.4}
+  }
+}

@@ -2,31 +2,14 @@ import SciLean
 
 open SciLean
 
+set_default_scalar Float
 
-section missing
-end missing
-
-
-def test1 : IO Unit := do
-
-  let v : FloatVector (Fin 3) := VectorType.fromVec ![1,2,3]
-  let v' : FloatVector' (.subvector (offset := 3) (inc := 2)) (Fin 3) :=
-    VectorType.fromVec ![1,2,3]
-
-  let A : FloatMatrix' .RowMajor .normal (Fin 3) (Fin 3) := MatrixType.fromMatrix !![1,1,1; 0,-1,0; -1, 0, 42]
-
-  IO.println v.data
-  IO.println (10.0•v').data.data
-  IO.println (v'+v').data.data
-
-  IO.println (MatrixType.gemv 1 1 A v 0).data
-  IO.println ""
-  IO.println A.data
-  IO.println ""
-  IO.println (MatrixType.row A 0).data
-  IO.println (MatrixType.col A 1).data
-  IO.println (MatrixType.Square.diag A).data
-
-
+/-- Simple matrix/vector sanity check using {lit}`Float^[Idx n]` arrays. -/
 def main : IO Unit := do
-  test1
+  let v : Float^[Idx 3] := ⊞ (i : Idx 3) => (i.1.toNat + 1).toFloat
+  let m : Float^[Idx 3, Idx 3] := ⊞ (i : Idx 3) (j : Idx 3) => if i == j then 1.0 else 0.0
+  let w : Float^[Idx 3] := ⊞ (i : Idx 3) => ∑ᴵ (j : Idx 3), m[i,j] * v[j]
+
+  IO.println s!"v = {v}"
+  IO.println s!"m = {m}"
+  IO.println s!"m*v = {w}"

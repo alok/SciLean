@@ -1,0 +1,11 @@
+===== SurfaceMeshTests =====
+tetrahedron #vertices: 4
+tetrahedron #edges: 6
+tetrahedron  #faces: 4
+sphere #vertices: 10242
+sphere #edges: 30720
+sphere  #faces: 20480
+bunny #vertices: 502
+bunny #edges: 1500
+bunny  #faces: 1000
+

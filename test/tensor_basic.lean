@@ -28,7 +28,7 @@ On macOS, `#eval` is disabled due to precompilation constraints.
 
 -- GpuTensor type (no construction - requires Metal)
 #check GpuTensor Float (Idx 3)
-#check GpuBufferN Float (Idx 3)
+#check GpuBufferView Float
 
 -- Tensor type abbreviation
 #check Tensor Device.cpu Float (Idx 3)

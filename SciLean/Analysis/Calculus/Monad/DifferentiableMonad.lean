@@ -1,32 +1,31 @@
 import SciLean.Analysis.Calculus.FwdFDeriv
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 
-/-- `DifferentiableMonad K m` states that the monad `m` has the notion of differentiability.
-The rought idea is that if the monad `m` stores some state `S` then a function `(f : X → m Y)`
-should be also differentiable w.r.t. to the state `S`.
+/-- {lit}`DifferentiableMonad K m` states that the monad {lit}`m` has the notion of differentiability.
+The rough idea is that if the monad {lit}`m` stores some state {lit}`S` then a function
+{lit}`f : X → m Y` should be also differentiable w.r.t. the state {lit}`S`.
 
-This class provide proposition `DifferentiableM K f` which is monadic generalization of
+This class provides proposition {lit}`DifferentiableM K f` which is a monadic generalization of
 differentiability.
 
-For `StateM S` the `DifferentiableM` is:
-```
-   DifferentiableM K f
-   =
-   Differentiable K (fun (x,s) => f x s)
-```
+For {lit}`StateM S` the {lit}`DifferentiableM` predicate is:
+
+    {lit}`DifferentiableM K f`
+    {lit}`=`
+    {lit}`Differentiable K (fun (x,s) => f x s)`
 -/
 class DifferentiableMonad (K : Type) [RCLike K] (m : Type → Type) [Monad m] where
-  /-- Differentiability of monatic functions.
+  /-- Differentiability of monadic functions.
 
-  For state monad, `m = StateM S`, this predicate says that the function is also differentiable
-  w.r.t. to the state variable.
-  ```
-    DifferentiableM K f
-    =
-    Differentiable K (fun (x,s) => f x s)
-  ```
+  For the state monad {lit}`m = StateM S`, this predicate says that the function is also
+  differentiable w.r.t. the state variable:
+
+      {lit}`DifferentiableM K f`
+      {lit}`=`
+      {lit}`Differentiable K (fun (x,s) => f x s)`
   -/
   DifferentiableM {X Y : Type} [NormedAddCommGroup X] [NormedSpace K X] [NormedAddCommGroup Y] [NormedSpace K Y]
     (f : X → m Y) : Prop
@@ -68,8 +67,8 @@ variable
 
 open DifferentiableMonad
 
-/-- Monadic differentiable value. For example, in case of state monad the value `x : StateM S X`
-is a function in `S` and it makes sense to ask about differentiability. -/
+/-- Monadic differentiable value. For example, in case of the state monad the value
+{lit}`x : StateM S X` is a function in {lit}`S` and it makes sense to ask about differentiability. -/
 def DifferentiableValM (x : m X) : Prop :=
   DifferentiableM K (fun _ : Unit => x)
 

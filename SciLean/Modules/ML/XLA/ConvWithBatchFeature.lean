@@ -14,13 +14,13 @@ instance (a b : ℤ) : IndexType (Ico a b) := sorry
 
 open Set in
 def convolutionB {lhsDims rhsDims : Dims (r+2)}
-   (lhs : TensorIndex lhsDims → R) (rhs : TensorIndex rhsDims → R)
+   (lhs : XlaTensorIndex lhsDims → R) (rhs : XlaTensorIndex rhsDims → R)
    (lhsDimMap rhsDimMap outDimMap : DimMap r)
    (low high : ArrayN ℤ r)    -- padding
    (stride : ArrayN ℕ+ r)    -- window stride
    (xdil ydil : ArrayN ℕ+ r) -- dillatation
    (feature_group_count batch_group_count : ℕ+)
-   (outDims : Dims (r+2)) : TensorIndex outDims → R :=
+   (outDims : Dims (r+2)) : XlaTensorIndex outDims → R :=
 
   let lhsSpDims := lhsDimMap.spatialDims lhsDims
   let lhsBatchDim := lhsDimMap.batchDim lhsDims
@@ -52,7 +52,7 @@ def convolutionB {lhsDims rhsDims : Dims (r+2)}
   -- have c25_2 : outFeatureDim = rhsFeatureDim / batch_group_count := sorry
 
 
-  fun (i : TensorIndex outDims) =>
+  fun (i : XlaTensorIndex outDims) =>
     let i := outIndexMap.toFun i
     let bi := i.1; let fi := i.2.1; let si := i.2.2
 
@@ -73,8 +73,8 @@ def convolutionB {lhsDims rhsDims : Dims (r+2)}
       -- fj = bg * x
       -- fj = fg * y
 
-    let lhs' := fun (sk : TensorIndex lhsSpDims) => lhs (lhsIndexMap.symm (bk,fk,sk))
-    let rhs' := fun (sj : TensorIndex rhsSpDims) => rhs (rhsIndexMap.symm (bj,fj,sj))
+    let lhs' := fun (sk : XlaTensorIndex lhsSpDims) => lhs (lhsIndexMap.symm (bk,fk,sk))
+    let rhs' := fun (sj : XlaTensorIndex rhsSpDims) => rhs (rhsIndexMap.symm (bj,fj,sj))
 
     let out' := convWithPaddingStride' lhs' rhs' low high stride xdil ydil houtDim
 
@@ -302,8 +302,8 @@ def ConvolutionWithPaddingArgs.rhsAdjoint {r} {lhsDims rhsDims outDims : Dims r}
 
 -- open Set in
 -- def convolutionB {lhsDims rhsDims : Dims (r+2)}
---    (lhs : TensorIndex lhsDims → R) (rhs : TensorIndex rhsDims → R)
---    (outDims : Dims (r+2)) (args : ConvolutionWithPaddingArgs lhsDims rhsDims outDims) : TensorIndex outDims → R := sorry
+--    (lhs : XlaTensorIndex lhsDims → R) (rhs : XlaTensorIndex rhsDims → R)
+--    (outDims : Dims (r+2)) (args : ConvolutionWithPaddingArgs lhsDims rhsDims outDims) : XlaTensorIndex outDims → R := sorry
 
 -- If feature_group_count = 1 and batch_group_count = 1, then for all output_spatial_index in index_space(dim(result, output_spatial_dimensions...)), result[result_shape(:, output_spatial_index, :)] = dot_product where:
 
@@ -322,11 +322,11 @@ def slice.outDims {r}
 -- ceil((limit_indices - start_indices) / strides)
 
 def slice {r} {inDims outDims : Dims r}
-    (operand : TensorIndex inDims → R)
+    (operand : XlaTensorIndex inDims → R)
     (start_indices limit_indices : ArrayN ℤ r)
     (strides : ArrayN ℕ+ r)
     (houtDims : outDims = slice.outDims start_indices limit_indices strides := by infer_var) :
-    TensorIndex outDims → R :=
+    XlaTensorIndex outDims → R :=
   fun result_index =>
     let operand_index := start_indices.toInt + result_index.1 * strides
     operand ⟨operand_index, sorry⟩
@@ -337,10 +337,10 @@ def slice {r} {inDims outDims : Dims r}
 theorem ArrayN.data_size {n α} (a : ArrayN α n) : a.data.size = n := by simp[a.2]
 
 def convolutionBase {r} {lhsDims rhsDims outDims : Dims r}
-    (lhs : TensorIndex lhsDims → R)
-    (rhs : TensorIndex rhsDims → R)
+    (lhs : XlaTensorIndex lhsDims → R)
+    (rhs : XlaTensorIndex rhsDims → R)
     (args : ConvolutionWithPaddingArgs lhsDims rhsDims outDims) :
-    TensorIndex outDims → R :=
+    XlaTensorIndex outDims → R :=
 
   fun i =>
     let output_spatial_index : ArrayN ℤ (r-2) := sorry -- get the correct parts of `i`

@@ -1,8 +1,11 @@
 import Lean
 import SciLean.Tactic.DataSynth.Elab
 import SciLean.Tactic.DataSynth.Attr
+import Verso.Code.External
+import SciLean.Util.VersoExtensions
 
 open Lean Meta
+open Verso.Code.External
 
 namespace SciLean.Tactic.MetaFun
 
@@ -60,18 +63,14 @@ Define new meta-function, these functions are non-computable functions satisfyin
 These meta-functions can be evaluated only on meta programming level by syntactically inspecting
 their arguments.
 
-For example:
-```
-variable {α : Type} [LinearOrder α] [Inhabited α]
-
-meta_fun_decl bounds (x : α) : α×α
-satisfying
-  bounds.1 ≤ x ∧ x ≤ bounds.2
-```
-defines a function `bounds (x : α) : α×α` which returns lower and upper bound of `x`.
+For example, the declaration
+{lit}`variable {α : Type} [LinearOrder α] [Inhabited α]`,
+{lit}`meta_fun_decl bounds (x : α) : α×α`,
+{lit}`satisfying bounds.1 ≤ x ∧ x ≤ bounds.2`
+defines a function {lit}`bounds (x : α) : α × α` which returns lower and upper bound of {lit}`x`.
 
 There can be many bounds and the idea behing this meta-function is that it will return the best
-effort bounds based on the syntactic structure of `x`.
+effort bounds based on the syntactic structure of {lit}`x`.
 
 -/
 
@@ -91,8 +90,6 @@ elab "meta_fun_decl" id:ident bs:bracketedBinder* ":" ty:term "satisfying" prop:
   }
 
   metaFunExt.add decl
-
-
 
 open Lean Elab Term in
 /--

@@ -21,7 +21,7 @@ def floatsToByteArray (floats : List Float) : ByteArray := Id.run do
 def getFloat (arr : ByteArray) (i : Nat) : Float :=
   (arr.ugetFloat32 (i * 4).toUSize).toFloat
 
-/-- Test gemm_bias_relu fused kernel -/
+/-- Test {lit}`gemm_bias_relu` fused kernel. -/
 def testGemmBiasRelu : IO Unit := do
   IO.println "=== Testing gemm_bias_relu fused kernel ==="
 
@@ -109,7 +109,7 @@ def testBatching : IO Unit := do
   else
     IO.println "  ✗ Batching test FAILED"
 
-/-- Test bias_relu operation -/
+/-- Test {lit}`bias_relu` operation. -/
 def testBiasRelu : IO Unit := do
   IO.println "\n=== Testing bias_relu ==="
 
@@ -145,7 +145,7 @@ def testBiasRelu : IO Unit := do
   else
     IO.println "  ✗ bias_relu test FAILED"
 
-/-- Test layer_norm operation -/
+/-- Test {lit}`layer_norm` operation. -/
 def testLayerNorm : IO Unit := do
   IO.println "\n=== Testing layer_norm ==="
 
@@ -187,7 +187,7 @@ def testLayerNorm : IO Unit := do
   else
     IO.println "  ✗ layer_norm test FAILED"
 
-/-- Test bias_gelu operation -/
+/-- Test {lit}`bias_gelu` operation. -/
 def testBiasGelu : IO Unit := do
   IO.println "\n=== Testing bias_gelu ==="
 

@@ -4,34 +4,36 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: SciLean contributors
 -/
 import SciLean.Data.Tensor
+import SciLean.Data.IndexType.Shape
 import SciLean.FFI.Metal
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 /-!
 # GPU Computation Monad
 
-The GPU monad provides a structured way to sequence GPU operations with:
+The {lit}`GPU` monad provides a structured way to sequence GPU operations with:
 1. Automatic command buffer batching for performance
 2. Type-safe device transfers
 3. Clean composition of GPU computations
 
 ## Design Rationale
 
-The GPU monad wraps IO but adds semantic meaning: operations within
-a GPU computation block should be batched for efficiency. The `run`
+The {lit}`GPU` monad wraps {name}`IO` but adds semantic meaning: operations within
+a GPU computation block should be batched for efficiency. The {lit}`GPU.exec`
 function handles command buffer lifecycle automatically.
 
 ## Usage
 
-```lean
+```nonLeanCode
 -- Simple GPU computation
-let result ← GPU.run do
+let result ← GPU.exec do
   let a ← GPU.alloc (Float^[1024])
   let b ← GPU.alloc (Float^[1024])
   GPU.add a b
 
--- Compute with automatic CPU↔GPU transfers
+-- Compute with automatic CPU/GPU transfers
 let cpuResult ← GPU.compute cpuInput fun gpuTensor => do
   let temp ← GPU.relu gpuTensor
   GPU.add temp temp
@@ -42,9 +44,9 @@ variable {ι : Type} {n : ℕ} [IndexType ι n]
 variable {κ : Type} {m : ℕ} [IndexType κ m]
 
 /-- The GPU monad for sequencing GPU operations.
-    Wraps IO but provides semantic batching context. -/
+    Wraps {name}`IO` but provides semantic batching context. -/
 structure GPU (α : Type) where
-  /-- Run the GPU computation as an IO action -/
+  /-- Run the GPU computation as an {name}`IO` action. -/
   run : IO α
 
 namespace GPU
@@ -90,12 +92,16 @@ def tryExec (comp : GPU α) : IO (Except IO.Error α) := do
 /-! ## Tensor Operations in GPU Monad -/
 
 /-- Allocate a GPU tensor. -/
-def alloc {α : Type} [PlainDataType α] {ι : Type} {n : ℕ} [IndexType ι n]
-    : GPU (GpuTensor α ι) :=
-  ⟨GpuBufferN.alloc >>= (pure ⟨·⟩)⟩
+def alloc {α : Type} [PlainDataType α] {ι : Type} {n : ℕ}
+    [IndexType ι n] [IndexTypeShape ι n] : GPU (GpuTensor α ι) :=
+  ⟨do
+    let elemBytes := (inferInstance : PlainDataType α).btype.bytes
+    let gpuBuf ← Metal.GpuBuffer.alloc (n.toUSize * elemBytes)
+    pure (GpuTensor.fromContiguous (ι:=ι) gpuBuf)⟩
 
 /-- Transfer a CPU tensor to GPU. -/
-def upload {α : Type} [PlainDataType α] {ι : Type} {n : ℕ} [IndexType ι n]
+def upload {α : Type} [PlainDataType α] {ι : Type} {n : ℕ}
+    [IndexType ι n] [IndexTypeShape ι n]
     (cpu : CpuTensor α ι) : GPU (GpuTensor α ι) :=
   ⟨cpu.toGpu⟩
 
@@ -106,20 +112,21 @@ def download {α : Type} [PlainDataType α] {ι : Type} {n : ℕ} [IndexType ι 
 
 /-! ## GPU Tensor Operations -/
 
-/-- Element-wise addition on GPU -/
+/-- Element-wise addition on GPU. -/
 def add (a b : GpuTensor Float (Idx n)) : GPU (GpuTensor Float (Idx n)) :=
   ⟨GpuTensor.add a b⟩
 
-/-- Element-wise multiplication on GPU -/
+/-- Element-wise multiplication on GPU. -/
 def mul (a b : GpuTensor Float (Idx n)) : GPU (GpuTensor Float (Idx n)) :=
   ⟨GpuTensor.mul a b⟩
 
-/-- ReLU activation on GPU -/
+/-- ReLU activation on GPU. -/
 def relu (a : GpuTensor Float (Idx n)) : GPU (GpuTensor Float (Idx n)) :=
   ⟨GpuTensor.relu a⟩
 
-/-- Fused GEMM + Bias + ReLU: C = max(0, A @ B + bias)
-    More efficient than separate gemm → add → relu operations. -/
+/-- Fused GEMM + bias + ReLU.
+    More efficient than separate {name}`GpuTensor.gemm`, {name}`GpuTensor.add`,
+    and {name}`GpuTensor.relu` operations. -/
 def gemmBiasRelu (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Idx k × Idx n))
     (bias : GpuTensor Float (Idx n)) : GPU (GpuTensor Float (Idx m × Idx n)) :=
   ⟨GpuTensor.gemmBiasRelu A B bias⟩
@@ -133,7 +140,7 @@ def gemmBiasRelu (A : GpuTensor Float (Idx m × Idx k)) (B : GpuTensor Float (Id
     3. Downloads result back to CPU
 
     All within a single batched command buffer. -/
-def compute [PlainDataType α] (input : CpuTensor α ι)
+def compute [PlainDataType α] [IndexTypeShape ι n] (input : CpuTensor α ι)
     (f : GpuTensor α ι → GPU (GpuTensor α ι)) : IO (CpuTensor α ι) := do
   exec do
     let gpuIn ← upload input
@@ -141,7 +148,8 @@ def compute [PlainDataType α] (input : CpuTensor α ι)
     download gpuOut
 
 /-- Run a GPU computation on multiple CPU tensors. -/
-def compute2 [PlainDataType α] (in1 : CpuTensor α ι) (in2 : CpuTensor α ι)
+def compute2 [PlainDataType α] [IndexTypeShape ι n]
+    (in1 : CpuTensor α ι) (in2 : CpuTensor α ι)
     (f : GpuTensor α ι → GpuTensor α ι → GPU (GpuTensor α ι))
     : IO (CpuTensor α ι) := do
   exec do
@@ -151,7 +159,8 @@ def compute2 [PlainDataType α] (in1 : CpuTensor α ι) (in2 : CpuTensor α ι)
     download result
 
 /-- Map a GPU operation over a CPU tensor. -/
-def map [PlainDataType α] (f : GpuTensor α ι → GPU (GpuTensor α ι))
+def map [PlainDataType α] [IndexTypeShape ι n]
+    (f : GpuTensor α ι → GPU (GpuTensor α ι))
     (cpu : CpuTensor α ι) : IO (CpuTensor α ι) :=
   compute cpu f
 

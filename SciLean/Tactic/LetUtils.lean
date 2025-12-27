@@ -2,6 +2,7 @@ import Lean.Elab.Tactic.ElabTerm
 import Lean.Elab.Tactic.Conv.Basic
 
 import SciLean.Lean.Expr
+import SciLean.VersoPrelude
 
 
 namespace SciLean.Meta
@@ -71,25 +72,14 @@ def convLetUnfold1 : Tactic
 macro " let_unfold1 " id:ident n:(num)? : tactic => `(tactic| conv => let_unfold1 $id $[$n]?)
 
 
-/-- Moves let binding upwards, maximum by `n?` positions. Returns none if there is no such let binding.
+/-- Moves let binding upwards, maximum by {lit}`n?` positions. Returns {lit}`none` if there is no such let binding.
 
-For example for the following expresion
-```
-  let x := ..
-  let y := ..
-  let z := ..
-  f x y z
-```
-calling ``letMoveUp e (fun n => n == `z) (some 1)`` will produce
-```
-  let x := ..
-  let z := ..
-  let y := ..
-  f x y z
-```
-but only if the value of `y` does not depend on `z`.
+For example, for the expression {lit}`let x := ..; let y := ..; let z := ..; f x y z`,
+calling {name}`letMoveUp` {lit}`e (fun n => n == Name.mkSimple "z") (some 1)` will produce
+{lit}`let x := ..; let z := ..; let y := ..; f x y z`
+but only if the value of {lit}`y` does not depend on {lit}`z`.
 
-Changing `(some 1)` to `(some 2)` or `none`, `let z := ...` will be move to the top.
+Changing {lit}`(some 1)` to {lit}`(some 2)` or {lit}`none`, {lit}`let z := ...` will be moved to the top.
 -/
 def letMoveUp (e : Expr) (p : Name → Bool) (n? : Option Nat) : Option Expr := do
   run e |>.map λ (e, _) => e
@@ -174,7 +164,7 @@ macro " let_move_up " id:ident n:(num)? : tactic => `(tactic| conv => let_move_u
 
 -- /-- Moves let binding down, maximum by `n?` positions. Returns none if there is no such let binding.
 
--- For example for the following expresion
+-- For example for the following expression
 -- ```
 --   let x := ..
 --   let y := ..

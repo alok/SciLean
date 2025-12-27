@@ -3,6 +3,7 @@ import SciLean.Analysis.Calculus.Notation.Gradient
 
 import SciLean.Util.SolveFun
 import SciLean.Tactic.LetEnter
+import SciLean.VersoPrelude
 
 set_option linter.unusedVariables false
 
@@ -63,8 +64,8 @@ variable
 
 Well behaved integragor for Hamiltonian systems
 
-Warning: This is symplectic integrator if `H q p = T p + V q`.
-In more complicated cases use `implicitSymplecticEulerV1` or `implicitSymplecticEulerV2`.
+Warning: This is symplectic integrator if {lit}`H q p = T p + V q`.
+In more complicated cases use {lit}`implicitSymplecticEulerV1` or {lit}`implicitSymplecticEulerV2`.
 -/
 noncomputable
 def explicitSymplecticEuler (H : X → X → R) (Δt : R) (qₙ pₙ : X) : X×X :=
@@ -86,7 +87,8 @@ def implicitSymplecticEulerV2 (H : X → X → R) (Δt : R) (qₙ pₙ : X) : X�
     ∧
     p' = pₙ - Δt • ∇ (q:=q'), H q pₙ
 
-/-- For Hamiltonians in the form `H q p = T p + V q` the `explicitSymplecticEuler` method is identical to `implicitSymplecticEulerV1`
+/-- For Hamiltonians in the form {lit}`H q p = T p + V q` the {lit}`explicitSymplecticEuler` method is identical to
+{lit}`implicitSymplecticEulerV1`
 -/
 theorem explicitSymplecticEuler_eq_implicitSymplecticEulerV1
   (T V : X → R)

@@ -1,0 +1,19 @@
+===== SquareGemmTest =====
+Testing square matrix GEMM...
+Testing 64×64 @ 64×64...
+  AMX: OK
+  MPS: OK
+  Auto: OK
+Testing 128×128 @ 128×128...
+  AMX: OK
+  MPS: OK
+  Auto: OK
+Testing 256×256 @ 256×256...
+  AMX: OK
+  MPS: OK
+  Auto: OK
+Testing 512×512 @ 512×512...
+  AMX: OK
+  MPS: OK
+  Auto: OK
+All tests passed!

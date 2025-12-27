@@ -51,15 +51,15 @@ theorem outDim_swap' {r} {spDims kerDims : ArrayN ℤ r} {low high : ArrayN ℤ 
 
 def convWithPaddingStride
     {spDims kerDims : Dims r}
-    (x : R^[TensorIndex spDims]) (y : R^[TensorIndex kerDims])  -- lhs and rhs
+    (x : R^[XlaTensorIndex spDims]) (y : R^[XlaTensorIndex kerDims])  -- lhs and rhs
     (low high : ArrayN ℤ r)    -- padding
     (stride : ArrayN ℕ+ r)    -- window stride
     (xdil ydil : ArrayN ℕ+ r) -- dillatation
     {outDim : Dims r}
     (houtDim : outDim = convOutDim spDims kerDims low high stride xdil ydil := by unfold convOutDim; reduce_dim) :
-    R^[TensorIndex outDim] :=
-  ⊞ (i : TensorIndex outDim) =>
-    ∑ (j : TensorIndex kerDims),
+    R^[XlaTensorIndex outDim] :=
+  ⊞ (i : XlaTensorIndex outDim) =>
+    ∑ (j : XlaTensorIndex kerDims),
       let k := i.1 * stride + j.1 * ydil - low
       let dk := k / xdil
       let rk := k % xdil
@@ -72,15 +72,15 @@ def convWithPaddingStride
 
 def convWithPaddingStride'
     {spDims kerDims : Dims r}
-    (x : TensorIndex spDims → R) (y : TensorIndex kerDims → R)  -- lhs and rhs
+    (x : XlaTensorIndex spDims → R) (y : XlaTensorIndex kerDims → R)  -- lhs and rhs
     (low high : ArrayN ℤ r)    -- padding
     (stride : ArrayN ℕ+ r)    -- window stride
     (xdil ydil : ArrayN ℕ+ r) -- dillatation
     {outDim : Dims r}
     (houtDim : outDim = convOutDim spDims kerDims low high stride xdil ydil := by unfold convOutDim; reduce_dim) :
-    TensorIndex outDim → R :=
-  fun (i : TensorIndex outDim) =>
-    ∑ (j : TensorIndex kerDims),
+    XlaTensorIndex outDim → R :=
+  fun (i : XlaTensorIndex outDim) =>
+    ∑ (j : XlaTensorIndex kerDims),
       let k := i.1 * stride + j.1 * ydil - low
       let dk := k / xdil
       let rk := k % xdil
@@ -107,7 +107,7 @@ def_fun_prop convWithPaddingStride' in y
 @[fun_trans]
 theorem convWithPaddingStride.arg_y.adjoint_rule
     {spDims kerDims : Dims r}
-    (x : R^[TensorIndex spDims])
+    (x : R^[XlaTensorIndex spDims])
     (low high : ArrayN ℤ r)    -- padding
     (stride : ArrayN ℕ+ r)    -- window stride
     (xdil ydil : ArrayN ℕ+ r) -- dillatation
@@ -124,7 +124,7 @@ theorem convWithPaddingStride.arg_y.adjoint_rule
   simp (config:={zeta:=false}) [Inner.inner,convWithPaddingStride]
   symm
   calc
-    _ = ∑ (i : TensorIndex outDim), z[i] * ∑ (j : TensorIndex kerDims),
+    _ = ∑ (i : XlaTensorIndex outDim), z[i] * ∑ (j : XlaTensorIndex kerDims),
       let k := i.1 * stride + j.1 * ydil - low
       let dk := k / xdil
       let rk := k % xdil
@@ -134,7 +134,7 @@ theorem convWithPaddingStride.arg_y.adjoint_rule
       else
         0 := by rfl
 
-    _ = ∑ (i : TensorIndex outDim), ∑ (j : TensorIndex kerDims),
+    _ = ∑ (i : XlaTensorIndex outDim), ∑ (j : XlaTensorIndex kerDims),
       let k := i.1 * stride + j.1 * ydil - low
       let dk := k / xdil
       let rk := k % xdil
@@ -144,7 +144,7 @@ theorem convWithPaddingStride.arg_y.adjoint_rule
       else
         0 := by sorry -- move `z` in
 
-    _ = ∑ (j : TensorIndex kerDims), ∑ (i : TensorIndex outDim),
+    _ = ∑ (j : XlaTensorIndex kerDims), ∑ (i : XlaTensorIndex outDim),
       let k := i.1 * stride + j.1 * ydil - low
       let dk := k / xdil
       let rk := k % xdil
@@ -154,7 +154,7 @@ theorem convWithPaddingStride.arg_y.adjoint_rule
       else
         0 := by sorry -- swap sums
 
-    _ = ∑ (j : TensorIndex kerDims), (∑ (i : TensorIndex outDim),
+    _ = ∑ (j : XlaTensorIndex kerDims), (∑ (i : XlaTensorIndex outDim),
       let k := j.1 * ydil + i.1 * stride - low
       let dk := k / xdil
       let rk := k % xdil
@@ -170,7 +170,7 @@ theorem convWithPaddingStride.arg_y.adjoint_rule
 @[fun_trans]
 theorem convWithPaddingStride.arg_x.adjoint_rule
     {spDims kerDims : Dims r}
-    (y : R^[TensorIndex kerDims])
+    (y : R^[XlaTensorIndex kerDims])
     (low high : ArrayN ℤ r)    -- padding
     (stride : ArrayN ℕ+ r)    -- window stride
     (xdil ydil : ArrayN ℕ+ r) -- dillatation
@@ -193,7 +193,7 @@ theorem convWithPaddingStride.arg_x.adjoint_rule
   -- intro ker'
   -- symm
   -- calc
-  --   _ = ∑ (i : TensorIndex outDim), z[i] * ∑ (j : TensorIndex kerDims),
+  --   _ = ∑ (i : XlaTensorIndex outDim), z[i] * ∑ (j : XlaTensorIndex kerDims),
   --     let k := i.1 * stride + j.1 * ydil - low
   --     let dk := k / xdil
   --     let rk := k % xdil
@@ -203,7 +203,7 @@ theorem convWithPaddingStride.arg_x.adjoint_rule
   --     else
   --       0 := by rfl
 
-  --   _ = ∑ (i : TensorIndex outDim), ∑ (j : TensorIndex kerDims),
+  --   _ = ∑ (i : XlaTensorIndex outDim), ∑ (j : XlaTensorIndex kerDims),
   --     let k := i.1 * stride + j.1 * ydil - low
   --     let dk := k / xdil
   --     let rk := k % xdil
@@ -213,12 +213,12 @@ theorem convWithPaddingStride.arg_x.adjoint_rule
   --     else
   --       0 := by sorry -- move `z` in
 
-  --   _ = ∑ (i : TensorIndex outDim), ∑ (j : TensorIndex kerDims), ∑ (k : TensorIndex spDims),
+  --   _ = ∑ (i : XlaTensorIndex outDim), ∑ (j : XlaTensorIndex kerDims), ∑ (k : XlaTensorIndex spDims),
   --     if k.1 * xdil = i.1 * stride + j.1 * ydil - low then
   --       z[i] * x[k] * y[j]
   --     else 0 := by sorry -- introduce sum over `k`
 
-  --   _ = ∑ (k : TensorIndex spDims), ∑ (j : TensorIndex kerDims), ∑ (i : TensorIndex outDim),
+  --   _ = ∑ (k : XlaTensorIndex spDims), ∑ (j : XlaTensorIndex kerDims), ∑ (i : XlaTensorIndex outDim),
   --     let i' := k.1 * xdil - j.1 * ydil + low
   --     let di' := i' / stride
   --     let ri' := i' % stride
@@ -227,7 +227,7 @@ theorem convWithPaddingStride.arg_x.adjoint_rule
   --     else 0 := by sorry -- swap sums and rewrite the condition in terms of `i'`
 
 
-  --   _ = ∑ (k : TensorIndex spDims), ∑ (j : TensorIndex kerDims),
+  --   _ = ∑ (k : XlaTensorIndex spDims), ∑ (j : XlaTensorIndex kerDims),
   --     let i' := k.1 * xdil - j.1 * ydil + low
   --     let di' := i' / stride
   --     let ri' := i' % stride
@@ -236,7 +236,7 @@ theorem convWithPaddingStride.arg_x.adjoint_rule
   --       z[di'] * x[k] * y[j]
   --     else 0 := by sorry -- remove sum over `i`
 
-  --   _ = ∑ (k : TensorIndex spDims), ∑ (j : TensorIndex kerDims),
+  --   _ = ∑ (k : XlaTensorIndex spDims), ∑ (j : XlaTensorIndex kerDims),
   --     let i' := k.1 * xdil + j.1 * ydil - ((kerDims - 1) * ydil - low)
   --     let di' := i' / stride
   --     let ri' := i' % stride
@@ -245,7 +245,7 @@ theorem convWithPaddingStride.arg_x.adjoint_rule
   --       z[di'] * x[k] * (rev y)[j]
   --     else 0 := by sorry -- reverse the sum over `j`, `j --> kerDims - 1 - j`
 
-  --   _ = ∑ (k : TensorIndex spDims), (∑ (j : TensorIndex kerDims),
+  --   _ = ∑ (k : XlaTensorIndex spDims), (∑ (j : XlaTensorIndex kerDims),
   --     let i' := k.1 * xdil + j.1 * ydil - ((kerDims - 1) * ydil + 1 - low - 1)
   --     let di' := i' / stride
   --     let ri' := i' % stride

@@ -552,7 +552,7 @@ This is morphism composition. The face `f` is a morphism `Q → P` and `g` is a 
       : (f.comp g h).toPrism = g.toPrism
       := sorry_proof
 
-    /--  -/
+    /-- The original prism of a face is preserved by composition. -/
     @[simp]
     theorem comp_ofPrism (f g : FaceRepr) (h)
       : (f.comp g h).ofPrism = f.ofPrism
@@ -799,7 +799,7 @@ def FaceRepr.index_numberOfFaces (f : FaceRepr)
   : f.index < f.ofPrism.faceCount f.dim
   := sorry_proof
 
-/-- Face is uniquelly determined by its parent prism, dimension and index -/
+/-- Face is uniquely determined by its parent prism, dimension and index -/
 def FaceRepr.index_ext (f g : FaceRepr)
   : f.ofPrism = g.ofPrism → f.dim = g.dim → f.index = g.index → f = g
   := sorry_proof
@@ -956,12 +956,12 @@ private def BasisIndex.evalImpl (idx : BasisIndex) (deg : Nat) (x : idx.ofPrism.
   | .prod p q, (x, y) => (p.evalImpl deg x) * (q.evalImpl deg y)
 
 
--- Lagrangian basis function correspoinding to the index `idx`
+-- Lagrangian basis function corresponding to the index `idx`
 def BasisIndex.eval (idx : BasisIndex) (x : idx.ofPrism.Space) : ℝ :=
   idx.evalImpl idx.degree x
 
 
--- Lagrangian node correspoinding to the index `idx`
+-- Lagrangian node corresponding to the index `idx`
 def BasisIndex.node (idx : BasisIndex) : idx.ofPrism.Space :=
   match idx with
   | .point _ => ()

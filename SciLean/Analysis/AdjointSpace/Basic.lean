@@ -10,17 +10,20 @@ import SciLean.Data.IndexType.Operations
 
 open ComplexConjugate RCLike
 /--
-This is almost `InnerProductSpace` but we do not require that norm originates from the inner product.
+This is almost {name}`InnerProductSpace`, but we do not require that the norm originates from the
+inner product.
 
-The reason for this class it to be able to have inner product on spaces line `ℝ×ℝ` and `ι → ℝ`
-as they are by default equiped by max norm which is not compatible with inner product. -/
+The reason for this class is to be able to have inner products on spaces like {lean}`ℝ × ℝ` and
+{lit}`ι → ℝ`, as they are by default equipped with the max norm, which is not compatible with the
+inner product.
+-/
 class AdjointSpace (𝕜 : Type*) (E : Type*) [RCLike 𝕜] [NormedAddCommGroup E] extends
   NormedSpace 𝕜 E, Inner 𝕜 E where
-  /-- Norm induced by inner is topologicaly equivalent to the given norm -/
+  /-- Norm induced by inner is topologically equivalent to the given norm. -/
   inner_top_equiv_norm : ∃ c d : ℝ,
     c > 0 ∧ d > 0 ∧
     ∀ x : E, (c • ‖x‖^2 ≤ re (inner x x)) ∧ (re (inner x x) ≤ d • ‖x‖^2)
-  /-- The inner product is *hermitian*, taking the `conj` swaps the arguments. -/
+  /-- The inner product is *hermitian*: applying {lit}`conj` swaps the arguments. -/
   conj_symm : ∀ x y, conj (inner y x) = inner x y
   /-- The inner product is additive in the first coordinate. -/
   add_left : ∀ x y z, inner (x + y) z = inner x z + inner y z
@@ -94,7 +97,7 @@ theorem inner_smul_real_right (x y : E) (r : ℝ) : ⟪x, (r : 𝕜) • y⟫ = 
 
 /-- The inner product as a sesquilinear form.
 
-Note that in the case `𝕜 = ℝ` this is a bilinear form. -/
+Note that in the case {lit}`𝕜 = ℝ` this is a bilinear form. -/
 @[simps!]
 def sesqFormOfInner : E →ₗ[𝕜] E →ₗ⋆[𝕜] 𝕜 :=
   LinearMap.mk₂'ₛₗ (RingHom.id 𝕜) (starRingEnd _) (fun x y => ⟪y, x⟫)
@@ -144,7 +147,7 @@ theorem inner_self_nonpos {x : E} : re ⟪x, x⟫ ≤ 0 ↔ x = 0 := by
   constructor
   · have ⟨c,d,hc,_,h⟩ := inner_top_equiv_norm (𝕜:=𝕜) (E:=E)
     have ⟨h,_⟩ := h x
-    intro h'; simp[h'] at h
+    intro h'; simp at h
     have : ‖x‖^2 ≤ 0 := by nlinarith
     have : ‖x‖ ≤ 0 := by nlinarith
     simp_all only [gt_iff_lt, smul_eq_mul, norm_le_zero_iff]
@@ -191,11 +194,11 @@ theorem inner_mul_symm_re_eq_norm (x y : E) : re (⟪x, y⟫ * ⟪y, x⟫) = ‖
   rw [← inner_conj_symm, mul_comm]
   exact re_eq_norm_of_mul_conj (inner 𝕜 y x)
 
-/-- Expand `⟪x + y, x + y⟫` -/
+/-- Expand {lit}`⟪x + y, x + y⟫`. -/
 theorem inner_add_add_self (x y : E) : ⟪x + y, x + y⟫ = ⟪x, x⟫ + ⟪x, y⟫ + ⟪y, x⟫ + ⟪y, y⟫ := by
   simp only [inner_add_left, inner_add_right]; ring
 
-/-- Expand `⟪x + y, x + y⟫_ℝ` -/
+/-- Expand {lit}`⟪x + y, x + y⟫_ℝ`. -/
 theorem real_inner_add_add_self (x y : F) :
     ⟪x + y, x + y⟫_ℝ = ⟪x, x⟫_ℝ + 2 * ⟪x, y⟫_ℝ + ⟪y, y⟫_ℝ := by
   have : ⟪y, x⟫_ℝ = ⟪x, y⟫_ℝ := by rw [← inner_conj_symm]; rfl
@@ -206,7 +209,7 @@ theorem real_inner_add_add_self (x y : F) :
 theorem inner_sub_sub_self (x y : E) : ⟪x - y, x - y⟫ = ⟪x, x⟫ - ⟪x, y⟫ - ⟪y, x⟫ + ⟪y, y⟫ := by
   simp only [inner_sub_left, inner_sub_right]; ring
 
-/-- Expand `⟪x - y, x - y⟫_ℝ` -/
+/-- Expand {lit}`⟪x - y, x - y⟫_ℝ`. -/
 theorem real_inner_sub_sub_self (x y : F) :
     ⟪x - y, x - y⟫_ℝ = ⟪x, x⟫_ℝ - 2 * ⟪x, y⟫_ℝ + ⟪y, y⟫_ℝ := by
   have : ⟪y, x⟫_ℝ = ⟪x, y⟫_ℝ := by rw [← inner_conj_symm]; rfl

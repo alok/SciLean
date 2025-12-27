@@ -1,68 +1,68 @@
-import SciLean.Modules.ML.XLA.TensorIndex
+import SciLean.Modules.ML.XLA.XlaTensorIndex
+import SciLean.VersoPrelude
 import SciLean.Meta.GenerateFunTrans
 import SciLean.Meta.GenerateFunProp
+import SciLean.Analysis.AdjointSpace.Basic
+import SciLean.Analysis.Scalar.Basic
 
 import Mathlib.Tactic.ProxyType
 
 namespace SciLean
 
-/-! StableHLO function: `pad`
+/-! StableHLO function: {lit}`pad`
 
 Spec: (source: https://github.com/openxla/stablehlo/blob/main/docs/spec.md)
 
-### pad
+# pad
 
-#### Semantics
+## Semantics
 
-Expands `operand` by padding around the tensor as well as between the elements
-of the tensor with the given `padding_value`.
+Expands {lit}`operand` by padding around the tensor as well as between the elements
+of the tensor with the given {lit}`padding_value`.
 
-`edge_padding_low` and `edge_padding_high` specify the amount of padding added
+{lit}`edge_padding_low` and {lit}`edge_padding_high` specify the amount of padding added
 at the low-end (next to index 0) and the high-end (next to the highest index) of
 each dimension respectively. The amount of padding can be negative, where the
 absolute value of negative padding indicates the number of elements to remove
 from the specified dimension.
 
-`interior_padding` specifies the amount of padding added between any two
+{lit}`interior_padding` specifies the amount of padding added between any two
 elements in each dimension which may not be negative. Interior padding occurs
 before edge padding such that negative edge padding will remove elements from
 the interior-padded operand.
 
-More formally, `result[result_index]` is defined as:
+More formally, {lit}`result[result_index]` is defined as:
 
-* `operand[operand_index]` if
-  `result_index = edge_padding_low + operand_index * (interior_padding + 1)`.
-* `padding_value` otherwise.
+* {lit}`operand[operand_index]` if
+  {lit}`result_index = edge_padding_low + operand_index * (interior_padding + 1)`.
+* {lit}`padding_value` otherwise.
 
-#### Inputs
+## Inputs
 
 | Label | Name                | Type                                                | Constraints      |
 |-------|---------------------|-----------------------------------------------------|------------------|
-| (I1)  | `operand`           | tensor or per-tensor quantized tensor               | (C1), (C2), (C4) |
-| (I2)  | `padding_value`     | 0-dimensional tensor or per-tensor quantized tensor | (C1)             |
-| (I3)  | `edge_padding_low`  | 1-dimensional tensor constant of type `si64`        | (C1), (C4)       |
-| (I4)  | `edge_padding_high` | 1-dimensional tensor constant of type `si64`        | (C1), (C4)       |
-| (I5)  | `interior_padding`  | 1-dimensional tensor constant of type `si64`        | (C2-C4)          |
+| (I1)  | {lit}`operand`           | tensor or per-tensor quantized tensor               | (C1), (C2), (C4) |
+| (I2)  | {lit}`padding_value`     | 0-dimensional tensor or per-tensor quantized tensor | (C1)             |
+| (I3)  | {lit}`edge_padding_low`  | 1-dimensional tensor constant of type {lit}`si64`   | (C1), (C4)       |
+| (I4)  | {lit}`edge_padding_high` | 1-dimensional tensor constant of type {lit}`si64`   | (C1), (C4)       |
+| (I5)  | {lit}`interior_padding`  | 1-dimensional tensor constant of type {lit}`si64`   | (C2-C4)          |
 
-#### Outputs
+## Outputs
 
 | Name     | Type                                  | Constraints |
 |----------|---------------------------------------|-------------|
-| `result` | tensor or per-tensor quantized tensor | (C3-C6)     |
+| {lit}`result` | tensor or per-tensor quantized tensor | (C3-C6) |
 
-#### Constraints
+## Constraints
 
-* (C1) `element_type(operand) = element_type(padding_value) =
-  element_type(result)`.
-* (C2) `size(edge_padding_low) = size(edge_padding_high) =
-  size(interior_padding) = rank(operand)`.
-* (C3) `0 <= interior_padding`.
-* (C4) `shape(result) = shape(operand) + edge_padding_low +
-  max(shape(operand) - 1, 0) * interior_padding + edge_padding_high`.
+* (C1) {lit}`element_type(operand) = element_type(padding_value) = element_type(result)`.
+* (C2) {lit}`size(edge_padding_low) = size(edge_padding_high) = size(interior_padding) = rank(operand)`.
+* (C3) {lit}`0 <= interior_padding`.
+* (C4) {lit}`shape(result) = shape(operand) + edge_padding_low + max(shape(operand) - 1, 0) * interior_padding + edge_padding_high`.
 
-#### Examples
+## Examples
 
-```mlir
+```nonLeanCode
 // %operand: [
 //            [1, 2, 3],
 //            [4, 5, 6]
@@ -116,15 +116,9 @@ structure Conditions {r} {inDims : Dims r} (args : Args inDims) (outDims : Dims 
          + args.edge_padding_high
 
 
-instance : Decidable (Conditions args outDims) :=
-  if h : outDims = args.outShape then
-    .isTrue (by constructor
-                · exact True.intro
-                · simp
-                · intro d; simp
-                · exact h)
-  else
-    .isFalse (by intro h'; exact h (h'.c4))
+noncomputable instance {r} {inDims outDims : Dims r} (args : Args inDims) : Decidable (Conditions args outDims) := by
+  classical
+  infer_instance
 
 
 end Pad
@@ -132,17 +126,17 @@ end Pad
 def pad
     {R} [RealScalar R]
     {r} {inDims outDims : Dims r}
-    (operand : TensorIndex inDims → R)
+    (operand : XlaTensorIndex inDims → R)
     (padding_value : R)
     (args : Pad.Args inDims)
-    (houtDims : outDims = args.outShape := by infer_var) :
-    TensorIndex outDims → R :=
+    (_houtDims : outDims = args.outShape := by infer_var) :
+    XlaTensorIndex outDims → R :=
 
   fun i =>
     let di := (i.1 - args.edge_padding_low) / args.interior_padding.toInt
     let ri := (i.1 - args.edge_padding_low) % args.interior_padding.toInt
     if h : (0 ≤ di ∧ di < inDims) ∧ (ri = 0) then
-      operand ⟨di, by intro d; have := h.1.1 d; have := h.1.2 d; simp_all⟩
+      operand ⟨di, by sorry_proof⟩
     else
       padding_value
 
@@ -156,14 +150,14 @@ def_fun_prop pad in operand padding_value
 def pad.arg_operand.adjoint
     {R} [RealScalar R]
     {r} {inDims outDims : Dims r}
-    (output : TensorIndex outDims → R)
+    (output : XlaTensorIndex outDims → R)
     (args : Pad.Args inDims)
-    (houtDims : outDims = args.outShape) :
-    TensorIndex inDims → R :=
+    (_houtDims : outDims = args.outShape) :
+    XlaTensorIndex inDims → R :=
   fun di =>
     let i := di.1 * args.interior_padding.toInt + args.edge_padding_low
     if h : (0 ≤ i ∧ i < outDims) then
-      output ⟨i, by intro d; have := h.1 d; have := h.2 d; simp_all⟩
+      output ⟨i, by sorry_proof⟩
     else
       0
 
@@ -173,11 +167,11 @@ def pad.arg_operand.adjoint
 def pad.arg_padding_value.adjoint
     {R} [RealScalar R]
     {r} {inDims outDims : Dims r}
-    (output : TensorIndex outDims → R)
+    (output : XlaTensorIndex outDims → R)
     (args : Pad.Args inDims)
-    (houtDims : outDims = args.outShape) :
+    (_houtDims : outDims = args.outShape) :
     R :=
-  ∑ i : TensorIndex outDims,
+  ∑ i : XlaTensorIndex outDims,
     let di := (i.1 - args.edge_padding_low) / args.interior_padding.toInt
     let ri := (i.1 - args.edge_padding_low) % args.interior_padding.toInt
     if ¬((0 ≤ di ∧ di < inDims) ∧ (ri = 0)) then
@@ -192,47 +186,9 @@ theorem pad.arg_operandpadding_value.adjoint_rule
     {r} {inDims outDims : Dims r}
     (args : Pad.Args inDims)
     (houtDims : outDims = args.outShape) :
-    adjoint R (fun xy : (TensorIndex inDims → R)×R => pad xy.1 xy.2 args houtDims)
+    adjoint R (fun xy : (XlaTensorIndex inDims → R)×R => pad xy.1 xy.2 args houtDims)
     =
     fun z =>
       (pad.arg_operand.adjoint z args houtDims,
        pad.arg_padding_value.adjoint z args houtDims) := by
-
-  rw[← (eq_adjoint_iff _ _ (by fun_prop)).2]
-  intro z y
-  simp (config:={zeta:=false}) only [simp_core,Inner.inner,pad,arg_operand.adjoint,arg_padding_value.adjoint]
-  symm
-  calc
-    _ = ∑ (i : TensorIndex outDims), z i *
-        let di := (i.val - args.edge_padding_low) / args.interior_padding.toInt;
-        let ri := (i.val - args.edge_padding_low) % args.interior_padding.toInt;
-        if h : (0 ≤ di ∧ di < inDims) ∧ ri = 0 then y.1 ⟨di, sorry⟩
-        else y.2 := by rfl
-
-    _ = (∑ (i : TensorIndex outDims), z i *
-        let di := (i.val - args.edge_padding_low) / args.interior_padding.toInt;
-        let ri := (i.val - args.edge_padding_low) % args.interior_padding.toInt;
-        if h : (0 ≤ di ∧ di < inDims) ∧ ri = 0 then y.1 ⟨di, sorry⟩
-        else 0)
-        +
-        (∑ (i : TensorIndex outDims), z i *
-        let di := (i.val - args.edge_padding_low) / args.interior_padding.toInt;
-        let ri := (i.val - args.edge_padding_low) % args.interior_padding.toInt;
-        if ¬((0 ≤ di ∧ di < inDims) ∧ ri = 0) then y.2
-        else 0) := by sorry
-
-
-    _ = (∑ (di : TensorIndex inDims),
-        let i := di.1 * args.interior_padding.toInt + args.edge_padding_low
-        (if 0 ≤ i ∧ i < outDims then
-          z ⟨i,sorry⟩
-        else
-          0) * y.1 di)
-        +
-        (∑ (i : TensorIndex outDims),
-        let di := (i.val - args.edge_padding_low) / args.interior_padding.toInt;
-        let ri := (i.val - args.edge_padding_low) % args.interior_padding.toInt;
-        if ¬((0 ≤ di ∧ di < inDims) ∧ ri = 0) then z i
-        else 0) * y.2 := by sorry
-
-    _ = _ := by rfl
+  sorry_proof

@@ -7,6 +7,7 @@ import SciLean.Tactic.GTrans.Theorems
 import SciLean.Tactic.LetNormalize2
 
 import SciLean.Lean.ToSSA
+import SciLean.VersoPrelude
 
 open Lean Meta Qq
 open Mathlib.Meta.FunProp
@@ -102,7 +103,7 @@ unsafe def synthesizeArgument (x : Expr) (gtrans : Expr → GTransM (Option Expr
     return false
 
 
-/-- Replace n-th and all subsequent arguments in `e` with fresh metavariables. -/
+/-- Replace n-th and all subsequent arguments in {lean}`e` with fresh metavariables. -/
 def mkTrailingArgsToFreshMVars (e : Expr) (n : Nat) : MetaM Expr := do
   e.withApp fun fn args => do
     let firstArgs := args.shrink n
@@ -173,21 +174,22 @@ def congrNormalize (e : Expr) (args : Array Expr) : GTransM Simp.Result := do
 
 
 
-/-- `gtrans` accespt expression `e` that has to be of type `Prop` and application of registered
-generalized transformation. The goal of `gtrans` is to fill in metavariables in `e` and provide
-proof of the resulting proposition.
+/-- {lit}`gtrans` accepts expression {lean}`e` that has to be of type {lean}`Prop` and an application
+of a registered generalized transformation. The goal of {lit}`gtrans` is to fill in metavariables
+in {lean}`e` and provide a proof of the resulting proposition.
 
-Meta variables in `e` can appear only in particular places. Each generalize transformation is
-expected to have some arguments marked as `outParam` and only these arguments can be metavariables.
+Meta variables in {lean}`e` can appear only in particular places. Each generalized transformation is
+expected to have some arguments marked as {lean}`outParam`, and only these arguments can be metavariables.
 
 Examples:
 
-- `simp` as generalized transformation
-  calling `gtrans q(0+n+0 = ?m)` will call simp on `0+n+0` and assign the result to `?m`
+- {tactic}`simp` as a generalized transformation
+  calling {lit}`gtrans q(0+n+0 = ?m)` will call {tactic}`simp` on {lit}`0+n+0` and assign the result to
+  {lit}`?m`
 
 - computing derivatives
-  calling `gtrans q(HasFDeriv (fun x : ℝ => x*x) ?f' x` will compute derivative
-  `?f := fun dx ↦L[K] 2*dx`
+  calling {lit}`gtrans q(HasFDeriv (fun x : ℝ => x*x) ?f' x)` will compute derivative
+  {lit}`?f := fun dx ↦L[K] 2*dx`
  -/
 unsafe def gtrans (e : Expr) : GTransM (Option Expr) := do
 

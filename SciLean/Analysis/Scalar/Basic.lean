@@ -20,13 +20,13 @@ namespace SciLean
 open Classical
 
 
-/-- `K` are real or complex numbers over real numbers `R`
+/-- {lit}`K` are real or complex numbers over real numbers {lit}`R`.
 
 This class allows us to write code independent of particular implementation of real or complex numbers.
 
-The main motivation for this class is to treat floating point numbers as real numbers but to minimize the impact of such unsoundness. We can write code with valid proofs and only at the last step before compilation provide inconsistent instance `Scalar Float Float`.
+The main motivation for this class is to treat floating point numbers as real numbers but to minimize the impact of such unsoundness. We can write code with valid proofs and only at the last step before compilation provide inconsistent instance {lit}`Scalar Float Float`.
 
-An alternative approach to get executable code would be to add a custom compiler step which would replace every occurance of real or complex numbers with their floating point equivalent. Implementing such compiler step turned out to be quite a non-trivial task thus we are taking this type class approach. -/
+An alternative approach to get executable code would be to add a custom compiler step which would replace every occurrence of real or complex numbers with their floating point equivalent. Implementing such compiler step turned out to be quite a non-trivial task thus we are taking this type class approach. -/
 class Scalar (R : outParam (Type _)) (K : (Type _)) extends RCLike K where
   -- used for specification
   toComplex : K → ℂ
@@ -94,14 +94,14 @@ class Scalar (R : outParam (Type _)) (K : (Type _)) extends RCLike K where
   lgamma_def (x : K) :
     toReal (lgamma x) = Real.log ‖Complex.Gamma (toComplex x)‖
 
-  /-- Is `x` finite number? For `ℝ` and `ℂ` this should be always true.
-  TODO: make dedicated class `FloatLike` that has this and `Scalar` derives from. -/
+  /-- Is {lit}`x` a finite number? For {lean}`ℝ` and {lean}`ℂ` this should be always true.
+  TODO: make dedicated class {lit}`FloatLike` that has this and {name}`Scalar` derives from. -/
   isFinite (x : K) : Bool
-  /-- Is `x` not a number? For `ℝ` and `ℂ` this should be always false.
-  TODO: make dedicated class `FloatLike` that has this and `Scalar` derives from. -/
+  /-- Is {lit}`x` not a number? For {lean}`ℝ` and {lean}`ℂ` this should be always false.
+  TODO: make dedicated class {lit}`FloatLike` that has this and {name}`Scalar` derives from. -/
   isNaN (x : K) : Bool
-  /-- Is `x` infinite? For `ℝ` and `ℂ` this should be always false.
-  TODO: make dedicated class `FloatLike` that has this and `Scalar` derives from. -/
+  /-- Is {lit}`x` infinite? For {lean}`ℝ` and {lean}`ℂ` this should be always false.
+  TODO: make dedicated class {lit}`FloatLike` that has this and {name}`Scalar` derives from. -/
   isInf (x : K) : Bool
   -- exp2 : K → K
   -- log2 : K → K
@@ -110,11 +110,11 @@ class Scalar (R : outParam (Type _)) (K : (Type _)) extends RCLike K where
   -- cbrt : K → K
 
 
-/-- `R` behaves as real numbers
+/-- {lit}`R` behaves as real numbers.
 
 This class allows us to write code independent of particular implementation of real numbers.
 
-See `Scalar` for motivation for this class.
+See {name}`Scalar` for motivation for this class.
 -/
 class RealScalar (R : Type*) extends Scalar R R where
   [order : LinearOrder R]
@@ -496,10 +496,10 @@ theorem Scalar.toENNReal_dite (c : Prop) [Decidable c]
 end SimpTheorems
 
 
-/-- Class saying that scalar multiplication between `R` and `K` is compatible with multiplication
-for  `[RealScalar R]` and `[Scalar R K]`
+/-- Class saying that scalar multiplication between {lit}`R` and {lit}`K` is compatible with multiplication
+for {lit}`[RealScalar R]` and {lit}`[Scalar R K]`.
 
-This class is necessary if you want to consider `K` as vector spaces over `R`. -/
+This class is necessary if you want to consider {lit}`K` as vector spaces over {lit}`R`. -/
 class ScalarSMul (R K : Type*) [RealScalar R] [Scalar R K] extends SMul R K where
   smul_eq_mul_make (r : R) (k : K) : r • k = Scalar.make r 0 * k
 

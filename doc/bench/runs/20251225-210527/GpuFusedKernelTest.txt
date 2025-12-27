@@ -1,0 +1,45 @@
+===== GpuFusedKernelTest =====
+Metal GPU available, running tests...
+
+=== Testing gemm_bias_relu fused kernel ===
+Result: [0.000000, 29.000000, 0.000000, 65.000000]
+  ✓ gemm_bias_relu test PASSED
+
+=== Testing GPU batching ===
+Batched result: [2.000000, 4.000000, 6.000000, 8.000000, 10.000000, 12.000000, 14.000000, 16.000000]
+  ✓ Batching test PASSED
+
+=== Testing bias_relu ===
+bias_relu result: [1.000000, 8.000000, 0.000000, 0.000000, 15.000000, 0.000000]
+  ✓ bias_relu test PASSED
+
+=== Testing layer_norm ===
+layer_norm result: [-1.341635, -0.447212, 0.447212, 1.341635]
+  ✓ layer_norm test PASSED
+
+=== Testing bias_gelu ===
+bias_gelu result: [0.000000, 0.841192, -0.158808, 0.841192, 1.954598, 0.000000]
+  ✓ bias_gelu test PASSED
+
+=== Testing avgpool2d ===
+avgpool2d result: [3.500000, 5.500000, 11.500000, 13.500000]
+  ✓ avgpool2d test PASSED
+
+=== Testing flash_attention ===
+flash_attention result: [1.660477, 2.660477, 2.339523, 3.339523]
+  ✓ flash_attention test PASSED
+
+=== Testing batchnorm2d ===
+batchnorm2d result: [-1.341635, -0.447212, 0.447212, 1.341635, -1.341635, -0.447212, 0.447212, 1.341635]
+  ✓ batchnorm2d test PASSED
+
+=== Testing backward pass kernels ===
+  Testing relu_backward...
+    relu_backward OK
+  Testing mul_backward...
+    mul_backward OK
+  Testing gelu_backward...
+    gelu_backward OK
+  ✓ backward kernels test PASSED
+
+=== All tests completed ===

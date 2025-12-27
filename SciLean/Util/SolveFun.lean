@@ -26,11 +26,12 @@ structure HasSolution {F Xs} [UncurryAll F Xs Prop] (P : F) : Prop where
 structure HasUniqueSolution {F Xs} [UncurryAll F Xs Prop] (P : F) : Prop extends HasSolution P where
   uniq : ∀ xs xs', uncurryAll P xs → uncurryAll P xs' → xs = xs'
 
-/-- Finds unique `(x₁, ..., xₙ)` such that `P x₁ ... xₙ` holds.
+/-- Finds unique {lit}`(x₁, ..., xₙ)` such that {lit}`P x₁ ... xₙ` holds.
 
-TODO: Can we return a solution if it exists and it not necessarily unique? I'm not sure if we would be able to prove `decomposeSolution` then.
+TODO: Can we return a solution if it exists and it not necessarily unique? I'm not sure if we would be able to prove
+{lit}`decomposeSolution` then.
 
-TODO: This is related to mathlib's `Classical.epsilon` i.e. the Hilbert epsilon function. Maybe redefine this function using it.
+TODO: This is related to mathlib's {name}`Classical.epsilon` i.e. the Hilbert epsilon function. Maybe redefine this function using it.
 -/
 noncomputable
 def solveFun {F : Sort _} {Xs : outParam (Type _)} [UncurryAll F Xs Prop] [Nonempty Xs] (f : F /- Xs → ... → Prop -/) : Xs :=
@@ -41,14 +42,9 @@ def solveFun {F : Sort _} {Xs : outParam (Type _)} [UncurryAll F Xs Prop] [Nonem
 
 
 open Lean Parser Elab Term in
-/-- Expresses the unique solution of a system of equations if it exists
+/-- Expresses the unique solution of a system of equations if it exists.
 
-For example
-
-```
-solve x y, x + y = a ∧ x - y = b
-```
-returns a pair `(x,y)` that solve the above system
+For example, {lit}`solve x y, x + y = a ∧ x - y = b` returns a pair {lit}`(x,y)` that solve the above system.
 
 The returned value is not specified if the system does not have an unique solution.
 -/
@@ -81,7 +77,7 @@ theorem decompose_has_unique_solution {Xs Ys Zs : Type _} [Nonempty Xs] [Nonempt
 
 
 
-/-- This theorem allows us to decompose one problem `P` into two succesives problems `Q₁` and `Q₂`.
+/-- This theorem allows us to decompose one problem {given}`P` into two successive problems {given}`Q₁` and {given}`Q₂`.
 -/
 theorem decomposeSolution {Xs Ys Zs : Type _} [Nonempty Xs] [Nonempty Ys] [Nonempty Zs]
   (f : Ys → Zs → Xs)  -- decomposition of unknowns
@@ -103,9 +99,9 @@ namespace SolveFun
 
 open Lean Meta
 
-/-- Take and expresion of the form `P₁ ∧ ... ∧ Pₙ` and return array `#[P₁, ..., Pₙ]`
+/-- Take an expression of the form {lit}`P₁ ∧ ... ∧ Pₙ` and return array {lit}`#[P₁, ..., Pₙ]`
 
-It ignores bracketing, so both `(P₁ ∧ P₂) ∧ P₃` and `P₁ ∧ (P₂ ∧ P₃)` produce `#[P₁, P₂, P₃]`-/
+It ignores bracketing, so both {lit}`(P₁ ∧ P₂) ∧ P₃` and {lit}`P₁ ∧ (P₂ ∧ P₃)` produce {lit}`#[P₁, P₂, P₃]`-/
 def splitAnd? (e : Expr) : MetaM (Array Expr) := do
   match e with
   | .mdata _ e' => splitAnd? e'
@@ -119,7 +115,7 @@ def splitAnd? (e : Expr) : MetaM (Array Expr) := do
   | e => return #[e]
 
 
-/-- Decompose `solve` problem into two `solve` problems. First, solve specified equations with indices `js` w.r.t to unknowns with indices `is`. Afterward, solve remaining equations w.r.t. remaining unknowns.
+/-- Decompose {lit}`solve` problem into two {lit}`solve` problems. First, solve specified equations with indices {lit}`js` w.r.t. unknowns with indices {lit}`is`. Afterward, solve remaining equations w.r.t. remaining unknowns.
 
 Returns:
 
@@ -131,23 +127,9 @@ Returns:
 
 ---
 
-For example calling `solveForFrom · #[1,3] #[0,1]` on
-
-```
-  solve x y z w, P ∧ Q ∧ R ∧ T
-```
-
-will return
-
-```
-  let yw' := fun x z => solve y w, P ∧ Q
-
-  fun (x,z) := solve x z, R ∧ T
-
-  let (y,w) := yw' x z
-
-  (x,y,z,w)
-```
+For example, calling {lit}`solveForFrom · #[1,3] #[0,1]` on
+{lit}`solve x y z w, P ∧ Q ∧ R ∧ T` will return a term of the form
+{lit}`let yw' := fun x z => solve y w, P ∧ Q; fun (x,z) => solve x z, R ∧ T; let (y,w) := yw' x z; (x,y,z,w)`.
 
 TODO: This should produce proof that those two terms are equal
 -/
@@ -236,31 +218,17 @@ def solveForNameFrom (e : Expr) (names : Array Name) (js : Array Nat) : MetaM (E
 open Lean Parser Syntax
 
 /--
-Tactic `solve_for y w from 0 1 := uniq` will decompose `solve x y z w, ...` problem
-by first solving for `y` and `w` from `0`th and `2`th equations and then solving the rest.
-You have to provide proof `uniq` that the decomposed problem has unique solution.
+Tactic {lit}`solve_for y w from 0 1 := uniq` will decompose {lit}`solve x y z w, ...` problem
+by first solving for {lit}`y` and {lit}`w` from {lit}`0`th and {lit}`2`th equations and then solving the rest.
+You have to provide proof {lit}`uniq` that the decomposed problem has unique solution.
 
 ---
 
-For example, calling `solve_for y w from 0 1 := by ...` on:
+For example, calling {lit}`solve_for y w from 0 1 := by ...` on
+{lit}`solve x y z w, P ∧ Q ∧ R ∧ T` produces a term of the form
+{lit}`let yw' := fun x z => solve y w, P ∧ Q; fun (x,z) => solve x z, R ∧ T; let (y,w) := yw' x z; (x,y,z,w)`.
 
-```
-  solve x y z w, P ∧ Q ∧ R ∧ T
-```
-
-produces
-
-```
-  let yw' := fun x z => solve y w, P ∧ Q
-
-  fun (x,z) := solve x z, R ∧ T
-
-  let (y,w) := yw' x z
-
-  (x,y,z,w)
-```
-
-Warring: this tactic currently uses `sorry`!-/
+Warning: this tactic currently uses {lit}`sorry`!-/
 local syntax (name:=solve_for_core_tactic) "solve_for_core " ident+ " from " num+ " := " term : conv
 
 @[inherit_doc solve_for_core_tactic]
@@ -289,12 +257,12 @@ open Lean Elab Tactic Conv
 
 open Function
 /--
-Rewrite `solve` as `invFun`
+Rewrite {lit}`solve` as {name}`invFun`
 
-TODO: There might be slight inconsistency as `invFun` always tries to give you some kind of answer even if it is not uniquely determined but `solve` gives up if the answer is not unique.
+TODO: There might be slight inconsistency as {name}`invFun` always tries to give you some kind of answer even if it is not uniquely determined but {lit}`solve` gives up if the answer is not unique.
 
 The issue is that I'm not sure if
-`Classical.choose (∃ x, f x - g x = 0)` might not be the same as `Classical.choose (∃ x, f x = g x)` or is that
+{lit}`Classical.choose (∃ x, f x - g x = 0)` might not be the same as {lit}`Classical.choose (∃ x, f x = g x)` or is that
 -/
 theorem solve_as_invFun {α β : Type _} [Nonempty α] (f g : α → β) [AddGroup β]
   : (solve x, f x = g x)

@@ -1,0 +1,13 @@
+===== LargeGEMM =====
+=== Large GEMM Performance Benchmark ===
+Warming up...
+Running benchmarks...
+gemm(64×64): 0.373070 ms, 1.405334 GFLOP/s (size=1638400)
+gemm(128×128): 0.374062 ms, 11.212858 GFLOP/s (size=6553600)
+gemm(256×256): 0.537416 ms, 62.436608 GFLOP/s (size=26214400)
+gemm(512×512): 1.412537 ms, 190.037823 GFLOP/s (size=52428800)
+gemm(1024×1024): 5.437550 ms, 394.935890 GFLOP/s (size=83886080)
+gemm(2048×2048): 27.734350 ms, 619.443729 GFLOP/s (size=83886080)
+
+Done!
+exit_code=0

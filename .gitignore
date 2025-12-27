@@ -21,7 +21,15 @@ perf.data
 uv.lock
 __pycache__/
 
+# W&B runs (local)
+/wandb/
+/.wandb/
+/Wandb/run-*/
+/Wandb/wandb/
+
 # Test data
 data/npy_test/
 data/mnist_weights/
 data/MNIST/
+examples/data/
+data/t10k-*

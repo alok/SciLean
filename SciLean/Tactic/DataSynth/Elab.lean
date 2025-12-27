@@ -1,6 +1,7 @@
 import Lean.Elab.Tactic.Conv
 import SciLean.Tactic.DataSynth.Main
 import SciLean.Tactic.DataSynth.Simproc
+import SciLean.VersoPrelude
 
 namespace SciLean.Tactic.DataSynth
 
@@ -9,7 +10,7 @@ open Lean Meta Elab Tactic
 declare_config_elab elabDataSynthConfig Config
 
 open Parser.Tactic in
-/-- `date_synth` as conv tactic will fill in meta variables in generalized transformation -/
+/-- {lit}`data_synth` as a conv tactic will fill in metavariables in generalized transformation. -/
 syntax (name:=data_synth_conv) "data_synth" optConfig (discharger)? : conv
 
 

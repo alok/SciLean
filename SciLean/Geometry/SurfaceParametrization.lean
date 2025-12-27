@@ -6,14 +6,15 @@ import Mathlib.MeasureTheory.Measure.Hausdorff
 import SciLean.Analysis.Scalar
 -- import SciLean.Analysis.Calculus.Jacobian
 import SciLean.Tactic.GTrans
+import SciLean.VersoPrelude
 
 open MeasureTheory
 
 namespace SciLean
 
 
-/-- `SurfaceParametrization A [(dom₁,p₁), ..., (domₙ,pₙ)]` says that the set `A` (assumed to be a
-surface) is parametrized by functions `pᵢ` with domain `domᵢ`. -/
+/-- {lit}`SurfaceParametrization A [(dom₁,p₁), ..., (domₙ,pₙ)]` says that the set {lean}`A` (assumed to be a
+surface) is parametrized by functions {lit}`pᵢ` with domain {lit}`domᵢ`. -/
 @[gtrans]
 structure SurfaceParametrization
     {X : Type} [NormedAddCommGroup X] [NormedSpace ℝ X]
@@ -21,14 +22,14 @@ structure SurfaceParametrization
     (U : outParam <| Type) [outParam (NormedAddCommGroup U)] [outParam (NormedSpace ℝ U)]
     (param : outParam <| List (Set U × (U → X))) : Prop where
 
-  /-- Every point of the parametrization yields a point in `A`. -/
+  /-- Every point of the parametrization yields a point in {lean}`A`. -/
   is_parametrization : ∀ p ∈ param, let (domᵢ,pᵢ) := p; ∀ u ∈ domᵢ, pᵢ u ∈ A
-  /-- Every point in `A` has unique parametrization representative. -/
+  /-- Every point in {lean}`A` has unique parametrization representative. -/
   complete_and_unique : ∀ x ∈ A, ∃! p ∈ param, ∃! u ∈ p.1, p.2 u = x
-  /-- Interior of every domain `domᵢ` can't be empty. Thanks to this we are really working with
+  /-- Interior of every domain {lit}`domᵢ` can't be empty. Thanks to this we are really working with
   a surface parametrization. -/
   non_empty_interior : ∀ p ∈ param, let (domᵢ,_) := p; interior domᵢ ≠ ∅
-  /-- Parametrizations `pᵢ` are differentiable. -/
+  /-- Parametrizations {lit}`pᵢ` are differentiable. -/
   differentiable : ∀ p ∈ param, let (domᵢ,pᵢ) := p; DifferentiableOn ℝ pᵢ domᵢ
 
 

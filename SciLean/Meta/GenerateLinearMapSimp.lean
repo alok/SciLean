@@ -6,6 +6,7 @@ import SciLean.Data.IndexType
 import SciLean.Meta.SimpAttr
 
 import SciLean.Tactic.AnalyzeConstLambda
+import SciLean.VersoPrelude
 
 namespace SciLean
 
@@ -178,8 +179,8 @@ def generateLinearMapSimp
 open Lean Meta
 /-- Generates bunch of simp theorems given a proof that function is linear.
 
-The provided theorem should be in the simple form `IsLinearMap K (fun x => foo x)`
-Not in the composition form `IsLinearMap K (fun x => foo (f x))`
+The provided theorem should be in the simple form {lit}`IsLinearMap K (fun x => foo x)`
+and not in the composition form {lit}`IsLinearMap K (fun x => foo (f x))`.
 -/
 def generateLinearMapSimps (isLinearMapTheorem : Name) : MetaM Unit := do
 
@@ -204,7 +205,7 @@ The commands is used as
 ```
 #generate_linear_map_simps thrmName
 ```
-where `thrmName` is a name of a theorem that states that function `f` is linear i.e. `IsLinearMap K f`.
+where the argument is the name of a theorem stating {lit}`IsLinearMap K f`.
 
 The command generates theorems
 ```
@@ -219,11 +220,11 @@ The command generates theorems
 @[simp] theorem app_zero : f 0 = 0 := ...
 ```
 All the above attributes are simp attributes. The ideas is that you can propagate
-arithmetic operations by calling `simp` e.g. `simp only [add_pull]`.
+arithmetic operations by calling simp, e.g. {lit}`simp only [add_pull]`.
 
 
 The command also supports functions jointly linear in two arguments. If we have
-`g : X → Y → Z` and `g_is_linear₂ : IsLinear K fun (x,y) => g x y` then
+{lit}`g : X → Y → Z` and {lit}`g_is_linear₂ : IsLinear K fun (x,y) => g x y` then
 ```
 #generate_linear_map_simps g_is_linear₂
 ```

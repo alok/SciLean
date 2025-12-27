@@ -1,4 +1,5 @@
 import Lean
+import SciLean.VersoPrelude
 -- import Mathlib
 
 namespace SciLean
@@ -50,7 +51,7 @@ elab_rules : term
 /--
 Rewrites type of a term term by conv tactic.
 
-Example: `(_ : 5 + 0 = 5) rewrite_type_by simp` returns proof of `5 = 5`
+Example: {lit}`(_ : 5 + 0 = 5) rewrite_type_by simp` returns proof of {lit}`5 = 5`
 -/
 syntax term:max "rewrite_type_by" convSeq : term
 

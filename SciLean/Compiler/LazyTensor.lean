@@ -1,6 +1,7 @@
 import Lean
 import Batteries.Data.Array.Basic
 import SciLean.Data.DataArray.DataArray
+import SciLean.VersoPrelude
 
 /-!
 # Lazy Tensor Compiler
@@ -11,19 +12,19 @@ with kernel fusion and symbolic shape support.
 ## Implementation Status
 
 **Implemented:**
-- ✅ `Sint`: Symbolic integers with constant folding
-- ✅ `LazyNode`: Lazy computation graph representation
-- ✅ `LazyTensor`: User-facing lazy tensor API with Thunk
-- ✅ Pattern matching for algebraic simplification (`x + 0 = x`, etc.)
+- ✅ {lit}`Sint`: Symbolic integers with constant folding
+- ✅ {lit}`LazyNode`: Lazy computation graph representation
+- ✅ {lit}`LazyTensor`: User-facing lazy tensor API with Thunk
+- ✅ Pattern matching for algebraic simplification ({lit}`x + 0 = x`, etc.)
 - ✅ Gradient rules for reverse-mode AD on the graph
 - ✅ Topological sort for proper backprop ordering
 - ✅ Basic kernel fusion detection
 
 **Not Yet Implemented:**
-- ❌ Lowering `LazyNode` → `UOp` (micro-ops IR)
-- ❌ Code generation from `UOp` to CUDA/Metal/C
-- ❌ Actual execution backends (see `TensorBackend` trait)
-- ❌ Integration with `DataArrayN` for seamless use
+- ❌ Lowering {lit}`LazyNode` → {lit}`UOp` (micro-ops IR)
+- ❌ Code generation from UOp to CUDA/Metal/C
+- ❌ Actual execution backends (see TensorBackend trait)
+- ❌ Integration with {lit}`DataArrayN` for seamless use
 
 ## Architecture
 
@@ -52,7 +53,7 @@ namespace SciLean.Compiler
 
 /-! ## Symbolic Integers
 
-Like tinygrad's `sint`, these allow dimensions to be symbolic variables
+Like tinygrad's {lit}`Sint`, these allow dimensions to be symbolic variables
 that are resolved at runtime.
 -/
 
@@ -386,7 +387,7 @@ partial def applyRules (rules : List RewriteRule) (n : LazyNode) : LazyNode :=
 
 /-! ## Standard Simplification Rules
 
-Algebraic identities like `x + 0 = x`, `x * 1 = x`, etc.
+Algebraic identities like {lit}`x + 0 = x`, {lit}`x * 1 = x`, etc.
 -/
 
 def standardRules : List RewriteRule := [
@@ -519,7 +520,7 @@ end LazyTensor
 Like tinygrad's UOp, this is the core intermediate representation.
 All tensor operations get lowered to UOp before code generation.
 
-**Status**: Defined but not yet used. Lowering from `LazyNode` to `UOp` is TODO.
+**Status**: Defined but not yet used. Lowering from {name}`LazyNode` to {lit}`UOp` is TODO.
 -/
 
 /-- Axis types for GPU execution dimensions. -/
@@ -535,7 +536,7 @@ inductive AxisType where
 /-- A micro-operation in the computation graph.
 
 This is the core IR that all operations get lowered to.
-Unlike `LazyNode`, `UOp` is designed for code generation:
+Unlike {name}`LazyNode`, {lit}`UOp` is designed for code generation:
 - Explicit memory operations (LOAD, STORE, INDEX)
 - Control flow (RANGE, IF, BARRIER)
 - GPU-specific operations (WMMA for tensor cores)
@@ -602,7 +603,7 @@ instance : BEq UOp where
 
 /-! ## Gradient Rules via Pattern Matching
 
-Like tinygrad's `pm_gradient`, we define gradient rules as pattern matches.
+Like tinygrad's {lit}`pm_gradient`, we define gradient rules as pattern matches.
 Each rule maps an operation to its backward pass.
 -/
 

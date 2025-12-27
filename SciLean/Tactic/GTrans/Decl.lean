@@ -19,7 +19,7 @@ structure GTransDecls where
   decls : NameMap GTransDecl := {}
   deriving Inhabited
 
-/-- -/
+/-- Environment extension storing generalized transformation declarations. -/
 abbrev GTransDeclsExt := SimpleScopedEnvExtension GTransDecl GTransDecls
 
 initialize gtransDeclsExt : GTransDeclsExt ←

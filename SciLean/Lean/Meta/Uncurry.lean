@@ -7,14 +7,15 @@ import SciLean.Lean.Meta.Basic
 import SciLean.Util.RewriteBy
 
 import Mathlib.Logic.Function.Basic
+import SciLean.VersoPrelude
 
 set_option linter.unusedVariables false
 
 namespace Lean.Meta
 
 
-/-- Returns `#[x.1, x.2.1, x.2.2.1, ..., x.2....2]` with `n` elements.
-Where `·.1` and `·.2` are `Prod` projections. -/
+/-- Returns {lit}`#[x.1, x.2.1, x.2.2.1, ..., x.2....2]` with {given}`n` elements.
+Where {lit}`·.1` and {lit}`·.2` are {name}`Prod` projections. -/
 def mkProdSplitElem' (x : Expr) (n : Nat) : Array Expr :=
   if n = 0 then
     #[]
@@ -30,16 +31,14 @@ where
     | n+1 => go n (x.proj ``Prod 1) (xs.push (x.proj ``Prod 0))
 
 
-/-- Takes expression `b` with free vars `xs = #[x₁, ..., xₙ]` and returns lambda function in one
+/-- Takes expression {given}`b` with free vars {given}`xs` = {lit}`#[x₁, ..., xₙ]` and returns lambda function in one
 argument of the form:
-```
-fun x =>
-  let x₁ := x.1
-  let x₂ := x.2.1
-  ...
-  let xₙ := x.2....2
-  b
-``` -/
+{lit}``fun x =>``
+{lit}``  let x₁ := x.1``
+{lit}``  let x₂ := x.2.1``
+{lit}``  ...``
+{lit}``  let xₙ := x.2....2``
+{lit}``  b`` -/
 def mkUncurryLambdaFVars (xs : Array Expr) (b : Expr) (withLet:=true) : MetaM Expr := do
 
   if xs.size = 1 then return ← mkLambdaFVars xs b
@@ -62,15 +61,13 @@ def mkUncurryLambdaFVars (xs : Array Expr) (b : Expr) (withLet:=true) : MetaM Ex
       mkLambdaFVars #[xvar] b
 
 
-/-- Takes function of `n` arguments and returns uncurried version of `f` in specific form:
-```
-fun x =>
-  let x₁ := x.1
-  let x₂ := x.2.1
-  ...
-  let xₙ := x.2....2
-  f x₁ ... xₙ
-``` -/
+/-- Takes function of {given}`n` arguments and returns uncurried version of {given}`f` in specific form:
+{lit}``fun x =>``
+{lit}``  let x₁ := x.1``
+{lit}``  let x₂ := x.2.1``
+{lit}``  ...``
+{lit}``  let xₙ := x.2....2``
+{lit}``  f x₁ ... xₙ`` -/
 def mkUncurryFun' (n : Nat) (f : Expr) (withLet := true) : MetaM Expr := do
   if n ≤ 1 then
     return f
@@ -140,20 +137,16 @@ where
 
 /-- Lamda telescope for uncurried functions. This version peels off only one lambda.
 
-For input function
-```
-fun x =>
-  let x₁ := x.1
-  let x₂ := x.2.1
-  ...
-  let xₙ := x.2....2
-  f x₁ ... xₙ
-```
+For input function:
+{lit}``fun x =>``
+{lit}``  let x₁ := x.1``
+{lit}``  let x₂ := x.2.1``
+{lit}``  ...``
+{lit}``  let xₙ := x.2....2``
+{lit}``  f x₁ ... xₙ``
 call
-```
-k #[y₁, ..., yₙ] (f y₁ ... yₙ)
-```
-where `yᵢ` are fresh free variables. -/
+{lit}``k #[y₁, ..., yₙ] (f y₁ ... yₙ)``
+where {given}`yᵢ` are fresh free variables. -/
 def uncurryLambdaTelescopeOnceImpl [Inhabited α] (f : Expr) (k : Array Expr → Expr → MetaM α) : MetaM α := do
   forallBoundedTelescope (← inferType f) (some 1) fun xs b => do
     if xs.size = 0 then
@@ -162,7 +155,7 @@ def uncurryLambdaTelescopeOnceImpl [Inhabited α] (f : Expr) (k : Array Expr →
     let x := xs[0]!
     uncurryBodyTelescope (f.beta #[x]) x k
 
-/-- Simproc that replaces `↿f` with `f` in uncurried lambda form. -/
+/-- Simproc that replaces {lit}`↿f` with {lit}`f` in uncurried lambda form. -/
 dsimproc_decl hasUncurryNormalize (↿_) := fun e => do
 
   match e.getAppFnArgs with
@@ -177,7 +170,7 @@ dsimproc_decl hasUncurryNormalize (↿_) := fun e => do
   | _ => return .continue
 
 
-/-- Simproc that replaces `Function.uncurry` with `f` in uncurried lambda form. -/
+/-- Simproc that replaces {name}`Function.uncurry` with {given}`f` in uncurried lambda form. -/
 dsimproc_decl uncurryNormalize (Function.uncurry _) := fun e => do
 
   match e.getAppFnArgs with

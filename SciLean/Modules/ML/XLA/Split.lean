@@ -1,4 +1,4 @@
-import SciLean.Modules.ML.XLA.TensorIndex
+import SciLean.Modules.ML.XLA.XlaTensorIndex
 import SciLean.Modules.ML.XLA.Concatenate
 
 
@@ -23,9 +23,9 @@ def Args.outShape {r} {inDims : Dims r} (args : Args inDims) : Dims r :=
       inDims[d]
 
 def Args.indexMap {r} {inDims : Dims r} (args : Args inDims) :
-  Fin args.split_size × TensorIndex args.outShape
+  Fin args.split_size × XlaTensorIndex args.outShape
   ≃
-  TensorIndex inDims := sorry
+  XlaTensorIndex inDims := sorry
 
 structure Conditions {r} {inDims : Dims r} (args : Args inDims) (outDims : Dims r) where
   c1 : inDims[args.split_dimension] % args.split_size = 0
@@ -41,9 +41,9 @@ end Split
 
 open Split in
 
-def split {r} {inDims outDims : Dims r} (operand : TensorIndex inDims → R)
-    (args : Args inDims) (h : Conditions args outDims)
+def split {r} {inDims outDims : Dims r} (operand : XlaTensorIndex inDims → R)
+    (args : Args inDims) (_h : Conditions args outDims)
     (houtDims : outDims = args.outShape := by infer_var)
-    (i : Fin args.split_size) : TensorIndex outDims → R :=
+    (i : Fin args.split_size) : XlaTensorIndex outDims → R :=
   fun j =>
     operand (args.indexMap (i, houtDims ▸ j))

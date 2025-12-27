@@ -1,0 +1,68 @@
+{
+  "metrics": {
+    "gpu_tensor.gemm.256": {
+      "value": 0.29718,
+      "unit": "ms"
+    },
+    "gpu_tensor.gemm.512": {
+      "value": 0.30848,
+      "unit": "ms"
+    },
+    "gpu_tensor.gemm.1024": {
+      "value": 0.79793,
+      "unit": "ms"
+    },
+    "gpu_tensor.chain.256": {
+      "value": 0.40202,
+      "unit": "ms"
+    },
+    "gpu_tensor.chain.512": {
+      "value": 0.55973,
+      "unit": "ms"
+    },
+    "gpu_tensor.transfer_total.256": {
+      "value": 0.01233,
+      "unit": "ms"
+    },
+    "gpu_tensor.transfer_total.512": {
+      "value": 0.03729,
+      "unit": "ms"
+    },
+    "gpu_tensor.transfer_total.1024": {
+      "value": 0.15824,
+      "unit": "ms"
+    },
+    "gemm_view.baseline_ms.256": {
+      "value": 0.263522,
+      "unit": "ms"
+    },
+    "gemm_view.tflops.256": {
+      "value": 0.13,
+      "unit": "TFLOPs/s"
+    },
+    "gemm_view.baseline_ms.512": {
+      "value": 0.510914,
+      "unit": "ms"
+    },
+    "gemm_view.tflops.512": {
+      "value": 0.53,
+      "unit": "TFLOPs/s"
+    },
+    "gemm_view.baseline_ms.1024": {
+      "value": 0.598718,
+      "unit": "ms"
+    },
+    "gemm_view.tflops.1024": {
+      "value": 3.59,
+      "unit": "TFLOPs/s"
+    },
+    "gemm_view.baseline_ms.2048": {
+      "value": 1.702339,
+      "unit": "ms"
+    },
+    "gemm_view.tflops.2048": {
+      "value": 10.09,
+      "unit": "TFLOPs/s"
+    }
+  }
+}

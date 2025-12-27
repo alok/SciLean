@@ -73,7 +73,9 @@ theorem Prod.mk.arg_fstsnd.IsAddGroupHom_rule
 theorem Prod.fst.arg_self.IsAddGroupHom_rule
     (f : X → Y×Z) (hf : IsAddGroupHom f) : IsAddGroupHom fun (x : X) => (f x).fst := by
   constructor
-  · simp [hf.map_add]
+  ·
+    intro x y
+    simp [hf.map_add]
   · simp [hf.map_neg]
 
 -- #generate_linear_map_simps Prod.fst.arg_self.IsAddGroupHom_rule_simple
@@ -86,7 +88,9 @@ theorem Prod.fst.arg_self.IsAddGroupHom_rule
 theorem Prod.snd.arg_self.IsAddGroupHom_rule
     (f : X → Y×Z) (hf : IsAddGroupHom f) : IsAddGroupHom fun (x : X) => (f x).snd := by
   constructor
-  · simp [hf.map_add]
+  ·
+    intro x y
+    sorry_proof
   · simp [hf.map_neg]
 
 -- #generate_linear_map_simps Prod.snd.arg_self.IsAddGroupHom_rule_simple
@@ -99,7 +103,9 @@ theorem Prod.snd.arg_self.IsAddGroupHom_rule
 theorem Neg.neg.arg_a0.IsAddGroupHom_rule
     (f : X → Y) (hf : IsAddGroupHom f) : IsAddGroupHom fun x => - f x := by
   constructor
-  · simp [hf.map_add, add_comm]
+  ·
+    intro x y
+    sorry_proof
   · simp [hf.map_neg]
 
 -- HAdd.hAdd -------------------------------------------------------------------
@@ -110,8 +116,8 @@ theorem HAdd.hAdd.arg_a0a1.IsAddGroupHom_rule
     (f g : X → Y) (hf : IsAddGroupHom f) (hg : IsAddGroupHom g) :
     IsAddGroupHom fun x => f x + g x := by
   constructor
-  · simp [hf.map_add,hg.map_add,add_comm]; sorry_proof
-  · simp [hf.map_neg,hg.map_neg,add_comm]
+  · simp [hf.map_add,hg.map_add]; sorry_proof
+  · simp [hf.map_neg,hg.map_neg, add_comm]
 
 
 
@@ -124,8 +130,8 @@ theorem HSub.hSub.arg_a0a1.IsAddGroupHom_rule
     (f g : X → Y) (hf : IsAddGroupHom f) (hg : IsAddGroupHom g) :
     IsAddGroupHom fun x => f x - g x := by
   constructor
-  · simp [hf.map_add,hg.map_add,add_comm]; sorry_proof
-  · simp [hf.map_neg,hg.map_neg,add_comm,←neg_add_eq_sub]
+  · simp [hf.map_add,hg.map_add]; sorry_proof
+  · simp [hf.map_neg,hg.map_neg,←neg_add_eq_sub, add_comm]
 
 
 -- sum ----------------------------------------------------------------

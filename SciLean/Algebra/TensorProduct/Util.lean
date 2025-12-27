@@ -1,4 +1,5 @@
 import SciLean.Algebra.TensorProduct.Basic
+import SciLean.VersoPrelude
 
 set_option linter.unusedSectionVars false
 
@@ -10,12 +11,18 @@ macro "variable_vec[" k:term "]" X:ident : command =>
 
 open Lean Elab Command Term Meta in
 /--
-Command `variable_tprod[𝕜] X ⊗ Y` will add to the context all the instances necessary for `X ⊗ Y`
+Command {lit}`variable_tprod[𝕜] X ⊗ Y` will add to the context all the instances
+necessary for {lit}`X ⊗ Y`.
 
 Expands into
-```
-variable {XY :Type*} [NormedAddCommGroup XY] [AdjointSpace 𝕜 XY] [TensorProductType 𝕜 X Y XY]
-         [TensorProductGetYX 𝕜 X Y XY] [TensorProductGetRXY 𝕜 X Y XY]
+```lean +error
+variable {𝕜} [RCLike 𝕜]
+variable {X Y XY : Type*}
+variable [NormedAddCommGroup X] [AdjointSpace 𝕜 X]
+variable [NormedAddCommGroup Y] [AdjointSpace 𝕜 Y]
+variable [NormedAddCommGroup XY] [AdjointSpace 𝕜 XY] [Module 𝕜 XY]
+variable [TensorProductType 𝕜 X Y XY]
+variable [TensorProductGetYX 𝕜 X Y XY] [TensorProductGetRXY 𝕜 X Y XY]
 ```
 -/
 elab "variable_tprod[" k:term "]" X:term:120 "⊗'" Y:term:120 : command => do

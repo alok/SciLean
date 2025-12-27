@@ -1,22 +1,12 @@
 import Lean
+import SciLean.VersoPrelude
 namespace SciLean
 
 open Lean Parser.Term
 /-- Variant of let binding for product pattern that does not desugar into match but into
 bunch of other let bindings and projections.
 
-For examples
-```
-let' (x,y) := v;
-b
-```
-expands into
-```
-let p := v
-let x := p.1
-let y := p.2
-b
-```
+For example, {lit}`let' (x,y) := v; b` expands into {lit}`let p := v; let x := p.1; let y := p.2; b`.
 -/
 
 syntax (name:=let'_syntax) withPosition("let'" "(" ident,* ")" ":=" term) optSemicolon(term) : term
@@ -128,28 +118,11 @@ macro_rules (kind :=let'_syntax'')
 
 /-- Let binding that deconstructs structure into its fields.
 
-The notation
-```
-let ⟨..⟩ := s
-b
-```
-expands to
-```
-let ⟨x₁,...,xₙ⟩ := s
-b
-```
-where `x₁` are field names of struct `s`.
+The notation {lit}`let ⟨..⟩ := s; b` expands to {lit}`let ⟨x₁,...,xₙ⟩ := s; b`
+where {given}`x₁` are field names of struct {given}`s`, so each {lean}`x₁` is a field of {lean}`s`.
 
-For example, `Prod` has field `fst` and `snd` therefore
-```
-let ⟨..⟩ := (1,2)
-fst + snd
-```
-as it expands to
-```
-let ⟨fst,snd⟩ := (1,2)
-fst + snd
-```
+For example, {name}`Prod` has field {name (full := MProd.fst)}`fst` and {name (full := MProd.snd)}`snd` therefore
+{lit}`let ⟨..⟩ := (1,2); fst + snd` expands to {lit}`let ⟨fst,snd⟩ := (1,2); fst + snd`.
  -/
 syntax (name:=let_struct_syntax) withPosition("let" "⟨..⟩" ":=" term) optSemicolon(term) : term
 
@@ -166,9 +139,9 @@ elab_rules (kind:=let_struct_syntax) : term
   elabTerm stx none
 
 
-/-- Structure field assigment, allows for `s.x := x'` notation in `do` block.
+/-- Structure field assignment, allows for {lit}`s.x := x'` notation in {lit}`do` block.
 
-`s.x := x'` expands into `s := {s with x := x'}` -/
+{lit}`s.x := x'` expands into {lit}`s := {s with x := x'}` -/
 macro_rules
 | `(doElem| $x:ident := $val) => do
   let .str n f := x.getId | Macro.throwUnsupported

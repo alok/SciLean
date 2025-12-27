@@ -4,40 +4,39 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: SciLean contributors
 -/
 import SciLean.Data.Tensor.Basic
+import SciLean.Data.IndexType.Shape
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 /-!
 # Device Transfer Operations
 
-Type-safe transfers between CPU and GPU tensors. The device is tracked in the type,
+Type-safe transfers between {name}`CpuTensor` and {name}`GpuTensor`. The device is tracked in the type,
 so transfers are explicit and visible in function signatures.
 
-Example:
-```lean
-def forward (weights : GpuTensor Float (Idx 128, Idx 784)) (input : CpuTensor Float (Idx 784)) : IO (CpuTensor Float (Idx 128)) := do
-  let gpuInput ← input.toGpu
-  let output ← TensorOps.gemm weights gpuInput  -- GPU computation
-  output.toCpu
-```
+Usage: call {lit}`CpuTensor.toGpu` to upload, do GPU computation, then {lit}`GpuTensor.toCpu` to download.
 -/
 
-variable {α : Type*} [PlainDataType α]
-variable {ι : Type*} {n : ℕ} [IndexType ι n]
+variable {α : Type} [PlainDataType α]
+variable {ι : Type} {n : ℕ} [IndexType ι n]
 
 /-! ## CPU → GPU Transfer -/
 
-/-- Transfer CPU tensor to GPU -/
-def CpuTensor.toGpu (t : CpuTensor α ι) : IO (GpuTensor α ι) := do
-  let gpuBuf ← GpuBufferN.fromDataArrayN t.data
-  return ⟨gpuBuf⟩
+/-- Transfer CPU tensor to GPU (contiguous layout). -/
+def CpuTensor.toGpu (t : CpuTensor α ι) [IndexTypeShape ι n] : IO (GpuTensor α ι) := do
+  let gpuBuf ← Metal.GpuBuffer.fromByteArray t.data.data.byteData
+  return GpuTensor.fromContiguous (ι:=ι) gpuBuf
 
 /-! ## GPU → CPU Transfer -/
 
-/-- Transfer GPU tensor to CPU -/
+/-- Transfer GPU tensor to CPU (makes contiguous copy if needed). -/
 def GpuTensor.toCpu (t : GpuTensor α ι) : IO (CpuTensor α ι) := do
-  let cpuArr ← GpuBufferN.toDataArrayN t.data
-  return ⟨cpuArr⟩
+  let tContig ← GpuTensor.ensureContiguous t
+  let bytes ← Metal.GpuBuffer.toByteArray tContig.data.buffer
+  let data : DataArray α := ⟨bytes, sorry_proof⟩
+  let arr : DataArrayN α ι := ⟨data, sorry_proof⟩
+  return ⟨arr⟩
 
 /-! ## Polymorphic Transfer API -/
 
@@ -45,8 +44,8 @@ def GpuTensor.toCpu (t : GpuTensor α ι) : IO (CpuTensor α ι) := do
 class ToGpu (T : Type) (G : outParam Type) where
   toGpu : T → IO G
 
-instance : ToGpu (CpuTensor α ι) (GpuTensor α ι) where
-  toGpu := CpuTensor.toGpu
+instance [IndexTypeShape ι n] : ToGpu (CpuTensor α ι) (GpuTensor α ι) where
+  toGpu t := CpuTensor.toGpu (ι:=ι) t
 
 instance : ToGpu (GpuTensor α ι) (GpuTensor α ι) where
   toGpu t := pure t
@@ -63,28 +62,28 @@ instance : ToCpu (CpuTensor α ι) (CpuTensor α ι) where
 
 /-! ## Convenience Functions -/
 
-/-- Run a GPU computation on CPU data, handling transfers automatically -/
-def withGpu (input : CpuTensor α ι)
+/-- Run a GPU computation on CPU data, handling transfers automatically. -/
+def withGpu (input : CpuTensor α ι) [IndexTypeShape ι n]
     (f : GpuTensor α ι → IO (GpuTensor α ι))
     : IO (CpuTensor α ι) := do
   let gpuIn ← input.toGpu
   let gpuOut ← f gpuIn
   gpuOut.toCpu
 
-/-- Run a GPU computation on CPU data with different output shape -/
-def withGpu' {β : Type*} [PlainDataType β] {κ : Type*} {m : ℕ} [IndexType κ m]
-    (input : CpuTensor α ι)
+/-- Run a GPU computation on CPU data with a different output shape. -/
+def withGpu' {β : Type} [PlainDataType β] {κ : Type} {m : ℕ} [IndexType κ m]
+    (input : CpuTensor α ι) [IndexTypeShape ι n]
     (f : GpuTensor α ι → IO (GpuTensor β κ))
     : IO (CpuTensor β κ) := do
   let gpuIn ← input.toGpu
   let gpuOut ← f gpuIn
   gpuOut.toCpu
 
-/-- Transfer DataArrayN directly to GPU -/
-def DataArrayN.toGpu (arr : DataArrayN α ι) : IO (GpuTensor α ι) :=
+/-- Transfer {name}`DataArrayN` directly to GPU. -/
+def DataArrayN.toGpu (arr : DataArrayN α ι) [IndexTypeShape ι n] : IO (GpuTensor α ι) :=
   CpuTensor.toGpu ⟨arr⟩
 
-/-- Alias for compatibility with Tensor notation -/
+/-- Alias for compatibility with {name}`Tensor` notation. -/
 abbrev Tensor.toGpu [ToGpu T G] (t : T) : IO G := ToGpu.toGpu t
 abbrev Tensor.toCpu [ToCpu T C] (t : T) : IO C := ToCpu.toCpu t
 

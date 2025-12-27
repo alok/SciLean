@@ -9,7 +9,7 @@ def rand01 : IO Float := do
   return i.toFloat / N.toFloat
 
 def FloatArray.rand01 (n : Nat) : IO FloatArray := do
-  let mut xs : FloatArray := .mkEmpty n
+  let mut xs : FloatArray := FloatArray.emptyWithCapacity n
   for _ in [0:n] do
     xs := xs.push (← _root_.rand01)
   return xs

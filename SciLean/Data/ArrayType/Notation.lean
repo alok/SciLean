@@ -7,6 +7,7 @@ import Batteries.Lean.Expr
 import Mathlib.LinearAlgebra.Matrix.Notation
 
 import Qq
+import SciLean.VersoPrelude
 
 
 namespace SciLean
@@ -27,10 +28,10 @@ private def mkTuple (xs : Array (TSyntax `term)) : MacroM (TSyntax `term) :=
   `(term| ($(xs[0]!), $(xs[1:]),*))
 
 /--
-The syntax `x[i,j,k]` gets the element of `x : X` indexed by `(i,j,k)`.
+The syntax {lit}`x[i,j,k]` gets the element of {lit}`x` indexed by {lit}`(i, j, k)`.
 
-Note that product is right associated thus `x[i,j,k]`, `x[i,(j,k)]` and `x[(i,j,k)]` result in
-the same expression.
+Note that the product is right associated, so {lit}`x[i,j,k]`, {lit}`x[i,(j,k)]`,
+and {lit}`x[(i,j,k)]` result in the same expression.
 -/
 macro:max (name:=indexedGet) (priority:=high+1) x:term noWs "[" i:term ", " is:term,* "]" : term => do
   let idx ← mkTuple (#[i] ++ is.getElems)
@@ -119,7 +120,7 @@ macro x:ident noWs "[" ids:term,* "]" " •= " xi:term : doElem => do
 initialize registerTraceClass `ofFn_notation
 
 open Term  in
-/-- Notation `⊞ i => f i` creates an array with element `f i`. It is a syntax for `ofFn f`.
+/-- Notation {lit}`⊞ i => f i` creates an array with element {lit}`f i`. It is a syntax for {name}`ofFn`.
 
 For example:
 ```
@@ -130,14 +131,14 @@ variable (f : Idx n → Float) (g : Idx m → Idx n → Float)
 #check ⊞ i => ⊞ j => g i j    -- Float^[n]^[m]
 #check ⊞ i j k => g i j + f k -- Float^[m,n,n]
 ```
-The preferd way of creating a matrix is `⊞ i j => g i j` not `⊞ (i,j) => g i j`. Both versions
-work but the former notaion allows us to writh `⊞ i (j : Idx 5) => f i` instead of
-`⊞ ((i,j) : _ ×Idx 4) => f i`. This is also the reson for the somewhat unexpected fact that
-`⊞ i => ⊞ j => g i j ≠ ⊞ i j => g i j`.
+The preferd way of creating a matrix is {lit}`⊞ i j => g i j` not {lit}`⊞ (i,j) => g i j`. Both versions
+work but the former notaion allows us to writh {lit}`⊞ i (j : Idx 5) => f i` instead of
+{lit}`⊞ ((i,j) : _ ×Idx 4) => f i`. This is also the reson for the somewhat unexpected fact that
+{lit}`⊞ i => ⊞ j => g i j ≠ ⊞ i j => g i j`.
 
-The resulting type does not always have to be `Float^[n]`(notation for `DataArrayN Float (Idx n)`).
+The resulting type does not always have to be {lit}`Float^[n]` (notation for {lit}`DataArrayN Float (Idx n)`).
 When we explicitely force the resulting type we can obtain different array type.
-For this to work there has to be instance `OfFn coll idx elem` for `f : idx → elem`.
+For this to work there has to be instance {lit}`OfFn coll idx elem` for {lit}`f : idx → elem`.
 
 For example:
 ```
@@ -153,7 +154,7 @@ variable (f : Idx n → Float) (g : Idx m → Idx n → Float)
 (⊞ i j => g i j)      ==> ofFn (coll:=Float^[m,n]) ↿g
 (⊞ i => ⊞ j => g i j) ==> ofFn (coll:=Float^[n]^[m]) (fun i => ofFn (coll:=Float^[n]) (g i))
 ```
-the operation `↿` uncurries a function i.e. `↿g = fun (i,j) => g i j`
+the operation {lit}`↿` uncurries a function i.e. {lit}`↿g = fun (i,j) => g i j`
   -/
 syntax (name:=ofFnNotation) "⊞ " funBinder* " => " term:51 : term
 
@@ -191,7 +192,7 @@ def ofFnElab : TermElab := fun stx expectedType? =>
 -- Notation: ⊞[1,2,3] --
 ------------------------
 
-/-- A notation for creating a `DataArray` from a list of elements. -/
+/-- A notation for creating a {lit}`DataArray` from a list of elements. -/
 syntax (name := ofFnExplicitNotation) (priority:=high)
   "⊞[" ppRealGroup(sepBy1(ppGroup(term,+,?), ";", "; ", allowTrailingSep)) "]" : term
 
@@ -258,21 +259,22 @@ syntax term : dimSpec
 syntax (priority:=high) "[" dimSpec,+ "]" : dimSpec
 syntax "[" term ":" term "]": dimSpec
 
-/-- `x^[y]` is either array type or iterated function depending on the type of `x`.
+/-- {lit}`x^[y]` is either array type or iterated function depending on the type of {lit}`x`.
 
-**iterated function** `f^[n]` call `f` n-times e.g. `f^[3] = f∘f∘f`
+**iterated function** {lit}`f^[n]` call {lit}`f` {lit}`n`-times e.g. {lit}`f^[3] = f∘f∘f`
 
-**type product** `Float^[n]` array of n elemts with values in `Float`
+**type product** {lit}`Float^[n]` array of {lit}`n` elemts with values in {lit}`Float`
 
 The array notation is quite flexible and allows you to create arrays arrayType with various types.
-Examples where `n m k l : USize`, `a b : Int64` and `ι κ : Type` are types with `Index _` instance:
-- `Float^[n]` index type: `Idx n` i.e. numbers `0,...,n-1`
-- `Float^[n,m]` index type: `Idx n × Idx m` i.e. paris `(0,0),(0,1),...,(1,0),(1,1),...,(n-1,m-1)`
-- `Float^[[-a:b]]` index type :`Idx' (-a) b` i.e. closed interval from `-a` to `b` (`={-a, -a+1, ..., b-1, b}`)
-- `Float^[k,l,m]` index type: `Idx k × Idx l × Idx m` - type product is right associated by default
-- `Float^[[k,l],m]` index type: `(Idx k × Idx l) × Idx m`  - left associated product requires explicit brackets
-- `Float^[ι]` index type `ι` - generic type with `Index ι` instances
-- `Float^[ι,[10,[-a:b]],κ]` index type: `ι × (Idx 10 × Idx' (-a) b) × κ` - mix of all above
+Examples where {lit}`n` {lit}`m` {lit}`k` {lit}`l` are {lit}`USize`, {lit}`a` {lit}`b` are {lit}`Int64`
+and {lit}`ι` {lit}`κ` are {lit}`Type` with {lit}`Index` instances:
+- {lit}`Float^[n]` index type: {lit}`Idx n` i.e. numbers {lit}`0,...,n-1`
+- {lit}`Float^[n,m]` index type: {lit}`Idx n × Idx m` i.e. paris {lit}`(0,0),(0,1),...,(1,0),(1,1),...,(n-1,m-1)`
+- {lit}`Float^[[-a:b]]` index type: {lit}`Idx' (-a) b` i.e. closed interval from {lit}`-a` to {lit}`b` ({lit}`={-a, -a+1, ..., b-1, b}`)
+- {lit}`Float^[k,l,m]` index type: {lit}`Idx k × Idx l × Idx m` - type product is right associated by default
+- {lit}`Float^[[k,l],m]` index type: {lit}`(Idx k × Idx l) × Idx m` - left associated product requires explicit brackets
+- {lit}`Float^[ι]` index type {lit}`ι` - generic type with {lit}`Index` {lit}`ι` instances
+- {lit}`Float^[ι,[10,[-a:b]],κ]` index type: {lit}`ι × (Idx 10 × Idx' (-a) b) × κ` - mix of all above
 -/
 syntax (name:=typeIntPower) (priority:=high) term "^[" dimSpec,* "]" : term
 

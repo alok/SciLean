@@ -7,6 +7,7 @@ import Lean
 
 import SciLean.Tactic.FunTrans.Decl
 import SciLean.Tactic.FunTrans.Theorems
+import SciLean.VersoPrelude
 
 /-!
 # funTrans Attribute
@@ -24,7 +25,7 @@ namespace Meta.FunTrans
 private def funTransHelpString : String :=
 "`funTrans` tactic to compute function transformations like `fderiv` or `adjoint`"
 
-/-- Initialization of `funTrans` attribute -/
+/-- Initialization of {lit}`funTrans` attribute -/
 initialize funTransAttr : Unit ←
   registerBuiltinAttribute {
     name  := `fun_trans

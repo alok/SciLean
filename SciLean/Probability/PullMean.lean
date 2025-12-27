@@ -5,6 +5,7 @@ import Mathlib.Tactic.FunProp
 import SciLean.Probability.Rand
 import SciLean.Probability.IsAffineRandMap
 import SciLean.Tactic.LSimp
+import SciLean.VersoPrelude
 
 open Lean Meta Qq Mathlib.Meta
 
@@ -77,32 +78,32 @@ simproc_decl pullMean (_) := fun e => do
 
 
 
-/-- This tactic tries to pull `Rand.mean` from subexpressions and put it on top level of the
+/-- This tactic tries to pull {name}`Rand.mean` from subexpressions and put it on top level of the
 expression.
 
-For example, running `pull_mean` on
-```
+For example, running {lit}`pull_mean` on
+```nonLeanCode
 let x := x'.mean
 let y := y'.mean
 x + y
 ```
-will product
-```
+will produce
+```nonLeanCode
 Rand.mean do
   let x ← x'
   let y ← y'
   return x + y
 ```
 
-In general, it will take an expression of the form `f x₁'.mean ... xₙ'.mean` and turns it into
-```
+In general, it will take an expression of the form {lit}`f x₁'.mean ... xₙ'.mean` and turns it into
+```nonLeanCode
 Rand.mean do
   let x₁ ← x₁'
   ...
   let xₙ ← xₙ'
   return f x₁ ... xₙ
 ```
-this tactic succeeds only if `f` is affine function in all of its arguments!
+this tactic succeeds only if {lit}`f` is affine function in all of its arguments!
  -/
 macro "pull_mean" : conv => `(conv|
    (simp (config:={zeta:=false,singlePass:=true}) only [pullMean];

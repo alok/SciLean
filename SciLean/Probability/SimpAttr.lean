@@ -1,9 +1,10 @@
 import Lean
+import SciLean.VersoPrelude
 
 /-! # Probability Simp Attributes
 
 Simp attributes for probability-related transformations.
-Each provides both lemma support (`attr`) and simproc support (`attr_proc`).
+Each provides both lemma support ({lit}`attr`) and simproc support ({lit}`attr_proc`).
 -/
 
 namespace SciLean.Probability

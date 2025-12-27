@@ -1,6 +1,7 @@
 import SciLean.Data.DataArray
 import SciLean.Analysis.Calculus.Notation.Deriv
 import SciLean.Analysis.Calculus.Notation.FwdDeriv
+import SciLean.VersoPrelude
 
 
 namespace SciLean.Optimjl
@@ -10,7 +11,7 @@ variable {R : Type} [RealScalar R]
 
 
 inductive LineSearchError where
-  /-- Line search failed bacause reached maximum iteration -/
+  /-- Line search failed because reached maximum iteration -/
   | maxIterationn
   /-- Called method is not supported -/
   | notSupported
@@ -22,18 +23,18 @@ abbrev LineSearchM (Method State : Type) :=
 
 variable (R)
 class LineSearch (Method : Type) (State : outParam Type) where
-  /-- Line search finds `x` such that `φ x ≤ φ 0 + c₁ * x * dφ 0`. -/
+  /-- Line search finds {lit}`x` such that {lit}`φ x ≤ φ 0 + c₁ * x * dφ 0`. -/
   c₁ (method : Method) : R
 
   /-- Print summary of the methods.
 
-  With `verbose := false` this should be just a name.
-  With `verbose := true` this should print the name and all the settings.  -/
+  With {lit}`verbose := false` this should be just a name.
+  With {lit}`verbose := true` this should print the name and all the settings.  -/
   summary (method : Method) (verbose := false) : String
 
 
 class LineSearch0 (Method : Type) (State : outParam Type) extends LineSearch R Method State where
-  /-- Find `x` such that `φ x ≤ φ 0 + c₁ * x * dφ 0`. Return `x` and `φ x`.
+  /-- Find {lit}`x` such that {lit}`φ x ≤ φ 0 + c₁ * x * dφ 0`. Return {lit}`x` and {lit}`φ x`.
 
   Method using only function values and derivative information at the beggining. -/
   call (Φ : R → R) (φ₀ dφ₀ : R) (x₀ : R) :
@@ -41,7 +42,7 @@ class LineSearch0 (Method : Type) (State : outParam Type) extends LineSearch R M
 
 
 class LineSearch1 (Method : Type) (State : outParam Type) extends LineSearch R Method State where
-  /-- Find `x` such that `φ x ≤ φ 0 + c₁ * x * dφ 0`. Return `x` and `φ x`.
+  /-- Find {lit}`x` such that {lit}`φ x ≤ φ 0 + c₁ * x * dφ 0`. Return {lit}`x` and {lit}`φ x`.
 
   First order method using derivative information. -/
   call (Φdφ : R → R → R×R) (x₀ : R) (φdφ₀ : Option (R×R)) :

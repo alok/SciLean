@@ -10,24 +10,24 @@ variable
 
 
 
-/-- Ball using standard Euclidean metric. Empty for negative `r`.
+/-- Ball using standard Euclidean metric. Empty for negative {given}`r`.
 
-Similar to `Metric.ball` but uses norm originating from inner produce. Note that `ℝ×ℝ` uses
-max norm therefore for `x : ℝ×ℝ` the `Metric.ball x r` is is square rather then a ball.   -/
+Similar to {name}`Metric.ball` but uses norm originating from inner product. Note that {lean}`ℝ×ℝ` uses
+max norm therefore for {given}`x : ℝ×ℝ` the {lean}`Metric.ball x r` is a square rather than a ball. -/
 def ball₂ (x : X) (r : R) := {y | ‖y - x‖₂²[R] < r^2}
 
 
-/-- Closed ball using standard Euclidean metric. Empty for negative `r`.
+/-- Closed ball using standard Euclidean metric. Empty for negative {given}`r`.
 
-Similar to `Metric.closedBall` but uses norm originating from inner produce. Note that `ℝ×ℝ` uses
-max norm therefore for `x : ℝ×ℝ` the `Metric.ball x r` is is square rather then a ball.   -/
+Similar to {name}`Metric.closedBall` but uses norm originating from inner product. Note that {lean}`ℝ×ℝ` uses
+max norm therefore for {given}`x : ℝ×ℝ` the {lean}`Metric.closedBall x r` is a square rather than a ball. -/
 def closedBall₂ (x : X) (r : R) := {y | ‖y - x‖₂²[R] ≤ r^2}
 
 
-/-- Sphere using standard Euclidean metric. Empty for negative `r`.
+/-- Sphere using standard Euclidean metric. Empty for negative {given}`r`.
 
-Similar to `Metric.sphere` but uses norm originating from inner produce. Note that `ℝ×ℝ` uses
-max norm therefore for `x : ℝ×ℝ` the `Metric.sphere x r` is is square rather then a sphere.   -/
+Similar to {name}`Metric.sphere` but uses norm originating from inner product. Note that {lean}`ℝ×ℝ` uses
+max norm therefore for {given}`x : ℝ×ℝ` the {lean}`Metric.sphere x r` is a square rather than a sphere. -/
 def sphere₂ (x : X) (r : R) := {y | ‖y - x‖₂²[R] = r^2}
 
 

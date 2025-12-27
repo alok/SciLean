@@ -1,9 +1,10 @@
 import Lean
+import SciLean.VersoPrelude
 
 /-! # Vector Optimize Init
 
 Initialization for vector optimization simp attributes.
-Provides both `vector_optimize` for lemmas and `vector_optimize_proc` for simprocs.
+Provides both {lit}`vector_optimize` for lemmas and {lit}`vector_optimize_proc` for simprocs.
 -/
 
 namespace SciLean

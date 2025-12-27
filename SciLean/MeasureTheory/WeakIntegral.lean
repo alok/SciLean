@@ -19,11 +19,11 @@ def WeakMeasurable (f : α → E) :=
 def AEWeakMeasurable (f : α → E) (μ : Measure α) :=
   ∃ g : α → E, WeakMeasurable g ∧ f =ᵐ[μ] g
 
-/-- Element `e` is weak(Pettis) integral of `f`
+/-- Element {lit}`e` is weak (Pettis) integral of {lit}`f`.
 
 See `https://en.wikipedia.org/wiki/Pettis_integral`
 
-Also see documentation for `weakIntegral`
+Also see documentation for {lit}`weakIntegral`.
 -/
 def HasWeakIntegral (f : α → E) (e : E) (μ : Measure α) :=
   ∀ (e' : E →L[ℝ] ℝ),
@@ -32,30 +32,29 @@ def HasWeakIntegral (f : α → E) (e : E) (μ : Measure α) :=
     ∫ x, e' (f x) ∂μ = e' e
 
 
-/-- Function `f` is weakly(Pettis) integrable
+/-- Function {lit}`f` is weakly (Pettis) integrable.
 
 See `https://en.wikipedia.org/wiki/Pettis_integral`
 
-Also see documentation for `weakIntegral`
+Also see documentation for {lit}`weakIntegral`.
 -/
 def WeakIntegrable (f : α → E) (μ : Measure α) := ∃ e, HasWeakIntegral f e μ
 
 open Classical in
-/-- Weak(Pettis) Integral
+/-- Weak (Pettis) Integral
 
-Element `e` is weak integral of `f : α → E` if for all elements of the dual space `e' : E →L[ℝ] ℝ`
-the integral of `fun x => e' (f x )` is equal to `e' e`, i.e.
-```
-∀ e', ∫ x, e' (f x) ∂μ = e' e
-```
+Element {lit}`e` is weak integral of {lit}`f : α → E` if for all elements of the dual space {lit}`e' : E →L[ℝ] ℝ`
+the integral of {lit}`fun x => e' (f x)` is equal to {lit}`e' e`, i.e.
+
+    ∀ e', ∫ x, e' (f x) ∂μ = e' e
 
 The main reason for introducing weak integral in SciLean is that we can integrate functions like
-`f : α → ι → E` where `ι` is arbitrary type, not necessarily finite. Strong(Bochner) integral can
-integrate `f : α → ι → E` only if `ι` is finite and `E` is normed space as then `ι → E` is
+{lit}`f : α → ι → E` where {lit}`ι` is arbitrary type, not necessarily finite. Strong (Bochner) integral can
+integrate {lit}`f : α → ι → E` only if {lit}`ι` is finite and {lit}`E` is normed space as then {lit}`ι → E` is
 normed space too.
 
 Our main application is when working with random variables as we can talk about random functions
-`f : Rand (ι → E)` for arbitrary `ι` and `E` locally convex vector space.
+{lit}`f : Rand (ι → E)` for arbitrary {lit}`ι` and {lit}`E` locally convex vector space.
 
 See `https://en.wikipedia.org/wiki/Pettis_integral`
 -/

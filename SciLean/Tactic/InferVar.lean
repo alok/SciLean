@@ -8,6 +8,7 @@ import Mathlib.Data.UInt
 import Mathlib.Tactic.Ring
 
 import SciLean.Util.RewriteBy
+import SciLean.VersoPrelude
 
 namespace SciLean
 
@@ -66,12 +67,12 @@ namespace InferVar
 open Qq Lean Meta
 
 /--
-Assuming that `a` has mvar `m` and `b` is an expression.
+Assuming {lit}`a` has mvar {lit}`m` and {lit}`b` is an expression.
 
-Return mvar `m` and value `x` for it such that `a=b` is likely to hold.
+Return mvar {lit}`m` and a value for it such that {lit}`a = b` is likely to hold.
 
 Examples:
-- `a = 4 * ?m + 2`, `b = 2*n` => `(?m, (2*n-2)/4)`
+- {lit}`a = 4 * ?m + 2`, {lit}`b = 2*n` => {lit}`(?m, (2*n-2)/4)`
 -/
 partial def invertNat (a b : Q(Nat)) : MetaM (Q(Nat) × Q(Nat)) := do
   if a.getAppFn.isMVar then

@@ -11,6 +11,7 @@ import SciLean.Meta.Notation.Do
 import SciLean.Meta.SimpAttr
 import SciLean.Probability.SimpAttr
 import SciLean.Util.Limit
+import SciLean.VersoPrelude
 
 open MeasureTheory ENNReal BigOperators Finset
 
@@ -22,30 +23,29 @@ abbrev erase (a : α) : Erased α := .mk a
 theorem erase_out {α} (a : α) : (erase a).out = a := by simp[erase]
 
 
-/-- `x : Rand X` is a random variable of type `X`
+/-- {lit}`x : Rand X` is a random variable of type {lit}`X`.
 
 You can:
-  - generate sample with `x.get : IO X`
-  - get probability measure with `x.ℙ : Measure X`
+  - generate sample with {lit}`Rand.get x : IO X`
+  - get probability measure with {lit}`x.ℙ : Measure X`
 
-The internal fields `spec` and `rand` are just an internal implementation of `Rand` and should not
+The internal fields {lit}`spec` and {lit}`rand` are just an internal implementation of {lit}`Rand` and should not
 be accessed by normal users.
 
-TODO: Hide implementation using quotients or something like that
+TODO: Hide implementation using quotients or something like that.
 -/
 structure Rand (X : Type _)  where
-  /-- `spec` defines a probability measure by computing an expectation. This means if `x : Rand X`
-  corresponds to a probability measure `μ` then for `φ : X → ℝ`
-  ```
+  /-- {lit}`spec` defines a probability measure by computing an expectation. This means if {lit}`x : Rand X`
+  corresponds to a probability measure {lit}`μ` then for {lit}`φ : X → ℝ`
+  ```nonLeanCode
   x.spec.out φ = ∫ x, φ x ∂μ
   ```
 
-  Using `(X→ℝ)→ℝ` instead of `Measure X` for the specification of random variables has the
-  advantage that we can reuse Lean's `do` notation.
+  Using {lit}`(X → ℝ) → ℝ` instead of {lit}`Measure X` for the specification of random variables has the
+  advantage that we can reuse Lean's {lit}`do` notation.
   -/
   spec : Erased ((X→ℝ)→ℝ)
-  /-- `rand` is a pseudo randon number generator implemented using the "Standard" number generator
-  -/
+  /-- {lit}`rand` is a pseudo random number generator implemented using the "Standard" number generator. -/
   rand : StateM StdGen X
 
 
@@ -64,7 +64,7 @@ def ℙ {X} [MeasurableSpace X] (r : Rand X) : Measure X :=
   else
     0
 
-/-- Specification of `x : Rand X` is really saying that it is a probability measure. -/
+/-- Specification of {lit}`x : Rand X` is really saying that it is a probability measure. -/
 class LawfulRand (x : Rand X) [MeasurableSpace X] : Prop where
   is_measure : x.spec.out.IsMeasure
   is_prob : IsProbabilityMeasure x.ℙ
@@ -80,12 +80,12 @@ instance instIsProbabilityMeasureℙ (x : Rand X) [inst : LawfulRand x] : IsProb
 
 /-- Extensionality of random variable.
 
-WARNING: This theorem is inconsistent!!! The random generators `x.rand` and `y.rand` might differ.
+WARNING: This theorem is inconsistent!!! The random generators {lit}`x.rand` and {lit}`y.rand` might differ.
          We are not trying to model pseudo-random numbers. We assume that every random number
          generator is a true random number generator. Thus the result of any probabilistic program
          should be independent on the exact generator up to some randomness.
 
-TODO: We might quotient all the random number generators corresponding to the measure `x.ℙ`  under
+TODO: We might quotient all the random number generators corresponding to the measure {lit}`x.ℙ` under
       the assumption that they are all true random generators. I believe that such type would be
       a singleton i.e. all the random number generators are all the same.
 -/
@@ -120,10 +120,10 @@ instance : LawfulMonad Rand where
   bind_pure_comp := by intros; rfl
   bind_map       := by intros; rfl
   pure_bind      := sorry_proof -- by intros; ext; simp[Bind.bind,Pure.pure]
-  bind_assoc     := by intros; ext; simp[Bind.bind,Pure.pure]
+  bind_assoc     := by intros; ext; simp[Bind.bind]
   map_const      := by intros; ext; rfl
   id_map         := sorry_proof -- by intros; ext; simp[Bind.bind,Pure.pure,id,Functor.map]
-  seqLeft_eq     := by intros; ext; simp[Bind.bind,Pure.pure,Seq.seq,Function.const,Functor.map,SeqLeft.seqLeft]
+  seqLeft_eq     := by intros; ext; simp[Bind.bind,Pure.pure,Seq.seq,Functor.map,SeqLeft.seqLeft]
   seqRight_eq    := by intros; ext; simp[Bind.bind,Pure.pure,Seq.seq,Function.const,Functor.map,SeqRight.seqRight]
   pure_seq       := by intros; ext; simp[Bind.bind,Pure.pure,Seq.seq,Functor.map]
 
@@ -244,7 +244,7 @@ theorem reparameterize [Nonempty X] (f : X → Y) (hf : f.Injective) {r : Rand X
     (r.map f).E (fun y => φ (invf y)) := by
   simp [E]
   rw[weakIntegral_map sorry_proof sorry_proof]
-  simp [E,Function.invFun_comp' hf]
+  simp [Function.invFun_comp' hf]
 
 section Mean
 
@@ -256,7 +256,7 @@ def mean (r : Rand X) : X := r.E id
 @[rand_pull_E]
 theorem expectedValue_as_mean (x : Rand X) (φ : X → Y) :
     x.E φ = (x.map φ).mean := by
-  simp [bind,mean,pure,E]
+  simp [mean,E]
   rw[weakIntegral_map sorry_proof sorry_proof]
   rfl
 
@@ -286,7 +286,7 @@ end Mean
 
 variable (R)
 variable [Module R Y] [IsScalarTower ℝ R Y]
-/-- Estimate expected value of `f x`. -/
+/-- Estimate expected value of {lit}`f x`. -/
 def estimateE (n : ℕ) (x : Rand X) (f : X → Y) : Rand Y := do
   let mut y := (0:Y)
   for _ in [0:n] do
@@ -330,7 +330,7 @@ variable
 
 
 variable (R)
-/-- Probability density function of `x` w.r.t. the measure `ν`. -/
+/-- Probability density function of {lit}`x` w.r.t. the measure {lit}`ν`. -/
 noncomputable
 def pdf (x : Rand X) (ν : Measure X := by volume_tac) : X → R :=
   fun x' => Scalar.ofReal R (Measure.rnDeriv x.ℙ ν x').toReal
@@ -342,7 +342,7 @@ theorem pdf_wrt_self (x : Rand X) [LawfulRand x] : x.pdf R x.ℙ = 1 := sorry_pr
 @[simp,simp_core]
 theorem bind_pdf (ν : Measure Y) (x : Rand X) (f : X → Rand Y) :
     (x >>= f).pdf R ν = fun y => ∫ x', ((f x').pdf R ν y) ∂x.ℙ := by
-  funext y; simp[Rand.pdf,Bind.bind,Pure.pure]; sorry_proof
+  funext y; simp[Rand.pdf,Bind.bind]; sorry_proof
 
 @[simp,simp_core]
 theorem ite_pdf (c) [Decidable c] (t e : Rand X) (μ : Measure X) :
@@ -372,7 +372,7 @@ def _root_.SciLean.uniformI [MeasureSpace R] : Rand R := {
 }
 variable {R}
 
-/-- Draw `x` with probability `1-θ` and `y` with probability `θ`. -/
+/-- Draw {lit}`x` with probability {lit}`1-θ` and {lit}`y` with probability {lit}`θ`. -/
 def combine (x y : Rand X) (θ : R) : Rand X := do
   let θ' ← uniformI R
   if θ ≤ θ' then
@@ -380,10 +380,10 @@ def combine (x y : Rand X) (θ : R) : Rand X := do
   else
     y
 
-/-- `x +[θ] y` return random variable `(1-θ)*x + θ*y`.
+/-- {lit}`x +[θ] y` returns random variable {lit}`(1-θ)*x + θ*y`.
 In other words
-- `x` is generated with probability `1-θ`
-- `y` is generated with probability `θ` -/
+- {lit}`x` is generated with probability {lit}`1-θ`
+- {lit}`y` is generated with probability {lit}`θ` -/
 scoped macro x:term:65 " +[" θ:term "] " y:term:64 : term => `(term| combine $x $y $θ)
 
 

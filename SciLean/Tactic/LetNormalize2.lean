@@ -7,15 +7,15 @@ import Mathlib.Tactic.Basic
 import SciLean.Lean.Meta.Structure
 
 /-!
-# The `lift_lets` tactic
+# The {tactic}`lift_lets` tactic
 
-This module defines a tactic `lift_lets` that can be used to pull `let` bindings as far out
+This module defines the {tactic}`lift_lets` tactic, which can be used to pull let bindings as far out
 of an expression as possible.
 -/
 
 open Lean Elab Parser Meta Tactic
 
-/-- Configuration for `Lean.Expr.liftLets` and the `lift_lets` tactic. -/
+/-- Configuration for the {tactic}`lift_lets` tactic. -/
 structure Lean.Expr.LiftLets2Config where
   /-- Whether to lift lets out of proofs. The default is not to. -/
   proofs : Bool := false
@@ -28,7 +28,7 @@ structure Lean.Expr.LiftLets2Config where
   /-- Remove binding with no free variables.  -/
   removeNoFVar : Bool := true
   /-- Split bindings of constructors into multiple let bindings.
-  For example `let y := (a,b); ...` will be transformed into `let y₁ := a; let y₂ := b; ...`  -/
+  For example, a binding like let y := (a, b) becomes let y₁ := a; let y₂ := b. -/
   splitCtors : Bool := true
   /-- Remove binding of lambda functions.  -/
   removeLambda : Bool := true
@@ -39,7 +39,7 @@ structure Lean.Expr.LiftLets2Config where
 
 
 /--
-Auxiliary definition for `Lean.Expr.liftLets`. Takes a list of the accumulated fvars.
+Auxiliary definition for lifting let bindings. Takes a list of the accumulated fvars.
 This list is used during the computation to merge let bindings.
 -/
 private partial def Lean.Expr.liftLets2Aux {α} (config : LiftLets2Config) (e : Expr) (fvars : Array Expr)
@@ -123,13 +123,14 @@ where
 
 variable [MonadControlT MetaM n] [Monad n]
 
-/-- Take all the `let`s in an expression and move them outwards as far as possible.
-All top-level `let`s are added to the local context, and then `f` is called with the list
-of local bindings (each an fvar) and the new expression.
+/-- Take all the let bindings in an expression and move them outwards as far as possible.
+All top-level let bindings are added to the local context, and then the callback is called with the
+list of local bindings (each an fvar) and the new expression.
 
 Let bindings are merged if they have the same type and value.
 
-Use `e.liftLets mkLetFVars` to get a defeq expression with all `let`s lifted as far as possible. -/
+Use {name}`mkLetFVars` to get a defeq expression with all let bindings
+lifted as far as possible. -/
 def Lean.Expr.liftLets2 {α} (e : Expr) (f : Array Expr → Expr → n α)
     (config : LiftLets2Config := {}) : n α :=
   map2MetaM (fun k => e.liftLets2Aux config #[] k) f

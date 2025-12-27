@@ -8,7 +8,9 @@ import SciLean.Data.Int64
 namespace SciLean
 
 /--
-`Idx2 a b` is a whole number `i` with the constraint `a ≤ i ≤ b` -/
+Given {given}`a : ℤ`, {given}`b : ℤ`, and {given}`i : ℤ`, {lean}`Idx2 a b` is a whole number
+{lean}`i` with the constraint {lean}`a ≤ i` and {lean}`i ≤ b`.
+-/
 structure Idx2 (a b : ℤ) where
   val  : Int64
   bounds : a ≤ val.toInt ∧ val.toInt ≤ b
@@ -51,9 +53,11 @@ instance Idx2.decLe {a b} (i j : Idx2 a b) : Decidable (LE.le i j) :=  -- Nat.de
 
 
 /--
-`Idx2 a b` is equivalent to `Fin n`
+Given {given}`a : ℤ` and {given}`b : ℤ`, {lean}`Idx2 a b` is equivalent to
+{lean}`Fin ((b - a + 1).toNat)`.
 
-This is blatanly false but we treat `Idx2 a b` as `Fin n`, see documentation of `Idx2 a b`.
+This is blatantly false but we treat {lean}`Idx2 a b` as {lean}`Fin ((b - a + 1).toNat)`; see
+documentation of {lean}`Idx2 a b`.
 -/
 def Idx2.finEquiv (a b : ℤ) : Idx2 a b ≃ Fin ((b - a + 1).toNat) where
   toFun x := ⟨(x.1 - a.toInt64).toNatClampNeg, sorry_proof⟩

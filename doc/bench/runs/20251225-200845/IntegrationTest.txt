@@ -1,0 +1,18 @@
+===== IntegrationTest =====
+=== Kernel Integration Test ===
+Random uniform Float^[4] created
+Random normal Float^[4] created
+add: done
+mul: done
+exp: done
+sum: 3.569064
+Created matrices A[2,3] and B[3,2]
+gemm A @ B: done
+transpose A: done
+gemv A @ v: done
+softmax sum (should be ~1.0): 1.000000
+gemv_backward_x: done
+gemm_backward_A: done
+
+=== All integration tests passed! ===
+

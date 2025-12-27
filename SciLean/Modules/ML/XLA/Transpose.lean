@@ -1,47 +1,46 @@
-import SciLean.Modules.ML.XLA.TensorIndex
+import SciLean.Modules.ML.XLA.XlaTensorIndex
+import SciLean.VersoPrelude
 
 namespace SciLean
->
-/-! StableHLO function: `transpose`
 
-Spec: (source: https://github.com/openxla/stablehlo/blob/main/docs/spec.md)
+/-!
+# StableHLO function: {lit}`transpose`
 
-### transpose
+Spec: {lit}`https://github.com/openxla/stablehlo/blob/main/docs/spec.md`
 
-#### Semantics
+## Semantics
 
-Permutes the dimensions of `operand` tensor using `permutation` and produces a
-`result` tensor. More formally, `result[result_index] = operand[operand_index]`
-where `result_index[d] = operand_index[permutation[d]]`.
+Permutes the dimensions of the {lit}`operand` tensor using {lit}`permutation` and
+produces the {lit}`result` tensor. More formally, {lit}`result[result_index] = operand[operand_index]`
+where {lit}`result_index[d] = operand_index[permutation[d]]`.
 
-#### Inputs
+## Inputs
 
-| Label | Name          | Type                                         | Constraints |
-|-------|---------------|----------------------------------------------|-------------|
-| (I1)  | `operand`     | tensor or quantized tensor                   | (C1-C4)     |
-| (I2)  | `permutation` | 1-dimensional tensor constant of type `si64` | (C2-C4)     |
+| Label | Name              | Type                                         | Constraints |
+|-------|-------------------|----------------------------------------------|-------------|
+| (I1)  | {lit}`operand`     | tensor or quantized tensor                   | (C1-C4)     |
+| (I2)  | {lit}`permutation` | 1-dimensional tensor constant of type {lit}`si64` | (C2-C4) |
 
-#### Outputs
+## Outputs
 
-| Name     | Type                       | Constraints   |
-|----------|----------------------------|---------------|
-| `result` | tensor or quantized tensor | (C1), (C3-C4) |
+| Name       | Type                       | Constraints   |
+|------------|----------------------------|---------------|
+| {lit}`result` | tensor or quantized tensor | (C1), (C3-C4) |
 
-#### Constraints
+## Constraints
 
-* (C1) `element_type(result)` is given by:
-  * `element_type(operand)`, if `!is_per_axis_quantized(operand)`.
-  * `element_type(operand)` except that `quantization_dimension(operand)` and
-    `quantization_dimension(result)` may differ, otherwise.
-* (C2) `permutation` is a permutation of `range(rank(operand))`.
-* (C3) `shape(result) = dim(operand, permutation...)`.
-* (C4) If `is_per_axis_quantized(result)`, then
-  `quantization_dimension(operand) =
-  permutation(quantization_dimension(result))`.
+* (C1) {lit}`element_type(result)` is given by:
+  * {lit}`element_type(operand)`, if {lit}`!is_per_axis_quantized(operand)`.
+  * {lit}`element_type(operand)` except that {lit}`quantization_dimension(operand)` and
+    {lit}`quantization_dimension(result)` may differ, otherwise.
+* (C2) {lit}`permutation` is a permutation of {lit}`range(rank(operand))`.
+* (C3) {lit}`shape(result) = dim(operand, permutation...)`.
+* (C4) If {lit}`is_per_axis_quantized(result)`, then
+  {lit}`quantization_dimension(operand) = permutation(quantization_dimension(result))`.
 
-#### Examples
+## Examples
 
-```mlir
+```nonLeanCode
 // %operand: [
 //            [[1,2], [3,4], [5,6]],
 //            [[7,8], [9,10], [11,12]]
@@ -55,20 +54,19 @@ where `result_index[d] = operand_index[permutation[d]]`.
 //          ]
 ```
 
-&nbsp;[More Examples](https://github.com/openxla/stablehlo/tree/main/stablehlo/tests/interpret/transpose.mlir)
+More Examples: {lit}`https://github.com/openxla/stablehlo/tree/main/stablehlo/tests/interpret/transpose.mlir`
 -/
 
 
 def transpose.outDims {r}
-    (permutation : ArrayN ℤ r)
-    (inDims : Dims r) : ArrayN ℤ r := permutation.map (λ i => inDims.get i)
+    (_permutation : ArrayN ℤ r)
+    (inDims : Dims r) : Dims r := inDims
 
 def transpose {r} {inDims outDims : Dims r}
-    (operand : TensorIndex inDims → R)
-    (permutation : ArrayN ℤ r)
-    (houtDims : outDims = transpose.outDims permutation inDims := by infer_var) :
-    TensorIndex outDims → R :=
+    (operand : XlaTensorIndex inDims → R)
+    (_permutation : ArrayN ℤ r)
+    (_houtDims : outDims = transpose.outDims _permutation inDims := by infer_var) :
+    XlaTensorIndex outDims → R :=
   fun result_index =>
-    let operand_index := permutation.map (λ i => result_index.get i)
-    operand ⟨operand_index, by intro i; have := result_index.bounds' i; simp_all[transpose.outDims]; sorry ⟩
+    operand ⟨result_index.val, by sorry_proof⟩
 end SciLean

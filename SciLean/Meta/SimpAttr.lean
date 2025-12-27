@@ -1,10 +1,11 @@
 import Lean
+import SciLean.VersoPrelude
 
 /-! # SciLean Simp Attributes
 
 Simp attributes for algebraic transformations.
 
-Each attribute has both lemma support (`attr_name`) and simproc support (`attr_name_proc`).
+Each attribute has both lemma support ({lit}`attr_name`) and simproc support ({lit}`attr_name_proc`).
 -/
 
 namespace SciLean

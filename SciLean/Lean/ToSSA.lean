@@ -1,14 +1,17 @@
 import Lean
 import Qq
+import Verso.Code.External
+import SciLean.VersoPrelude
 import SciLean.Tactic.GTrans.MetaLCtxM
+import SciLean.Util.VersoExtensions
 
-open Lean Meta
+open Lean Meta Verso.Code.External
 
 namespace Lean.Expr
 
-/-- Turns expression `e` into single-static-assigment w.r.t. to free variables `fvars` and all bound variables
+/-- Turns an expression into single-static-assignment w.r.t. free variables and all bound variables.
 
-Returns expression, newly introduced let bindings
+Returns the SSA expression and the newly introduced let bindings.
 -/
 partial def toSSACore (e : Expr) (fvars : Array Expr) : MetaLCtxM (Expr × Array Expr) := do
   -- todo: use some fast data structure for this look up
@@ -49,20 +52,20 @@ where
 
         let arg := args[i]
         let (arg', lets') ← toSSACore arg fvars
-          if arg'.consumeMData.isApp then
-            let arg'' ← introLetDecl Name.anonymous (← inferType arg') arg'
-            goApp fn (args.set i arg'' h) infos (fvars.push arg'') (i+1) (lets ++ lets'.push arg'')
-          else
-            goApp fn (args.set i arg' h) infos fvars (i+1) (lets++lets')
+        if arg'.consumeMData.isApp then
+          let arg'' ← introLetDecl Name.anonymous (← inferType arg') arg'
+          goApp fn (args.set i arg'' h) infos (fvars.push arg'') (i+1) (lets ++ lets'.push arg'')
+        else
+          goApp fn (args.set i arg' h) infos fvars (i+1) (lets++lets')
       else
         return (mkAppN fn args, lets)
 
 
-/-- Converts an expression to single static assigment form w.r.t. bound variables and free variables `fvars`
+/-- Converts an expression to single static assignment form w.r.t. bound variables and free variables.
 
 Examples:
-- `x*x + x ==> let a := x*x; a + x`
-- `fun y => x*y + x*x ==> fun y => let a := x*y; let a_1 := x*x; a + a_1`
+- {_root_.lit}`x*x + x` becomes {_root_.lit}`let a := x*x; a + x`
+- {_root_.lit}`fun y => x*y + x*x` becomes {_root_.lit}`fun y => let a := x*y; let a_1 := x*x; a + a_1`
 -/
 def toSSA (e : Expr) (fvars : Array Expr) : MetaM Expr := do
   (toSSACore e fvars).runInMeta fun (e',lets) => do
@@ -74,7 +77,7 @@ def toSSA (e : Expr) (fvars : Array Expr) : MetaM Expr := do
 
 open Parser.Tactic in
 -- todo: add option that ssa form should be done w.r.t. to particular variables
-/-- `to_ssa` converts expression to single static assigment form -/
+/-- The {_root_.lit}`to_ssa` conv converts an expression to single static assignment form. -/
 syntax (name:=to_ssa_conv) "to_ssa" : conv
 
 open Lean Meta Elab Tactic

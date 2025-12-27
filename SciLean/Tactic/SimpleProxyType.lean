@@ -5,19 +5,20 @@ Authors: Kyle Miller, Tomas Skrivan
 -/
 import Mathlib.Tactic.Core
 import Mathlib.Logic.Equiv.Defs
+import SciLean.VersoPrelude
 
 /-!
 # Generating "simple proxy types"
 
 This module gives tools to create an equivalence between a given inductive type and a
-"simple proxy type" constructed from `Unit`, `PLift`, `Prod`, `Empty`, and `Sum`.
+"simple proxy type" constructed from {name}`Unit`, {name}`PLift`, {name}`Prod`, {name}`Empty`, and {name}`Sum`.
 It works for any non-recursive inductive type without indices.
 
-The only difference from "proxy type" is that it uses `Prod` instead of `Sigma` and this can make it
+The only difference from "proxy type" is that it uses {name}`Prod` instead of {name}`Sigma` and this can make it
 easier for downstream operations.
 
-NOTE: This is a quick and dirty addaptation of Kyle's `proxy_equiv`. I just replaces `Sigma` with
-      `Prod` and fixed the issue. Documentation is likely invalid!
+NOTE: This is a quick and dirty addaptation of Kyle's {lit}`proxy_equiv`. I just replaces {name}`Sigma` with
+      {name}`Prod` and fixed the issue. Documentation is likely invalid!
 -/
 
 namespace SciLean.Tactic.SimpleProxyType
@@ -26,20 +27,20 @@ open Meta Command
 
 initialize registerTraceClass `Elab.simpleProxyType
 
-/-- Configuration used by `mkProxyEquiv`. -/
+/-- Configuration used by {lit}`mkProxyEquiv`. -/
 structure ProxyEquivConfig where
-  /-- Name to use for the declaration for a type that is `Equiv` to the given type. -/
+  /-- Name to use for the declaration for a type that is {name}`Equiv` to the given type. -/
   proxyName : Name
-  /-- Name to use for the declaration for the equivalence `simpleProxyType ≃ type`. -/
+  /-- Name to use for the declaration for the equivalence {lit}`simpleProxyType ≃ type`. -/
   proxyEquivName : Name
   /-- Returns a proxy type for a constructor and a pattern to use to match against it,
   given a list of fvars for the constructor arguments and pattern names to use for the arguments.
-  The proxy type is expected to be a `Type*`. -/
+  The proxy type is expected to be a {lit}`Type*`. -/
   mkCtorSimpleProxyType : List (Expr × Name) → TermElabM (Expr × Term)
   /-- Given (constructor name, proxy constructor type, proxy constructor pattern) triples
-  constructed using `mkCtorSimpleProxyType`, return (1) the total proxy type (a `Type*`),
-  (2) patterns to use for each constructor, and (3) a proof to use to prove `left_inv` for
-  `simple_proxy_type ≃ type` (this proof starts with `intro x`). -/
+  constructed using {lit}`mkCtorSimpleProxyType`, return (1) the total proxy type (a {lit}`Type*`),
+  (2) patterns to use for each constructor, and (3) a proof to use to prove {lit}`left_inv` for
+  {lit}`simple_proxy_type ≃ type` (this proof starts with {lit}`intro x`). -/
   mkSimpleProxyType : Array (Name × Expr × Term) → TermElabM (Expr × Array Term × TSyntax `tactic)
 
 /-- Returns a proxy type for a constructor and a pattern to use to match against it.
@@ -47,13 +48,13 @@ structure ProxyEquivConfig where
 Input: a list of pairs associated to each argument of the constructor consisting
 of (1) an fvar for this argument and (2) a name to use for this argument in patterns.
 
-For example, given `#[(a, x), (b, y)]` with `x : Nat` and `y : Fin x`, then this function
-returns `Sigma (fun x => Fin x)` and `⟨a, b⟩`.
+For example, given {lit}`#[(a, x), (b, y)]` with {lit}`x : Nat` and {lit}`y : Fin x`, then this function
+returns {lit}`Sigma (fun x => Fin x)` and {lit}`⟨a, b⟩`.
 
-Always returns a `Type*`. Uses `Unit`, `PLift`, and `Sigma`. Avoids using `PSigma` since
-the `Fintype` instances for it go through `Sigma`s anyway.
+Always returns a {lit}`Type*`. Uses {name}`Unit`, {name}`PLift`, and {name}`Sigma`. Avoids using {name}`PSigma` since
+the {lit}`Fintype` instances for it go through {name}`Sigma`s anyway.
 
-The `decorateSigma` function is to wrap the `Sigma` a decorator such as `Lex`.
+The {lit}`decorateSigma` function wraps the {name}`Sigma` with a decorator such as {lit}`Lex`.
 It should yield a definitionally equal type. -/
 def defaultMkCtorSimpleProxyType (xs : List (Expr × Name))
     (decorateSigma : Expr → TermElabM Expr := pure) :
@@ -82,9 +83,9 @@ def defaultMkCtorSimpleProxyType (xs : List (Expr × Name))
       let ty ← decorateSigma (← mkAppM ``Prod #[(← inferType x), xsty])
       return (ty, ← `(term| ⟨$(mkIdent a), $patt⟩))
 
-/-- Create a `Sum` of types, mildly optimized to not have a trailing `Empty`.
+/-- Create a {name}`Sum` of types, mildly optimized to not have a trailing {name}`Empty`.
 
-The `decorateSum` function is to wrap the `Sum` with a function such as `Lex`.
+The {lit}`decorateSum` function wraps the {name}`Sum` with a function such as {lit}`Lex`.
 It should yield a definitionally equal type.
 
 Returns a tuple of (type, patterns, tactic proof). -/
@@ -121,8 +122,8 @@ where
       let spatt ← wrapSumAccess cidx' (nctors - 1) spatt
       `(term| Sum.inr $spatt)
 
-/-- Default configuration. Defines `SimpleProxyType` and `SimpleProxyTypeEquiv` in the namespace
-of the inductive type. Uses `Unit`, `PLift`, `Sigma`, `Empty`, and `Sum`. -/
+/-- Default configuration. Defines {lit}`SimpleProxyType` and {lit}`SimpleProxyTypeEquiv` in the namespace
+of the inductive type. Uses {name}`Unit`, {name}`PLift`, {name}`Sigma`, {name}`Empty`, and {name}`Sum`. -/
 def ProxyEquivConfig.default (indVal : InductiveVal) : ProxyEquivConfig where
   proxyName := indVal.name.mkStr "simpleProxyType"
   proxyEquivName := indVal.name.mkStr "simpleProxyTypeEquiv"
@@ -228,10 +229,10 @@ def ensureProxyEquiv (config : ProxyEquivConfig) (indVal : InductiveVal) : TermE
         (Generated by the `simple_proxy_equiv%` elaborator.)"
       trace[Elab.SimpleProxyType] "defined {config.proxyEquivName}"
 
-/-- Helper function for `simple_proxy_equiv% type : expectedType` elaborators.
+/-- Helper function for {lit}`simple_proxy_equiv% type : expectedType` elaborators.
 
-Elaborate `type` and get its `InductiveVal`. Uses the `expectedType`, where the
-expected type should be of the form `_ ≃ type`. -/
+Elaborate {lit}`type` and get its {name}`InductiveVal`. Uses {lit}`expectedType`, where the
+expected type should be of the form {lit}`_ ≃ type`. -/
 def elabProxyEquiv (type : Term) (expectedType? : Option Expr) :
     TermElabM (Expr × InductiveVal) := do
   let type ← Term.elabType type
@@ -247,33 +248,29 @@ def elabProxyEquiv (type : Term) (expectedType? : Option Expr) :
   return (type, ← getConstInfoInduct declName)
 
 /--
-The term elaborator `simple_proxy_equiv% α` for a type `α` elaborates to an equivalence `β ≃ α`
-for a "proxy type" `β` composed out of basic type constructors `Unit`, `PLift`, `Prod`,
-`Empty`, and `Sum`.
+The term elaborator {lit}`simple_proxy_equiv% α` for a type {lit}`α` elaborates to an equivalence {lit}`β ≃ α`
+for a "proxy type" {lit}`β` composed out of basic type constructors {name}`Unit`, {name}`PLift`, {name}`Prod`,
+{name}`Empty`, and {name}`Sum`.
 
-This only works for inductive types `α` that are neither recursive nor have indices.
-If `α` is an inductive type with name `I`, then as a side effect this elaborator defines
-`I.simpleProxyType` and `I.simpleProxyTypeEquiv`.
+This only works for inductive types {lit}`α` that are neither recursive nor have indices.
+If {lit}`α` is an inductive type with name {lit}`I`, then as a side effect this elaborator defines
+{lit}`I.simpleProxyType` and {lit}`I.simpleProxyTypeEquiv`.
 
-The elaborator makes use of the expected type, so `(simple_proxy_equiv% _ : _ ≃ α)` works.
+The elaborator makes use of the expected type, so {lit}`(simple_proxy_equiv% _ : _ ≃ α)` works.
 
-For example, given this inductive type
-```
-inductive foo (n : Nat) (α : Type)
-  | a
-  | b : Bool → foo n α
-  | c (x : Fin n) : Fin x → foo n α
-  | d : Bool → α → foo n α
-```
-the proxy type it generates is `Unit ⊕ Bool ⊕ (x : Fin n) × Fin x ⊕ (_ : Bool) × α` and
+For example, given this inductive type:
+{lit}``inductive foo (n : Nat) (α : Type)``
+{lit}``  | a``
+{lit}``  | b : Bool → foo n α``
+{lit}``  | c (x : Fin n) : Fin x → foo n α``
+{lit}``  | d : Bool → α → foo n α``
+the proxy type it generates is {lit}`Unit ⊕ Bool ⊕ (x : Fin n) × Fin x ⊕ (_ : Bool) × α` and
 in particular we have that
-```
-simple_proxy_equiv% (foo n α) : Unit ⊕ Bool ⊕ (x : Fin n) × Fin x ⊕ (_ : Bool) × α ≃ foo n α
-```
+{lit}``simple_proxy_equiv% (foo n α) : Unit ⊕ Bool ⊕ (x : Fin n) × Fin x ⊕ (_ : Bool) × α ≃ foo n α``
 -/
 syntax (name := simple_proxy_equiv) "simple_proxy_equiv% " term : term
 
-/-- Elaborator for `simple_proxy_equiv%`. -/
+/-- Elaborator for {lit}`simple_proxy_equiv%`. -/
 @[term_elab simple_proxy_equiv]
 def elab_simple_proxy_equiv : Elab.Term.TermElab := fun stx expectedType? =>
   match stx with

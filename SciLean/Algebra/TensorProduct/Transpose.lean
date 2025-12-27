@@ -1,25 +1,23 @@
 import SciLean.Algebra.TensorProduct.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 
 /--
-Class providing matrix-matrix multiplcation
+Class providing matrix transposition.
 
-This takes `A : Z ⊗ Y` and `B : Y ⊗ X` and produces `A*B : Z ⊗ X`
+This takes {lit}`A : Y ⊗ X` and produces {lit}`Aᵀ : X ⊗ Y`.
  -/
-class TensorProductTranpose
+class TensorProductTranspose
   (R Y X YX XY : Type*) [RCLike R]
   [NormedAddCommGroup Z] [AdjointSpace R Z] [NormedAddCommGroup Y] [AdjointSpace R Y] [NormedAddCommGroup X] [AdjointSpace R X]
   [AddCommGroup YX] [Module R YX] [AddCommGroup XY] [Module R XY]
   [TensorProductType R Y X YX] [TensorProductType R X Y XY]
   where
 
-    /-- Matrix transposition/conjugation
-    ```
-    transpose A = Aᵀ  or  Aᴴ
-    ```
+    /-- Matrix transposition/conjugation.
 
-    The type signature is the same as of `gemm` BLAS function.
+        {lit}`conjTranspose A = Aᵀ` or {lit}`Aᴴ`
     -/
     conjTranspose (A : YX) : XY

@@ -6,6 +6,7 @@ Authors: Alok Singh
 import Mathlib.Analysis.Normed.Field.Basic
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean.Kernel.Spec
 
@@ -96,17 +97,17 @@ noncomputable def argmax_spec [LinearOrder R] (x : Fin n → R) (hn : 0 < n := b
 -- Tier 4: Contractions
 -- ============================================================================
 
-/-- Matrix-vector multiply specification: y = A @ x
-    A has shape [m, n], x has shape [n], result has shape [m]. -/
+/-- Matrix-vector multiply specification: {lit}`y = A @ x`.
+    A has shape {lit}`[m, n]`, x has shape {lit}`[n]`, result has shape {lit}`[m]`. -/
 def gemv_spec [Semiring R] (A : Fin m → Fin n → R) (x : Fin n → R) : Fin m → R :=
   fun i => ∑ j, A i j * x j
 
-/-- General matrix multiply specification: C = A @ B
-    A has shape [m, k], B has shape [k, n], result has shape [m, n]. -/
+/-- General matrix multiply specification: {lit}`C = A @ B`.
+    A has shape {lit}`[m, k]`, B has shape {lit}`[k, n]`, result has shape {lit}`[m, n]`. -/
 def gemm_spec [Semiring R] (A : Fin m → Fin k → R) (B : Fin k → Fin n → R) : Fin m → Fin n → R :=
   fun i j => ∑ l, A i l * B l j
 
-/-- Scaled general matrix multiply: C = α * A @ B + β * C -/
+/-- Scaled general matrix multiply: {lit}`C = α * A @ B + β * C`. -/
 def gemm_scaled_spec [Semiring R] (α : R) (A : Fin m → Fin k → R) (B : Fin k → Fin n → R)
     (β : R) (C : Fin m → Fin n → R) : Fin m → Fin n → R :=
   fun i j => α * (∑ l, A i l * B l j) + β * C i j
@@ -116,14 +117,14 @@ def gemm_scaled_spec [Semiring R] (α : R) (A : Fin m → Fin k → R) (B : Fin 
 -- ============================================================================
 
 /-- Softmax specification (simple version without numerical stability).
-    softmax(x)_i = exp(x_i) / sum(exp(x))
+    {lit}`softmax(x)_i = exp(x_i) / sum(exp(x))`.
     Note: The C kernel uses the numerically stable version (subtracts max). -/
 noncomputable def softmax_spec (x : Fin n → ℝ) : Fin n → ℝ :=
   let exp_x := fun i => Real.exp (x i)
   let sum_exp := ∑ i, exp_x i
   fun i => exp_x i / sum_exp
 
-/-- Scaled vector addition: y = α*x + β*y -/
+/-- Scaled vector addition: {lit}`y = α*x + β*y`. -/
 def axpby_spec [Semiring R] (α : R) (x : Fin n → R) (β : R) (y : Fin n → R) : Fin n → R :=
   fun i => α * x i + β * y i
 
@@ -131,7 +132,7 @@ def axpby_spec [Semiring R] (α : R) (x : Fin n → R) (β : R) (y : Fin n → R
 -- Tier 6: Index Permutation
 -- ============================================================================
 
-/-- Transpose specification: dst[j,i] = src[i,j] -/
+/-- Transpose specification: {lit}`dst[j,i] = src[i,j]`. -/
 def transpose_spec (src : Fin m → Fin n → R) : Fin n → Fin m → R :=
   fun j i => src i j
 
@@ -151,7 +152,7 @@ theorem add_spec_comm (a b : Fin n → R) : add_spec a b = add_spec b a := by
 theorem mul_spec_comm (a b : Fin n → R) : mul_spec a b = mul_spec b a := by
   ext i; simp [mul_spec, mul_comm]
 
-/-- GEMM associativity: (A @ B) @ C = A @ (B @ C) -/
+/-- GEMM associativity: {lit}`(A @ B) @ C = A @ (B @ C)`. -/
 theorem gemm_spec_assoc
     (A : Fin m → Fin k → R) (B : Fin k → Fin l → R) (C : Fin l → Fin n → R) :
     gemm_spec (gemm_spec A B) C = gemm_spec A (gemm_spec B C) := by
@@ -166,7 +167,7 @@ theorem gemm_spec_assoc
 
 end Properties
 
-/-- Transpose involution: (Aᵀ)ᵀ = A -/
+/-- Transpose involution: {lit}`(Aᵀ)ᵀ = A`. -/
 theorem transpose_spec_invol (A : Fin m → Fin n → R) :
     transpose_spec (transpose_spec A) = A := by
   ext i j; simp [transpose_spec]
@@ -179,14 +180,14 @@ section AD
 
 variable [CommRing R]
 
-/-- Derivative of GEMV with respect to x: d/dx (A @ x) = A -/
+/-- Derivative of GEMV with respect to x: {lit}`d/dx (A @ x) = A`. -/
 theorem gemv_spec_linear (A : Fin m → Fin n → R) :
     ∀ x dx : Fin n → R, gemv_spec A (add_spec x dx) = add_spec (gemv_spec A x) (gemv_spec A dx) := by
   intro x dx
   ext i
   simp [gemv_spec, add_spec, Finset.sum_add_distrib, mul_add]
 
-/-- Outer product for weight gradients: x ⊗ y -/
+/-- Outer product for weight gradients: {lit}`x ⊗ y`. -/
 def outer_spec (x : Fin m → R) (y : Fin n → R) : Fin m → Fin n → R :=
   fun i j => x i * y j
 

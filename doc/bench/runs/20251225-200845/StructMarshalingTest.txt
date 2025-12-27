@@ -1,0 +1,28 @@
+===== StructMarshalingTest =====
+╔══════════════════════════════════════════════════════════════╗
+║           GPU Struct Marshaling Test                          ║
+╚══════════════════════════════════════════════════════════════╝
+Original:  [Vec3(1.000000, 2.000000, 3.000000), Vec3(4.000000, 5.000000, 6.000000), Vec3(7.000000, 8.000000, 9.000000)]
+Recovered: [Vec3(1.000000, 2.000000, 3.000000), Vec3(4.000000, 5.000000, 6.000000), Vec3(7.000000, 8.000000, 9.000000)]
+Bytes: 36 (expected 36 = 3 × 3 × 4)
+✓ Vec3 roundtrip OK
+
+Original:  [Particle(pos=Vec3(1.000000, 2.000000, 3.000000), vel=Vec3(0.100000, 0.200000, 0.300000), mass=1.000000), Particle(pos=Vec3(4.000000, 5.000000, 6.000000), vel=Vec3(0.400000, 0.500000, 0.600000), mass=2.000000)]
+Recovered: [Particle(pos=Vec3(1.000000, 2.000000, 3.000000), vel=Vec3(0.100000, 0.200000, 0.300000), mass=1.000000), Particle(pos=Vec3(4.000000, 5.000000, 6.000000), vel=Vec3(0.400000, 0.500000, 0.600000), mass=2.000000)]
+Bytes: 56 (expected 56 = 2 × 28)
+✓ Particle roundtrip OK
+
+=== GPU Roundtrip Test ===
+✓ GPU roundtrip OK
+
+=== GPU-Resident Computation Test ===
+Uploaded 3 particles (84 bytes)
+Running GPU operations... (data stays on GPU)
+Downloaded final result: 3 particles
+✓ GPU-resident test OK
+
+✓ All struct marshaling tests passed!
+
+Key insight: GpuArray keeps data on GPU between operations.
+Upload once → compute many times → download result.
+

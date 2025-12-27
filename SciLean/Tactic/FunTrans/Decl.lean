@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Tomas Skrivan
 -/
 import Qq
+import SciLean.VersoPrelude
 
 /-!
 # funTrans environment extension
@@ -38,20 +39,20 @@ structure FunTransDecl where
   /-- path for discriminatory tree -/
   path : Array DiscrTree.Key
   /-- argument index of a function this function transformation talks about.
-  For example, this would be 8 for `@fderiv 𝕜 _ E _ _ F _ _ f` -/
+  For example, this would be 8 for {lit}`@fderiv 𝕜 _ E _ _ F _ _ f` -/
   funArgId : Nat
   deriving Inhabited, BEq
 
-/-- -/
+/-- State storing registered function transformations. -/
 structure FunTransDecls where
   /-- discriminatory tree for function transformations -/
   decls : DiscrTree FunTransDecl := {}
   deriving Inhabited
 
-/-- -/
+/-- Environment extension for function transformation declarations. -/
 abbrev FunTransDeclsExt := SimpleScopedEnvExtension FunTransDecl FunTransDecls
 
-/-- -/
+/-- Register the function transformation extension. -/
 initialize funTransDeclsExt : FunTransDeclsExt ←
   registerSimpleScopedEnvExtension {
     name := by exact decl_name%
@@ -60,7 +61,7 @@ initialize funTransDeclsExt : FunTransDeclsExt ←
       {d with decls := d.decls.insertCore e.path e}
   }
 
-/-- -/
+/-- Register a function transformation declaration. -/
 def addFunTransDecl (declName : Name) : MetaM Unit := do
 
   let info ← getConstInfo declName
@@ -92,7 +93,7 @@ def addFunTransDecl (declName : Name) : MetaM Unit := do
     "added new function property `{declName}`\nlook up pattern is `{path}`"
 
 
-/-- -/
+/-- Match an expression against registered function transformations. -/
 def getFunTrans? (e : Expr) : MetaM (Option (FunTransDecl × Expr)) := do
   unless e.isApp do return .none
 
@@ -116,17 +117,18 @@ fun_trans bug: expression {← ppExpr e} matches multiple function transformatio
 
   return (decl,f)
 
-/-- -/
+/-- Check whether an expression is a registered function transformation. -/
 def isFunTrans (e : Expr) : MetaM Bool := do return (← getFunTrans? e).isSome
 
-/-- Returns function property transformation from `e = T f`. -/
+/-- Returns function property transformation from {lit}`e = T f`. -/
 def getFunTransDecl? (e : Expr) : MetaM (Option FunTransDecl) := do
   match ← getFunTrans? e with
   | .some (decl,_) => return decl
   | .none => return none
 
 
-/-- Returns function `f` from `e = T f` and `T` is function transformation. -/
+/-- Returns function {given}`f` from {lit}`e = T f`, where {given}`T` is the function transformation
+{lean}`T`; the result is {lean}`f`. -/
 def getFunTransFun? (e : Expr) : MetaM (Option Expr) := do
   match ← getFunTrans? e with
   | .some (_,f) => return f

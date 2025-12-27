@@ -1,6 +1,7 @@
 import SciLean.Numerics.Optimization.ArgMin
 import SciLean.Numerics.Optimization.Optimjl.Utilities.Types
 import SciLean.Util.Limit
+import SciLean.VersoPrelude
 
 /-! Port of Optim.jl, file src/multivariate/optimize/optimize.jl
 
@@ -162,7 +163,7 @@ def optimizeM
 
 
 open AbstractOptimizer
-/-- Finds minimum of `d.f` using optimization algorithm `method` using starting point `x₀`
+/-- Finds minimum of {lit}`d.f` using optimization algorithm {lit}`method` using starting point {lit}`x₀`
 
 This function and corresponding optimization algorithms are direct port of Optim.jl
 source: https://github.com/JuliaNLSolvers/Optim.jl

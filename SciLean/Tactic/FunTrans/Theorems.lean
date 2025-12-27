@@ -9,6 +9,7 @@ import SciLean.Tactic.FunTrans.Decl
 import Mathlib.Tactic.FunProp.Theorems
 import Mathlib.Lean.Meta.RefinedDiscrTree
 import SciLean.Lean.Array
+import SciLean.VersoPrelude
 
 
 
@@ -35,12 +36,12 @@ inductive LambdaTheoremArgs
   | apply
   /-- Composition theorem e.g. `fderiv ℝ fun x => f (g x) = ...`
 
-  The numbers `fArgId` and `gArgId` store the argument index for `f` and `g` in the composition
+  The numbers {lit}`fArgId` and {lit}`gArgId` store the argument index for {lit}`f` and {lit}`g` in the composition
   theorem. -/
   | comp (fArgId gArgId : Nat)
   /-- Let composition theorem e.g. `fderiv ℝ fun x => let y := g x; f x y = ...`
 
-  The numbers `fArgId` and `gArgId` store the argument index for `f` and `g` in the composition
+  The numbers {lit}`fArgId` and {lit}`gArgId` store the argument index for {lit}`f` and {lit}`g` in the composition
   theorem. -/
   | letE (fArgId gArgId : Nat)
 
@@ -64,7 +65,7 @@ inductive LambdaTheoremType
   | pi
   deriving Inhabited, BEq, Repr, Hashable
 
-/-- Convert `LambdaTheoremArgs` to `LambdaTheoremType`. -/
+/-- Convert {name}`LambdaTheoremArgs` to {name}`LambdaTheoremType`. -/
 def LambdaTheoremArgs.type (t : LambdaTheoremArgs) : LambdaTheoremType :=
   match t with
   | .id => .id
@@ -74,7 +75,7 @@ def LambdaTheoremArgs.type (t : LambdaTheoremArgs) : LambdaTheoremType :=
   | .apply  => .apply
   | .pi .. => .pi
 
-/-- Decides whether `f` is a function corresponding to one of the lambda theorems. -/
+/-- Decides whether {lit}`f` is a function corresponding to one of the lambda theorems. -/
 def detectLambdaTheoremArgs (f : Expr) (ctxVars : Array Expr) :
     MetaM (Option LambdaTheoremArgs) := do
 
@@ -104,7 +105,7 @@ def detectLambdaTheoremArgs (f : Expr) (ctxVars : Array Expr) :
   | _ => return none
 
 
-/--  -/
+/-- Metadata for a lambda theorem. -/
 structure LambdaTheorem where
   /-- Name of function transformation -/
   funTransName : Name
@@ -116,9 +117,9 @@ structure LambdaTheorem where
   thmArgs : LambdaTheoremArgs
   deriving Inhabited, BEq
 
-/-- -/
+/-- State storing lambda theorems. -/
 structure LambdaTheorems where
-  /-- map: function transfromation name × theorem type → lambda theorem -/
+  /-- map: function transformation name × theorem type → lambda theorem -/
   theorems : Std.HashMap (Name × LambdaTheoremType) (Array LambdaTheorem) := {}
   deriving Inhabited
 
@@ -127,7 +128,7 @@ structure LambdaTheorems where
 def LambdaTheorem.getProof (thm : LambdaTheorem) : MetaM Expr := do
   mkConstWithFreshMVarLevels thm.thmName
 
-/-- -/
+/-- Environment extension for lambda theorems. -/
 abbrev LambdaTheoremsExt := SimpleScopedEnvExtension LambdaTheorem LambdaTheorems
 
 /-- Extension storing all lambda theorems. -/
@@ -141,24 +142,18 @@ initialize lambdaTheoremsExt : LambdaTheoremsExt ←
          d.theorems.insert (e.funTransName, e.thmArgs.type) (es.push e)}
   }
 
-/-- Return lambda theorems of type `type` for function transformation `funTransName`
+/-- Return lambda theorems of type {lit}`type` for function transformation {lit}`funTransName`
 
-Theorems are filtered and sorted based on the optional argument `nargs`. It specifies the number of
+Theorems are filtered and sorted based on the optional argument {lit}`nargs`. It specifies the number of
 arguments of the expression we want to transform.
 
-For example when transforming
-```
-deriv (fun x => x * sin x)
-```
-we do not want to use composition theorem stating `deriv (fun x' => f (g x')) x` because our
-expression does not have the concrete point where we differentiate.
+For example when transforming {lit}`deriv (fun x => x * sin x)` we do not want to use composition
+theorem stating {lit}`deriv (fun x' => f (g x')) x` because our expression does not have the
+concrete point where we differentiate.
 
-On the other hand when transforming
-```
-deriv (fun x' => 1/(1-x')) x
-```
-we prefer the version `deriv (fun x' => f (g x')) x` over `deriv (fun x' => f (g x'))` as the former
-uses `DifferntiableAt` insed of `Differentiable` as preconditions. -/
+On the other hand when transforming {lit}`deriv (fun x' => 1/(1-x')) x` we prefer the version
+{lit}`deriv (fun x' => f (g x')) x` over {lit}`deriv (fun x' => f (g x'))` as the former uses
+{lit}`DifferentiableAt` instead of {lit}`Differentiable` as preconditions. -/
 def getLambdaTheorems (funTransName : Name) (type : LambdaTheoremType) (nargs : Option Nat):
     CoreM (Array LambdaTheorem) := do
   let .some thms := (lambdaTheoremsExt.getState (← getEnv)).theorems[(funTransName,type)]?
@@ -199,7 +194,7 @@ structure FunctionTheorem where
 
 private local instance : Ord Name := ⟨Name.quickCmp⟩
 
-/-- -/
+/-- State storing theorems about specific functions. -/
 structure FunctionTheorems where
   /-- map: function name → function transformation → function theorem -/
   theorems : Batteries.RBMap Name (Batteries.RBMap Name (Array FunctionTheorem) compare) compare := {}
@@ -213,7 +208,7 @@ def FunctionTheorem.getProof (thm : FunctionTheorem) : MetaM Expr := do
   | .fvar id => pure (.fvar id)
 
 
-/-- -/
+/-- Environment extension for function-specific theorems. -/
 abbrev FunctionTheoremsExt := SimpleScopedEnvExtension FunctionTheorem FunctionTheorems
 
 /-- Extension storing all function theorems. -/
@@ -239,7 +234,7 @@ def FunctionTheorem.ord (t s : FunctionTheorem) : Ordering :=
 
   tl.lexOrd sl
 
-/-- -/
+/-- Lookup theorems for a specific function and transformation. -/
 def getTheoremsForFunction (funName : Name) (funTransName : Name) (nargs : Option Nat) (mainArgs : Option (Array Nat)) :
     CoreM (Array FunctionTheorem) := do
 
@@ -275,16 +270,16 @@ structure GeneralTheorem where
 def GeneralTheorem.getProof (thm : GeneralTheorem) : MetaM Expr := do
   mkConstWithFreshMVarLevels thm.thmName
 
-/-- -/
+/-- State storing general function transformation theorems. -/
 structure GeneralTheorems where
-  /-- -/
+  /-- Discrimination tree of general theorems. -/
   theorems     : RefinedDiscrTree GeneralTheorem := {}
   deriving Inhabited
 
-/-- -/
+/-- Environment extension for general theorems. -/
 abbrev GeneralTheoremsExt := SimpleScopedEnvExtension GeneralTheorem GeneralTheorems
 
-/-- -/
+/-- Register morphism theorems extension. -/
 initialize morTheoremsExt : GeneralTheoremsExt ←
   registerSimpleScopedEnvExtension {
     name     := by exact decl_name%
@@ -295,7 +290,7 @@ initialize morTheoremsExt : GeneralTheoremsExt ←
   }
 
 
-/-- -/
+/-- Register free-variable theorems extension. -/
 initialize fvarTheoremsExt : GeneralTheoremsExt ←
   registerSimpleScopedEnvExtension {
     name     := by exact decl_name%
@@ -335,7 +330,7 @@ Examples:
       ContDiff 𝕜 n fun x => (f x) (g x)
   theorem clm_linear {f : E →L[𝕜] F} : IsLinearMap 𝕜 f
 ```
-- transition - the conclusion has to be in the form `P f` where `f` is a free variable
+- transition - the conclusion has to be in the form {lit}`P f` where {lit}`f` is a free variable
 ```
   theorem linear_is_continuous [FiniteDimensional ℝ E] {f : E → F} (hf : IsLinearMap 𝕜 f) :
       Continuous f
@@ -348,7 +343,7 @@ inductive Theorem where
   | fvar       (thm : GeneralTheorem)
 
 
-/-- -/
+/-- Construct a theorem from a constant. -/
 def getTheoremFromConst (declName : Name) (prio : Nat := eval_prio default) : MetaM Theorem := do
   let info ← getConstInfo declName
   forallTelescope info.type fun xs b => do
@@ -416,14 +411,14 @@ def getTheoremFromConst (declName : Name) (prio : Nat := eval_prio default) : Me
       throwError "unrecognized theoremType `{← ppExpr b}`"
 
 
-/-- -/
+/-- Add a theorem to the environment. -/
 def addTheorem (declName : Name) (attrKind : AttributeKind := .global)
     (prio : Nat := eval_prio default) : MetaM Unit := do
   match (← getTheoremFromConst declName prio) with
   | .lam thm =>
     trace[Meta.Tactic.fun_trans.attr] "\
 lambda theorem: {thm.thmName}
-function transfromations: {thm.funTransName}
+function transformations: {thm.funTransName}
 type: {repr thm.thmArgs.type}"
     lambdaTheoremsExt.add thm attrKind
   | .function thm =>

@@ -1,5 +1,6 @@
 import SciLean.Lean.Expr
 import SciLean.Lean.Meta.Basic
+import SciLean.VersoPrelude
 
 namespace SciLean.Meta
 
@@ -44,9 +45,9 @@ private def buildMk (mk : Expr) (mks : List Expr) (vars vals : Array Expr) : Met
       buildMk mk mks' (vars++xs) (vals.push b)
 
 
-/-- Decomposes an element `e` of possible nested structure and returns a function put it back together.
+/-- Decomposes an element {given}`e` of possible nested structure and returns a function put it back together.
 
-For example, calling this function on `x : (Nat×Nat)×Nat` returns `(#[x.1.1, x.1.2, x.1], fun a b c => ((a,b),c))`
+For example, calling this function on {lit}`x : (Nat×Nat)×Nat` returns {lit}`(#[x.1.1, x.1.2, x.1], fun a b c => ((a,b),c))`
 -/
 partial def splitStructureElem (e : Expr) : MetaM (Array Expr × Expr) := do
   let E ← inferType e
@@ -83,9 +84,9 @@ partial def splitStructureElem (e : Expr) : MetaM (Array Expr × Expr) := do
 
 
 
-/-- Decomposes an element `e` that is a nested application of constructors
+/-- Decomposes an element {given}`e` that is a nested application of constructors
 
-For example, calling this function on `x : (Nat×Nat)×Nat` returns `(#[x.1.1, x.1.2, x.1], fun a b c => ((a,b),c))`
+For example, calling this function on {lit}`x : (Nat×Nat)×Nat` returns {lit}`(#[x.1.1, x.1.2, x.1], fun a b c => ((a,b),c))`
 -/
 partial def splitByCtors (e : Expr) : MetaM (Array Expr × Array Expr × Expr) := do
 
@@ -142,19 +143,15 @@ structure StructureDecomposition where
   proof : Q(IsDecomposition $p₁ $p₂ $q)
 deriving Inhabited
 
-/-- Takes a type `X` of a nested structure  and splits it into two `X₁` and `X₂`. Elements `x` for which `split i x` is true are gatherd in `X₁` and rest is in `X₂`.
-Returns function `p₁ : X → X₁`, `p₂ : X → X₂` and `q : X₁ → X₂ → X` that are inverse of each other.
+/-- Takes a type {lit}`X` of a nested structure and splits it into two {lit}`X₁` and {lit}`X₂`. Elements {lit}`x`
+for which {lit}`split i x` is true are gathered in {lit}`X₁` and the rest is in {lit}`X₂`.
+Returns functions {lit}`p₁ : X → X₁`, {lit}`p₂ : X → X₂` and {lit}`q : X₁ → X₂ → X`
+that are inverse of each other.
 
-Example:
-```
-split ((u,v),(w,x),y) (fun i => i%2==0)
-```
-returns
-```
-p₁ := fun ((a,b),(c,d),e) => (a,c,e)
-p₂ := fun ((a,b),(c,d),e) => (b,d)
-q  := fun ((a,c,e),(b,d)) => ((a,b),(c,d),e)
-```
+Example: {lit}`split ((u,v),(w,x),y) (fun i => i%2==0)` returns
+{lit}`p₁ := fun ((a,b),(c,d),e) => (a,c,e)`,
+{lit}`p₂ := fun ((a,b),(c,d),e) => (b,d)`, and
+{lit}`q  := fun ((a,c,e),(b,d)) => ((a,b),(c,d),e)`.
 -/
 def decomposeStructure (e : Expr) (split : Nat → Expr → Bool) : MetaM (Option StructureDecomposition) := do
   let ⟨u,X,_⟩ ← inferTypeQ e
@@ -193,11 +190,11 @@ def decomposeStructure (e : Expr) (split : Nat → Expr → Bool) : MetaM (Optio
 
       return .some {u:=u, v:=v, w:=w, X:=X, X₁:=X₁, X₂:=X₂, p₁:=p₁, p₂:=p₂, q:=q, proof := proof}
 
-/-- Decomposition of the domain of a function `f : X → Y` as `X ≃ X₁×X₂` and provides
-`f' : X₁ → Y` such that `f = f' ∘ p₁` where `p₁ : X → X₁` is the projection onto the
+/-- Decomposition of the domain of a function {lit}`f : X → Y` as {lit}`X ≃ X₁×X₂` and provides
+{lit}`f' : X₁ → Y` such that {lit}`f = f' ∘ p₁` where {lit}`p₁ : X → X₁` is the projection onto the
 first component.
 
-In other words, this claims that `f` does not use the `X₂` part of `X`.
+In other words, this claims that {given}`f` does not use the {given}`X₂` part of {given}`X`.
 -/
 structure DomainDecomposition where
   {u : Level}
@@ -207,7 +204,7 @@ structure DomainDecomposition where
   f' : Q($dec.X₁ → $Y)
   proof : Q(∀ x, $f' ($dec.p₁ x) = $f x)
 
-/-- Take a function `f : X → Y` and find projections `p₁ : X → X₁`, `p₂ : X → X₂` and function `f' : X₁ → Y` such that `h : f = f' ∘ p₁`
+/-- Take a function {lit}`f : X → Y` and find projections {lit}`p₁ : X → X₁`, {lit}`p₂ : X → X₂` and function {lit}`f' : X₁ → Y` such that {lit}`h : f = f' ∘ p₁`
 -/
 def factorDomainThroughProjections (f : Expr) : MetaM (Option DomainDecomposition) := do
   let f ← instantiateMVars f
@@ -274,9 +271,9 @@ structure CodomainDecomposition where
   y₂ : Q($dec.X₂)
   proof : Q(∀ x, ($dec.q ($f' x) $y₂) = $f x)
 
-/-- Takes a function `f : X → Y` and finds decomposition `q : Y₁ → Y₂ → Y`, element `y : Y₂` and function `f' : X → Y₁` such that `h : f = fun x => q (f' x) y`
+/-- Takes a function {lit}`f : X → Y` and finds decomposition {lit}`q : Y₁ → Y₂ → Y`, element {lit}`y : Y₂` and function {lit}`f' : X → Y₁` such that {lit}`h : f = fun x => q (f' x) y`
 
-returns `(f', q, y, h)`
+returns {lit}`(f', q, y, h)`
 -/
 def factorCodomainThroughProjections (f : Expr) : MetaM (Option CodomainDecomposition) := do
   let f ← instantiateMVars f

@@ -5,11 +5,11 @@ Native Float32 (32-bit float) array operations via FFI.
 This provides direct memory access without double↔float conversion overhead.
 -/
 
-/-- Read a Float32 from ByteArray at byte offset `i`. -/
+/-- Read a Float32 from ByteArray at byte offset {given}`i`. -/
 @[extern "scilean_byte_array_uget_float32"]
 opaque ByteArray.ugetFloat32 (a : @& ByteArray) (i : USize) : Float32
 
-/-- Set a Float32 in ByteArray at byte offset `i`. Unsafe: no bounds checking. -/
+/-- Set a Float32 in ByteArray at byte offset {given}`i`. Unsafe: no bounds checking. -/
 @[extern "scilean_byte_array_uset_float32"]
 unsafe opaque ByteArray.usetFloat32Unsafe (a : ByteArray) (i : USize) (v : Float32) : ByteArray
 

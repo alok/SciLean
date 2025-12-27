@@ -6,6 +6,7 @@ import SciLean.Data.IndexType
 import SciLean.Data.IndexType.Basic
 import SciLean.Data.IndexType.Fold
 import SciLean.Data.ArrayLike
+import SciLean.VersoPrelude
 
 set_option linter.unusedVariables false
 
@@ -74,7 +75,7 @@ instance : SetElem (DataArray α) USize α (fun a i => i.toNat < a.size) where
   --   ⟨byteType.toByteArray arr.byteData (byteType.bytes * i) sorry_proof val, arr.size, sorry_proof⟩
 
 
-/-- Capacity of an array. The return type is `Squash Nat` as the capacity is is just an implementation detail and should not affect semantics of the program. -/
+/-- Capacity of an array. The return type is {lit}`Squash Nat` as the capacity is is just an implementation detail and should not affect semantics of the program. -/
 def DataArray.capacity (arr : DataArray α) : Squash Nat := Quot.mk _ (pd.capacity (arr.byteData.size))
 
 -- /-- Makes sure that `arr` fits at least `n` elements of `α` -/
@@ -106,8 +107,16 @@ def DataArray.replicate (n : Nat) (v : α) : DataArray α := Id.run do
     data := data.set i v
   return data
 
+@[inline]
+def DataArray.ofArray (xs : Array α) : DataArray α := Id.run do
+  let mut data := ByteArray.replicate (pd.bytes xs.size) 0
+  for j in [0:xs.size] do
+    let i : USize := j.toUSize
+    data := pd.btype.toByteArray data (pd.btype.bytes * i) sorry_proof (xs[j]'sorry_proof)
+  return ⟨data, sorry_proof⟩
 
-/-- Push array `y` to array `x` `k`-times  -/
+
+/-- Push array {lit}`y` to array {lit}`x` {lit}`k`-times. -/
 def _root_.SciLean.DataArray.pushArray (x y : DataArray α) (k : Nat := 1) : DataArray α := Id.run do
   let mut data := x.1 -- todo: reserve enough memory upfront
   let ydata := y.1
@@ -119,7 +128,7 @@ def _root_.SciLean.DataArray.pushArray (x y : DataArray α) (k : Nat := 1) : Dat
     data := ydata.copySlice 0 data idx.toNat width.toNat
   return ⟨data, sorry_proof⟩
 
-/-- Push element `v` to array `x` `k`-times  -/
+/-- Push element {lit}`v` to array {lit}`x` {lit}`k`-times. -/
 def _root_.SciLean.DataArray.push (x : DataArray α) (v : α) (k : Nat := 1) : DataArray α := Id.run do
   let v' := DataArray.replicate 1 v
   x.pushArray v' k
@@ -241,6 +250,7 @@ def DataArrayN.set (xs : DataArrayN α ι) (i : ι) (xi : α) : DataArrayN α ι
 def DataArrayN.modify (xs : DataArrayN α ι) (i : ι) (f : α → α) : DataArrayN α ι :=
   xs.set i (f (xs.get i))
 
+
 instance : GetElem (α^[ι]) ι α (fun _ _ => True) where
   getElem x i _ := x.get i
 
@@ -254,6 +264,7 @@ instance {r} [DefaultIndexOfRank (α^[κ]) r κ] : DefaultIndexOfRank (α^[ι,κ
 instance : SetElem (α^[ι]) ι α (fun _ _ => True) where
   setElem x i v _ := x.set i v
   setElem_valid := sorry_proof
+
 
 instance : LawfulSetElem (α^[ι]) ι where
   getElem_setElem_eq  := sorry_proof
@@ -334,6 +345,43 @@ instance {ι α : Type*} {n} [IndexType ι n] [pd : PlainDataType α] :
     fromByteArray_toByteArray := sorry_proof
     fromByteArray_toByteArray_other := sorry_proof
   }
+
+@[inline]
+def DataArrayN.get2 {X : Type*} [PlainDataType X]
+    {I nI} [IndexType I nI] {J nJ} [IndexType J nJ]
+    (xs : X^[J]^[I]) (i : I) (j : J) : X :=
+  let pd := (inferInstance : PlainDataType X)
+  let rowStride : USize := pd.btype.bytes * nJ.toUSize
+  let elemBytes : USize := pd.btype.bytes
+  let offset := (toIdx i).1 * rowStride + (toIdx j).1 * elemBytes
+  pd.btype.fromByteArray xs.data.byteData offset sorry_proof
+
+@[inline]
+def DataArrayN.set2 {X : Type*} [PlainDataType X]
+    {I nI} [IndexType I nI] {J nJ} [IndexType J nJ]
+    (xs : X^[J]^[I]) (i : I) (j : J) (v : X) : X^[J]^[I] :=
+  let pd := (inferInstance : PlainDataType X)
+  let rowStride : USize := pd.btype.bytes * nJ.toUSize
+  let elemBytes : USize := pd.btype.bytes
+  let offset := (toIdx i).1 * rowStride + (toIdx j).1 * elemBytes
+  let data := pd.btype.toByteArray xs.data.byteData offset sorry_proof v
+  ⟨⟨data, sorry_proof⟩, sorry_proof⟩
+
+instance (priority:=1000) {X : Type*} [PlainDataType X]
+    {I nI} [IndexType I nI] {J nJ} [IndexType J nJ] :
+    GetElem (X^[J]^[I]) (I×J) X (fun _ _ => True) where
+  getElem x ij _ := DataArrayN.get2 x ij.1 ij.2
+
+instance (priority:=1000) {X : Type*} [PlainDataType X]
+    {I nI} [IndexType I nI] {J nJ} [IndexType J nJ] :
+    SetElem (X^[J]^[I]) (I×J) X (fun _ _ => True) where
+  setElem x ij v _ := DataArrayN.set2 x ij.1 ij.2 v
+  setElem_valid := sorry_proof
+
+instance (priority:=1000) {X : Type*} [PlainDataType X]
+    {I nI} [IndexType I nI] {J nJ} [IndexType J nJ] :
+    IsGetElemCurry (X^[J]^[I]) I J where
+  getElem_curry := by sorry_proof
 
 
 -- def ArrayType.instPlainDataType {Cont ι α : Type*} [ArrayType Cont ι α] [IndexType ι] [pd : PlainDataType α] :

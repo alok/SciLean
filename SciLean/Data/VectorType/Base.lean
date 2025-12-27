@@ -9,14 +9,15 @@ import SciLean.Data.IndexType
 import SciLean.Data.IndexType.Basic
 import SciLean.Data.IndexType.Fold
 import SciLean.Data.ArrayOperations.Algebra
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 open InnerProductSpace
 
 /--
-`VectorType.Base X I K` provides basic fast linear algebra operations for `X` that is a data
-structure indexed by `I` with values in `K`
+{lit}`VectorType.Base X I K` provides basic fast linear algebra operations for {name}`X` that is a data
+structure indexed by {name}`I` with values in {name}`K`
  -/
 class VectorType.Base (X : Type*) (I : outParam (Type*))
     {nI : outParam ℕ} [IndexType I nI]
@@ -30,16 +31,16 @@ class VectorType.Base (X : Type*) (I : outParam (Type*))
 
   /-- Scalar multiplication.
 
-  `x` should be modified if it is passed with ref counter one. -/
+  {name}`x` should be modified if it is passed with ref counter one. -/
   scal  (alpha : K) (x : X) : X
   scal_spec (alpha : K) (x : X) (i : I) :
     (scal alpha x)[i] = alpha • x[i]
 
-  /-- `sum x = ∑ i, x[i]` -/
+  /-- {lit}`sum x = ∑ i, x[i]` -/
   sum (x : X) : K
   sum_spec (x : X) : sum x = Finset.univ.sum (fun i : I => x[i])
 
-  /-- `asum x = ∑ i, |x[i]|` -/
+  /-- {lit}`asum x = ∑ i, |x[i]|` -/
   asum (x : X) : R
   asum_spec (x : X) : asum x = Scalar.ofReal (K:=K) ‖(WithLp.equiv 1 (I → K)).symm (fun i : I => x[i])‖
 
@@ -47,25 +48,25 @@ class VectorType.Base (X : Type*) (I : outParam (Type*))
   nrm2 (x : X) : R
   nrm2_spec (x : X) : nrm2 x = Scalar.ofReal (K:=K) ‖(WithLp.equiv 2 (I → K)).symm (fun i : I => x[i])‖
 
-  /-- `iamax x = argmaxᵢ |x[i]|` -/
+  /-- {lit}`iamax x = argmaxᵢ |x[i]|` -/
   iamax (x : X) (h : nI ≠ 0 := by omega) : I
   iamax_spec (x : X) (h : nI ≠ 0) : Scalar.abs (x[iamax x]) = Scalar.ofReal (K:=K) ‖fun i : I => x[i]‖
 
-  /-- `imaxRe x = argmaxᵢ (real x[i])` -/
+  /-- {lit}`imaxRe x = argmaxᵢ (real x[i])` -/
   imaxRe (x : X) (h : nI ≠ 0 := by omega) : I
   imaxRe_spec (x : X) (h : nI ≠ 0) :
     Scalar.toReal R (Scalar.real (x[imaxRe x]))
     =
     iSup (α:=ℝ) (fun i : I => Scalar.toReal R <| Scalar.real (K:=K) (x[i]))
 
-  /-- `iminRe x = argmaxᵢ (re x[i])` -/
+  /-- {lit}`iminRe x = argmaxᵢ (re x[i])` -/
   iminRe (x : X) (h : nI ≠ 0 := by omega) : I
   iminRe_spec (x : X) (h : nI ≠ 0) :
     Scalar.toReal R (Scalar.real (x[iminRe x]))
     =
     iInf (α:=ℝ) (fun i : I => Scalar.toReal R <| Scalar.real (K:=K) (x[i]))
 
-  /-- `dot x y = ∑ i, conj x[i] y[i]` -/
+  /-- {lit}`dot x y = ∑ i, conj x[i] y[i]` -/
   dot (x y : X) : K
 
   dot_spec (x y : X) :
@@ -80,17 +81,17 @@ class VectorType.Base (X : Type*) (I : outParam (Type*))
     =
     starRingEnd _ x[i]
 
-  /-- `axpy a x y = a • x + y`
+  /-- {lit}`axpy a x y = a • x + y`
 
-  `y` should be modified if it is passed with ref counter one. -/
+  {name}`y` should be modified if it is passed with ref counter one. -/
   axpy (alpha : K) (x y : X) : X
 
   axpy_spec (alpha : K) (x y : X) (i : I) :
     (axpy alpha x y)[i] = alpha • x[i] + y[i]
 
-  /-- `axpby a b x y = a • x + b • y`
+  /-- {lit}`axpby a b x y = a • x + b • y`
 
-  `y` should be modified if it is passed with ref counter one. -/
+  {name}`y` should be modified if it is passed with ref counter one. -/
   axpby (alpha : K) (x : X) (beta : K) (y : X) : X := axpy alpha x (scal beta y)
 
   axpby_spec (alpha beta : K) (x y : X) (i : I) :
@@ -100,7 +101,7 @@ class VectorType.Base (X : Type*) (I : outParam (Type*))
 
   /-- Element wise multiplication.
 
-  `x` should be modified if it is passed with ref counter one. -/
+  {name}`x` should be modified if it is passed with ref counter one. -/
   mul (x y : X) : X
   mul_spec (x y : X) (i : I) :
     (mul x y)[i] = x[i] * y[i]
@@ -146,13 +147,13 @@ class VectorType.Dense (X : Type*) {I : outParam (Type*)}
   where
   getElem_surjective : Surjective (fun (x : X) (i : I) => x[i])
 
-  /-- Constant vector with all elements equial to `k`. -/
+  /-- Constant vector with all elements equial to {name}`k`. -/
   const (k : K) : X
   const_spec (k : K) (i : I) : (const k)[i] = k
 
   /-- Scalar multiplication and scalar addition
 
-  `x` should be modified if it is passed with ref counter one.  -/
+  {name}`x` should be modified if it is passed with ref counter one.  -/
   scalAdd (alpha beta : K) (x : X) : X
   scalAdd_spec (alpha beta : K) (x : X) (i : I) :
     (scalAdd alpha beta x)[i] = alpha * x[i] + beta
@@ -160,21 +161,21 @@ class VectorType.Dense (X : Type*) {I : outParam (Type*)}
 
   /-- Element wise division.
 
-  `x` should be modified if it is passed with ref counter one. -/
+  {name}`x` should be modified if it is passed with ref counter one. -/
   div (x y : X) : X
   div_spec (x y : X) (i : I) :
     (div x y)[i] = x[i] / y[i]
 
   /-- Element wise inverse.
 
-  `x` should be modified if it is passed with ref counter one. -/
+  {name}`x` should be modified if it is passed with ref counter one. -/
   inv (x : X) : X
   inv_spec (x : X) (i : I) :
     (inv x)[i] = (x[i])⁻¹
 
   /-- Element wise exponentiation.
 
-  `x` should be modified if it is passed with ref counter one. -/
+  {name}`x` should be modified if it is passed with ref counter one. -/
   exp (x : X) : X
   exp_spec (x : X) (i : I) :
     (exp x)[i] = Scalar.exp (x[i])

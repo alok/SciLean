@@ -48,9 +48,9 @@ def gemmCPU (m k n : Nat) (A B : FloatArray) : FloatArray := Id.run do
       C := C.uset (i*n + j).toUSize sum sorry_proof
   return C
 
-def runKMeansBenchmarks : IO Unit := do
+def runKMeansBenchmarks (quick : Bool) : IO Unit := do
   let d := 64
-  let n := 10000
+  let n := if quick then 2000 else 10000
   let k := 32
 
   IO.println s!"KMeans: n={n}, d={d}, k={k}"
@@ -58,7 +58,11 @@ def runKMeansBenchmarks : IO Unit := do
   let points ← FloatArray.random (n * d)
   let centroids ← FloatArray.random (k * d)
 
-  let config : Benchmark.Config := { warmupIterations := 2, timedIterations := 10 }
+  let config : Benchmark.Config :=
+    if quick then
+      { warmupIterations := 1, timedIterations := 3 }
+    else
+      { warmupIterations := 2, timedIterations := 10 }
   let mut suite : Benchmark.Suite := { name := "KMeans Benchmark" }
 
   -- CPU
@@ -76,18 +80,26 @@ def runKMeansBenchmarks : IO Unit := do
 
   suite.print
 
-def runGEMMBenchmarks : IO Unit := do
-  let m := 512
-  let kk := 512
-  let nn := 512
+def runGEMMBenchmarks (quick : Bool) : IO Unit := do
+  let m := if quick then 256 else 512
+  let kk := if quick then 256 else 512
+  let nn := if quick then 256 else 512
 
   IO.println s!"\nGEMM: {m}x{kk} @ {kk}x{nn}"
 
   let A ← FloatArray.random (m * kk)
   let B ← FloatArray.random (kk * nn)
 
-  let cpuConfig : Benchmark.Config := { warmupIterations := 1, timedIterations := 3 }
-  let gpuConfig : Benchmark.Config := { warmupIterations := 1, timedIterations := 10 }
+  let cpuConfig : Benchmark.Config :=
+    if quick then
+      { warmupIterations := 1, timedIterations := 2 }
+    else
+      { warmupIterations := 1, timedIterations := 3 }
+  let gpuConfig : Benchmark.Config :=
+    if quick then
+      { warmupIterations := 1, timedIterations := 3 }
+    else
+      { warmupIterations := 1, timedIterations := 10 }
   let mut suite : Benchmark.Suite := { name := "GEMM Benchmark" }
 
   -- CPU
@@ -112,8 +124,12 @@ def main : IO Unit := do
   IO.println ""
   IO.println s!"Metal available: {Metal.isAvailable ()}"
 
-  runKMeansBenchmarks
-  runGEMMBenchmarks
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
+
+  runKMeansBenchmarks quick
+  runGEMMBenchmarks quick
 
   IO.println "\nBenchmark complete!"
 

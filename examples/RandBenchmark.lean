@@ -6,8 +6,8 @@ import SciLean.Util.Benchmark
 
 This compares a few ways of generating random vectors:
 
-1. `IO.rand` in a loop to build a `FloatArray`
-2. `SciLean.Rand` (using `uniformI`) to build a `Float^[n]` in one state-thread
+1. {name}`IO.rand` in a loop to build a {name}`FloatArray`
+2. {name}`SciLean.Rand` (using {lit}`uniformI`) to build a {lit}`Float^[n]` in one state-thread
 
 The goal is to keep this *fast* and *easy to run* as a smoke/perf test.
 -/
@@ -27,9 +27,11 @@ def FloatArray.random01 (n : Nat) : IO FloatArray := do
     xs := xs.push (← rand01IO)
   return xs
 
-def benchSize (n : Nat) : IO Unit := do
+def benchSize (n : Nat) (quick : Bool) : IO Unit := do
   let config : Benchmark.Config :=
-    if n ≤ 100_000 then
+    if quick then
+      { warmupIterations := 1, timedIterations := 3 }
+    else if n ≤ 100_000 then
       { warmupIterations := 2, timedIterations := 8 }
     else
       { warmupIterations := 1, timedIterations := 3 }
@@ -56,12 +58,16 @@ def benchSize (n : Nat) : IO Unit := do
 
 
 def main : IO Unit := do
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
   IO.println "╔════════════════════════════════════════════════════════════╗"
   IO.println "║              SciLean Random Benchmark                      ║"
   IO.println "╚════════════════════════════════════════════════════════════╝"
 
-  for n in [10_000, 100_000, 250_000, 1_000_000] do
-    benchSize n
+  let sizes := if quick then [10_000, 100_000] else [10_000, 100_000, 250_000, 1_000_000]
+  for n in sizes do
+    benchSize n quick
 
 end RandBenchmark
 

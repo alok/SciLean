@@ -1,0 +1,23 @@
+===== PodTypesTest =====
+Testing PlainDataType integer instances...
+
+=== UInt32 ===
+Created array of 4 UInt32 values (42): 16 bytes
+Values: [42, 42, 42, 42] (expected all 42)
+Roundtrip 0x*: got 0x*
+
+=== UInt64 ===
+Created array of 2 UInt64 values: 16 bytes
+Values: [12345678901234, 12345678901234] (expected 12345678901234)
+
+=== Int32 ===
+Int32 roundtrip: stored -12345, got -12345
+
+=== Int64 ===
+Int64 roundtrip: stored -9876543210, got -9876543210
+
+=== UInt16 ===
+UInt16 roundtrip: stored 65000, got 65000
+
+✓ All POD type tests passed!
+

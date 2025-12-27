@@ -1,0 +1,27 @@
+===== PodBenchmark =====
+╔══════════════════════════════════════════════════════════════╗
+║  PlainDataType Specialization Benchmark                       ║
+║  Comparing raw FFI vs PlainDataType abstraction               ║
+╚══════════════════════════════════════════════════════════════╝
+
+Array size: 1000000 elements, 100 iterations each
+
+═══ Float32 (4 bytes) ═══
+  Raw FFI : 195ms (0.000513 M ops/s)
+  POD     : 173ms (0.000578 M ops/s)
+
+═══ UInt32 (4 bytes) ═══
+  Raw FFI : 166ms (0.000602 M ops/s)
+  POD     : 179ms (0.000559 M ops/s)
+
+═══ UInt64 (8 bytes) ═══
+  Raw FFI : 201ms (0.000498 M ops/s)
+  POD     : 223ms (0.000448 M ops/s)
+
+═══ Correctness Verification ═══
+Float32: raw=1500000.000000, pod=1500000.000000, match=true
+UInt32:  raw=42000000, pod=42000000, match=true
+UInt64:  raw=12345000000, pod=12345000000, match=true
+
+✓ Done! If POD matches Raw FFI performance, specialization works.
+

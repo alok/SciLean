@@ -19,7 +19,7 @@ structure DataSynthDecls where
   decls : NameMap DataSynthDecl := {}
   deriving Inhabited
 
-/-- -/
+/-- Environment extension storing data synthesis declarations. -/
 abbrev DataSynthDeclsExt := SimpleScopedEnvExtension DataSynthDecl DataSynthDecls
 
 initialize dataSynthDeclsExt : DataSynthDeclsExt ←

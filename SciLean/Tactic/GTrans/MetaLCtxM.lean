@@ -2,6 +2,7 @@ import Lean
 import Qq
 
 import SciLean.Lean.Meta.Basic
+import SciLean.VersoPrelude
 
 open Lean Meta
 
@@ -36,28 +37,24 @@ def _root_.Lean.Meta.Context.mkCtxCfg (ctx : ContextCtx) (cfg : ContextCfg) : Me
 
 -- TODO: change the monad such that we can only add variables to the context and not remove them
 --       or completely changes the context
-/-- Similar to `MetaM` but allows modifying local context.
+/-- Similar to {lit}`MetaM` but allows modifying local context.
 
-Most imporantly it has a variant of `lambdaTelescope` called `introLet` such that instead of
-```
-lambdaTelescope e fun xs b => do
-  f xs b
-```
+Most imporantly it has a variant of {lit}`lambdaTelescope` called {lit}`introLet` such that instead of
+{lit}`lambdaTelescope e fun xs b => do`
+{lit}`  f xs b`
 we can call
-```
-let (b,xs) ← lambdaIntro e
-f xs b
-```
+{lit}`let (b, xs) ← lambdaIntro e`
+{lit}`f xs b`.
 
-For example running `lambdaTelescope` does not work well with for loops but `lambdaIntro` does.
+For example running {lit}`lambdaTelescope` does not work well with for loops but {lit}`lambdaIntro` does.
 
 Important functions introducing new free variables to the context:
-  - `lambdaIntro`
-  - `letIntro`
-  - `introLocalDecl`
-  - `introLetDecl`
+  - {lit}`lambdaIntro`
+  - {lit}`letIntro`
+  - {lit}`introLocalDecl`
+  - {lit}`introLetDecl`
 
-Also you can run `MetaLCtxM` inside of `MetaM` with `MetaLCtxM.runInMeta`.
+Also you can run {lit}`MetaLCtxM` inside of {lit}`MetaM` with {lit}`MetaLCtxM.runInMeta`.
  -/
 abbrev MetaLCtxM  := ReaderT Meta.ContextCfg $ StateT Meta.ContextCtx $ StateRefT Meta.State CoreM
 
@@ -106,11 +103,11 @@ instance : MonadBacktrack (SavedState×ContextCtx) MetaLCtxM where
   let ((r,_),_) ← x cfg ctx |>.run s
   return r
 
-/-- Run `a : MetaLCtx X` without modifying the local context.
+/-- Run {lit}`a : MetaLCtxM X` without modifying the local context.
 
-This effectively runs `a : MetaLCtx X`, modifies the local context and then reverts the context back.
-The function `k` is evaluated on the result of `a` in the modified context before the context is
-reverted back. It is user's responsibility to make sure that the `k` modifies the result such
+This effectively runs {lit}`a : MetaLCtxM X`, modifies the local context and then reverts the context back.
+The function {lit}`k` is evaluated on the result of {lit}`a` in the modified context before the context is
+reverted back. It is user's responsibility to make sure that {lit}`k` modifies the result such
 that it is valid in the original context e.g. bind all newly introduced free variables. -/
 @[inline] def Lean.Meta.withoutModifyingLCtx (k : α → MetaM β) (a : MetaLCtxM α) : MetaM β :=
   fun ctx => do
@@ -120,11 +117,11 @@ that it is valid in the original context e.g. bind all newly introduced free var
     k a (.mkCtxCfg ctx cfg)
 
 
-/-- Run `a : MetaLCtx X` without modifying the local context.
+/-- Run {lit}`a : MetaLCtxM X` without modifying the local context.
 
-This effectively runs `a : MetaLCtx X`, modifies the local context and then reverts the context back.
-The function `k` is evaluated on the result of `a` in the modified context before the context is
-reverted back. It is user's responsibility to make sure that the `k` modifies the result such
+This effectively runs {lit}`a : MetaLCtxM X`, modifies the local context and then reverts the context back.
+The function {lit}`k` is evaluated on the result of {lit}`a` in the modified context before the context is
+reverted back. It is user's responsibility to make sure that {lit}`k` modifies the result such
 that it is valid in the original context e.g. bind all newly introduced free variables. -/
 @[inline] def MetaLCtxM.runInMeta (a : MetaLCtxM α) (k : α → MetaM β) : MetaM β :=
   fun ctx => do
@@ -158,7 +155,7 @@ def letIntro (e : Expr) : MetaLCtxM (Expr × Array Expr) := do
 
 /-- Adds let declaration into the local context. Returns newly created free variable.
 
-Similar to `withLetDecl` but runs in `MetaLCtxM` instead of `MetaM`. -/
+Similar to {name}`withLetDecl` but runs in {name}`MetaLCtxM` instead of {name}`MetaM`. -/
 def introLocalDecl (name : Name) (bi : BinderInfo) (type : Expr) : MetaLCtxM Expr := do
   let fvarId ← mkFreshFVarId
   fun _ ctx =>
@@ -169,7 +166,7 @@ def introLocalDecl (name : Name) (bi : BinderInfo) (type : Expr) : MetaLCtxM Exp
 
 /-- Adds let declaration into the local context. Returns newly created free variable.
 
-Similar to `withLetDecl` but runs in `MetaLCtxM` instead of `MetaM`. -/
+Similar to {name}`withLetDecl` but runs in {name}`MetaLCtxM` instead of {name}`MetaM`. -/
 def introLetDecl (name : Name) (type? : Option Expr) (val : Expr) : MetaLCtxM Expr := do
   let type := type?.getD (← inferType val)
   let fvarId ← mkFreshFVarId

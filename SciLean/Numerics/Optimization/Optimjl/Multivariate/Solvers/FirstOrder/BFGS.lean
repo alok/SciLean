@@ -3,10 +3,11 @@ import SciLean.Numerics.Optimization.Optimjl.LinerSearches.Types
 import SciLean.Numerics.Optimization.Optimjl.LinerSearches.BackTracking
 import SciLean.Data.DataArray.Algebra
 import SciLean.Data.DataArray.TensorProduct
+import SciLean.VersoPrelude
 
 /-! Port of Optim.jl
 
-Ported from `src/multivariate/solvers/first_order/bfgs.jl`.
+Ported from {lit}`src/multivariate/solvers/first_order/bfgs.jl`.
 
 See <https://github.com/JuliaNLSolvers/Optim.jl>
 -/
@@ -22,14 +23,14 @@ variable (R)
 inductive BFGS.InitialInvH (n : ℕ) where
 /-- Initialize inverse Hessian to this specified value -/
 | invH (invH : R^[n,n])
-/-- Initialize inverse Hessian such that the step length is the specified `stepnorm` -/
+/-- Initialize inverse Hessian such that the step length is the specified {lit}`stepnorm` -/
 | stepnorm (stepnorm : R)
 /-- Initialize inverse Hessian to identity matrix -/
 | identity
 
 open BFGS in
 structure BFGS extends Options R where
-  /-- Linear search that finds appropriate `α` `xₙ₊₁ = xₙ + α • sₙ` -/
+  /-- Linear search that finds appropriate {lit}`α` {lit}`xₙ₊₁ = xₙ + α • sₙ` -/
   lineSearch : LineSearch0Obj R := .mk (BackTracking R) {}
   -- /-- Guess initial `α` to try given function value and gradient -/
   -- alphaguess (φ₀ dφ₀ : R) (d : ObjectiveFunction R (R^[n])) : R := 1
@@ -46,31 +47,31 @@ namespace BFGS
 
 
 structure State (R : Type) (n : ℕ) [RealScalar R] [PlainDataType R] [BLAS (DataArray R) R R] where
-   /-- current position `xₙ` -/
+   /-- current position {lit}`xₙ` -/
    x : R^[n]
-   /-- previous position `xₙ₋₁`-/
+   /-- previous position {lit}`xₙ₋₁` -/
    x_previous : R^[n] := x
-   /-- current gradient `∇f(xₙ)` -/
+   /-- current gradient {lit}`∇f(xₙ)` -/
    g : R^[n] := 0
-   /-- previous gradient `∇f(xₙ₋₁)` -/
+   /-- previous gradient {lit}`∇f(xₙ₋₁)` -/
    g_previous : R^[n] := g
-   /-- current valus `f(xₙ)` -/
+   /-- current value {lit}`f(xₙ)` -/
    f_x : R
-   /-- previous valus `f(xₙ₋₁)` -/
+   /-- previous value {lit}`f(xₙ₋₁)` -/
    f_x_previous : R := f_x
-   /-- position difference `xₙ-xₙ₋₁` -/
+   /-- position difference {lit}`xₙ-xₙ₋₁` -/
    dx : R^[n] := 0
-   /-- gradient difference `∇f(xₙ)-∇f(xₙ₋₁)`-/
+   /-- gradient difference {lit}`∇f(xₙ)-∇f(xₙ₋₁)` -/
    dg : R^[n] := 0
-   /-- `(∇²f)⁻¹(xₙ)*(xₙ-xₙ₋₁)` i.e. `invH*dx`  -/
+   /-- {lit}`(∇²f)⁻¹(xₙ)*(xₙ-xₙ₋₁)` i.e. {lit}`invH*dx`  -/
    u : R^[n] := 0
-   /-- current inverse hessian `(∇²f)⁻¹(xₙ)` -/
+   /-- current inverse hessian {lit}`(∇²f)⁻¹(xₙ)` -/
    invH : R^[n,n] := ⊞ (i j : Idx n) => if i=j then (1:R) else 0
-   /-- step direction `- (∇²f)⁻¹ ∇f` i.e. `- (invH * g)` -/
+   /-- step direction {lit}`- (∇²f)⁻¹ ∇f` i.e. {lit}`- (invH * g)` -/
    s : R^[n] := - g
-   /-- line search scalle `dx := α • s` -/
+   /-- line search scale {lit}`dx := α • s` -/
    alpha : R := 1
-   /-- somethig to do with line search -/
+   /-- something to do with line search -/
    x_ls : R^[n] := 0
    f_calls : ℕ := 0
    g_calls : ℕ := 0

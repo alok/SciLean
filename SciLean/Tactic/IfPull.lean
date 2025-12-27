@@ -8,11 +8,11 @@ open Lean Meta
 
 initialize registerTraceClass `Meta.Tactic.if_pull
 
-/-- Simproc that pulls `if` out of applications and lambda functions.
+/-- Simproc that pulls {lit}`if` out of applications and lambda functions.
 
 For example
-  - `(if 0 ≤ x then x else -x) + y` is transformed to `if 0 ≤ x then x + y else -x + y`
-  - `fun y => if 0 ≤ x then y + x else y - x` is transformed to `if 0 ≤ x then (fun y => y + x) else (fun y => y - x)`  -/
+  - {lit}`(if 0 ≤ x then x else -x) + y` is transformed to {lit}`if 0 ≤ x then x + y else -x + y`
+  - {lit}`fun y => if 0 ≤ x then y + x else y - x` is transformed to {lit}`if 0 ≤ x then (fun y => y + x) else (fun y => y - x)`  -/
 simproc_decl if_pull (_) := fun e => do
 
   match e with
@@ -39,7 +39,7 @@ simproc_decl if_pull (_) := fun e => do
         | return .continue
 
       let arg := args[i]!
-      -- todo: introduce let bindings for other arguments (probaly only for non-type arguments)
+      -- todo: introduce let bindings for other arguments (probably only for non-type arguments)
       thn := mkAppN fn (args.set! i (arg.getArg! 3))
       els := mkAppN fn (args.set! i (arg.getArg! 4))
       cond := arg.getArg! 1

@@ -1,5 +1,6 @@
 import SciLean.Analysis.AdjointSpace.Basic
 import SciLean.Analysis.Normed.IsContinuousLinearMap
+import SciLean.VersoPrelude
 -- import SciLean.Data
 
 open ComplexConjugate
@@ -7,45 +8,40 @@ open ComplexConjugate
 namespace SciLean
 
 open Classical in
-/-- Canonical basis `ⅇ i` on space `X` over the field `𝕜` indexed by `i : I`
+/-- Canonical basis {lit}`ⅇ i` on space {lit}`X` over the field {lit}`𝕜` indexed by {lit}`i : I`
 
-We do not require orthonormality, thus it comes with dual basis `ⅇ'` such that
-```
-  ⟪ⅇ i, ⅇ' j⟫ = if
-```
+We do not require orthonormality, thus it comes with dual basis {lit}`ⅇ'` such that
+{lit}`⟪ⅇ i, ⅇ' j⟫ = if i = j then 1 else 0`.
 -/
 class CanonicalBasis (I : outParam Type*) (𝕜 X : Type*) [RCLike 𝕜]
       [NormedAddCommGroup X] [AdjointSpace 𝕜 X] [Fintype I]
   where
-  /-- `ⅇ[i]` is `i`-th basis vector of a vector space
+  /-- {lit}`ⅇ[i]` is {lit}`i`-th basis vector of a vector space
 
-  Can be also written a `ⅇ[𝕜,X,i]` or `ⅇ[X,i]` to specify the vector space `X` and base field `𝕜`
+  Can be also written a {lit}`ⅇ[𝕜,X,i]` or {lit}`ⅇ[X,i]` to specify the vector space {lit}`X` and base field {lit}`𝕜`
 
-  To project a vector on this basis vector use `ℼ[i]` which notation for `proj i` -/
+  To project a vector on this basis vector use {lit}`ℼ[i]` which notation for {lit}`proj i`. -/
   basis (i : I) : X
-  /-- `ⅇ'[i]` is `i`-th dual basis vector of a vector space
+  /-- {lit}`ⅇ'[i]` is {lit}`i`-th dual basis vector of a vector space
 
-  Can be also written a `ⅇ'[𝕜,X,i]` or `ⅇ'[X,i]` to specify the vector space `X` and base field `𝕜`
+  Can be also written a {lit}`ⅇ'[𝕜,X,i]` or {lit}`ⅇ'[X,i]` to specify the vector space {lit}`X` and base field {lit}`𝕜`
 
-  To project a vector on this basis vector use `ℼ'[i]` which notation for `dualProj i`
+  To project a vector on this basis vector use {lit}`ℼ'[i]` which notation for {lit}`dualProj i`
 
-  We have `dualBasis` because the basis `ⅇ[i]` is not necessarily orthonormal, but similar condition
-  holds between `ⅇ[i]` and `ⅇ'[j]`
-  ```
-    ⟪e[i], ⅇ'[j]⟫ = if i = j then 1 else 0
-  ```
+  We have {lit}`dualBasis` because the basis {lit}`ⅇ[i]` is not necessarily orthonormal, but similar condition
+  holds between {lit}`ⅇ[i]` and {lit}`ⅇ'[j]`, namely {lit}`⟪ⅇ[i], ⅇ'[j]⟫ = if i = j then 1 else 0`.
   -/
   dualBasis (i : I) : X
   /--
-  `ℼ[𝕜,i]` is the projection onto i-th basis vector.
+  {lit}`ℼ[𝕜,i]` is the projection onto i-th basis vector.
 
-  Can be also written a `ℼ[𝕜,i]` to specify the base field `𝕜`
+  Can be also written a {lit}`ℼ[𝕜,i]` to specify the base field {lit}`𝕜`.
   -/
   proj  (i : I) (x : X) : 𝕜
   /--
-  `ℼ[𝕜,i]` is the projection onto i-th dual basis vector.
+  {lit}`ℼ[𝕜,i]` is the projection onto i-th dual basis vector.
 
-  Can be also written a `ℼ'[𝕜,i]` to specify the base field `𝕜`
+  Can be also written a {lit}`ℼ'[𝕜,i]` to specify the base field {lit}`𝕜`.
   -/
   dualProj (i : I) (x : X) : 𝕜
 

@@ -235,11 +235,12 @@ private def parseOneMetadata : PState Unit := do
   colon
   if id == "descr" then
     let v ← quoted parseToken
-    if v.length < 2 then .error s!"Invalid dtype string: {v}"
-    let firstChar := v.data[0]!
-    let order ← ByteOrder.fromChar firstChar
-    let dtype ← Dtype.fromNpyString (v.drop 1)
-    modify fun s => { s with dtype := some (dtype, order) }
+    match v.toList with
+    | [] | [_] => .error s!"Invalid dtype string: {v}"
+    | firstChar :: rest =>
+      let order ← ByteOrder.fromChar firstChar
+      let dtype ← Dtype.fromNpyString (String.ofList rest)
+      modify fun s => { s with dtype := some (dtype, order) }
   else if id == "fortran_order" then
     let v ← parseToken
     let b ← liftM (npyBool v)

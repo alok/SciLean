@@ -25,14 +25,14 @@ def FloatArray.random (n : Nat) : IO FloatArray := do
     xs := xs.push (← rand01)
   return xs
 
-/-- Create random Float^[I,J] matrix -/
+/-- Create random {lean}`Float^[I,J]` matrix -/
 def DataArrayN.random {I nI} [IndexType I nI] {J nJ} [IndexType J nJ] : IO (Float^[I,J]) := do
   let mut arr : FloatArray := .emptyWithCapacity (nI * nJ)
   for _ in [0:(nI * nJ)] do
     arr := arr.push (← rand01)
   return DataArrayN.fromFloatArray arr
 
-/-- Naive matrix multiplication: C = A * B -/
+/-- Naive matrix multiplication: {lit}`C = A * B` -/
 def naiveMatMul (m k n : Nat) (A B : FloatArray) : FloatArray := Id.run do
   let mut C : FloatArray := .emptyWithCapacity (m * n)
   for _ in [0:m*n] do
@@ -47,7 +47,7 @@ def naiveMatMul (m k n : Nat) (A B : FloatArray) : FloatArray := Id.run do
       C := C.uset (i*n + j).toUSize sum sorry_proof
   return C
 
-/-- BLAS GEMM: C = A * B -/
+/-- BLAS GEMM: {lit}`C = A * B` -/
 def blasMatMul (m k n : Nat) (A B : FloatArray) : FloatArray :=
   let C : FloatArray := .mk (Array.replicate (m * n) 0.0)
   BLAS.dgemmSimple m.toUSize n.toUSize k.toUSize 1.0 A B 0.0 C
@@ -63,6 +63,10 @@ def verifyGEMM (m k n : Nat) (A B : FloatArray) : IO Bool := do
       maxDiff := diff
   IO.println s!"Max difference: {maxDiff}"
   return maxDiff < 1e-10
+
+/-- Compute GFLOPs/s from average time in nanoseconds. -/
+def gflops (flops : Nat) (avgTimeNs : Nat) : Float :=
+  if avgTimeNs == 0 then 0.0 else flops.toFloat / avgTimeNs.toFloat
 
 /-- Test high-level DataArrayN API -/
 def testDataArrayNGEMM : IO Unit := do
@@ -112,7 +116,13 @@ def testDataArrayNGEMM : IO Unit := do
   suite.print
 
 def runBenchmarks : IO Unit := do
-  let sizes := [(64, 64, 64), (128, 128, 128), (256, 256, 256), (512, 512, 512)]
+  let quick := (← IO.getEnv "SCILEAN_BENCH_QUICK").isSome
+  if quick then
+    IO.println "Quick mode enabled (SCILEAN_BENCH_QUICK)"
+  let sizes := if quick then
+      [(64, 64, 64), (128, 128, 128)]
+    else
+      [(64, 64, 64), (128, 128, 128), (256, 256, 256), (512, 512, 512)]
 
   IO.println "╔════════════════════════════════════════════════════════════╗"
   IO.println "║           SciLean BLAS GEMM Benchmark                      ║"
@@ -132,8 +142,10 @@ def runBenchmarks : IO Unit := do
       IO.println "ERROR: Results don't match!"
       continue
 
-    let naiveConfig : Benchmark.Config := { warmupIterations := 1, timedIterations := 3 }
-    let blasConfig : Benchmark.Config := { warmupIterations := 2, timedIterations := 10 }
+    let naiveConfig : Benchmark.Config :=
+      { warmupIterations := 1, timedIterations := if quick then 1 else 3 }
+    let blasConfig : Benchmark.Config :=
+      { warmupIterations := 1, timedIterations := if quick then 3 else 10 }
     let mut suite : Benchmark.Suite := { name := s!"GEMM {m}x{k}x{n}" }
 
     -- Naive
@@ -150,8 +162,14 @@ def runBenchmarks : IO Unit := do
 
     suite.print
 
+    let flops := 2 * m * k * n
+    let naiveGF := gflops flops naiveResult.avgTimeNs
+    let blasGF := gflops flops blasResult.avgTimeNs
+    IO.println s!"GFLOPs/s: naive {Float.round (naiveGF * 100) / 100}, BLAS {Float.round (blasGF * 100) / 100}"
+
   -- Test high-level DataArrayN API
-  testDataArrayNGEMM
+  unless quick do
+    testDataArrayNGEMM
 
   IO.println "\nBenchmark complete!"
 

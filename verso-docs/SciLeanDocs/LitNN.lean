@@ -12,8 +12,8 @@ set_option doc.verso true
 SciLean uses dependent types to encode tensor shapes directly in type signatures.
 This catches dimension mismatches at compile time, not runtime.
 
-The notation `Float^[n]` creates a fixed-size array of `n` floats.
-For matrices, `Float^[n,m]` is a 2D array with `n` rows and `m` columns.
+The notation {lit}`Float^[n]` creates a fixed-size array of {lit}`n` floats.
+For matrices, {lit}`Float^[n,m]` is a 2D array with {lit}`n` rows and {lit}`m` columns.
 -/
 
 /-- Size of MNIST images: 28 x 28 = 784 pixels -/

@@ -4,37 +4,39 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: SciLean contributors
 -/
 import SciLean.Data.DataArray
-import SciLean.Data.Tensor.GpuBufferN
+import SciLean.Data.Tensor.GpuTensor
+import SciLean.Data.Tensor.Layout
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 /-!
 # Device-Tracked Tensor Type
 
-`Tensor d α ι` is a tensor with element type `α` and shape tracked by index type `ι`,
-where `d : Device` specifies whether data resides on CPU or GPU (Metal).
+{lit}`Tensor d α ι` is a tensor with element type {lit}`α` and shape tracked by index type
+{lit}`ι`, where {lit}`d : Device` specifies whether data resides on CPU or GPU (Metal).
 
 The device is encoded in the type, providing compile-time guarantees about data location
 and eliminating runtime dispatch overhead. This enables:
-- Type-safe transfers between devices (`toGpu`, `toCpu`)
-- Device-specific optimizations in TensorOps typeclass instances
-- Zero-cost abstraction over DataArrayN for CPU tensors
+- Type-safe transfers between devices via explicit transfer functions
+- Device-specific optimizations in tensor operation typeclasses
+- Zero-cost abstraction over {name}`DataArrayN` for CPU tensors
 -/
 
-/-- Compute device for tensor operations -/
+/-- Compute device for tensor operations. -/
 inductive Device where
   | cpu    -- CPU with DataArrayN storage
-  | metal  -- GPU via Metal with GpuBufferN storage
+  | metal  -- GPU via Metal with layout metadata
   deriving DecidableEq, Repr, Inhabited
 
 namespace Device
 
-/-- Check if Metal GPU is available at runtime -/
+/-- Check if Metal GPU is available at runtime. -/
 def metalAvailable : IO Bool := do
   -- TODO: Add actual Metal availability check via FFI
   return true
 
-/-- Get best available device (prefers GPU) -/
+/-- Get best available device (prefers GPU). -/
 def best : IO Device := do
   if ← metalAvailable then
     return .metal
@@ -48,34 +50,29 @@ instance : ToString Device where
 
 end Device
 
-/-- CPU Tensor - wraps DataArrayN with device tracking -/
-structure CpuTensor (α : Type*) [PlainDataType α] (ι : Type*) {n : outParam ℕ} [IndexType ι n] : Type where
-  /-- The underlying CPU array -/
+/-- CPU tensor wrapping {name}`DataArrayN` with device tracking. -/
+structure CpuTensor (α : Type) [PlainDataType α] (ι : Type) {n : outParam ℕ} [IndexType ι n] : Type where
+  /-- The underlying CPU array. -/
   data : DataArrayN α ι
 
-/-- GPU Tensor - wraps GpuBufferN with device tracking -/
-structure GpuTensor (α : Type*) [PlainDataType α] (ι : Type*) {n : outParam ℕ} [IndexType ι n] : Type where
-  /-- The underlying GPU buffer -/
-  data : GpuBufferN α ι
-
-/-- Device-indexed tensor type. Maps Device to appropriate storage type. -/
-abbrev Tensor (d : Device) (α : Type*) [PlainDataType α] (ι : Type*) {n : outParam ℕ} [IndexType ι n] : Type :=
+/-- Device-indexed tensor type. Maps {name}`Device` to appropriate storage type. -/
+abbrev Tensor (d : Device) (α : Type) [PlainDataType α] (ι : Type) {n : outParam ℕ} [IndexType ι n] : Type :=
   match d with
   | .cpu => CpuTensor α ι
   | .metal => GpuTensor α ι
 
 namespace CpuTensor
 
-variable {α : Type*} [PlainDataType α]
-variable {ι : Type*} {n : ℕ} [IndexType ι n]
+variable {α : Type} [PlainDataType α]
+variable {ι : Type} {n : ℕ} [IndexType ι n]
 
 /-! ## Construction -/
 
-/-- Create from DataArrayN -/
+/-- Create from {name}`DataArrayN`. -/
 @[inline]
 def ofDataArrayN (arr : DataArrayN α ι) : CpuTensor α ι := ⟨arr⟩
 
-/-- Extract DataArrayN -/
+/-- Extract {name}`DataArrayN`. -/
 @[inline]
 def toDataArrayN (t : CpuTensor α ι) : DataArrayN α ι := t.data
 
@@ -89,19 +86,19 @@ instance : Coe (CpuTensor α ι) (DataArrayN α ι) where
 
 /-! ## Basic Properties -/
 
-/-- Number of elements -/
+/-- Number of elements. -/
 def size (_ : CpuTensor α ι) : ℕ := n
 
-/-- Size as USize -/
+/-- Size as {name}`USize`. -/
 def usize (_ : CpuTensor α ι) : USize := n.toUSize
 
 /-! ## Element Access -/
 
-/-- Get element at index -/
+/-- Get element at index. -/
 @[inline]
 def get (t : CpuTensor α ι) (i : ι) : α := t.data.get i
 
-/-- Set element at index -/
+/-- Set element at index. -/
 @[inline]
 def set (t : CpuTensor α ι) (i : ι) (v : α) : CpuTensor α ι :=
   ⟨t.data.set i v⟩
@@ -115,43 +112,14 @@ instance : SetElem (CpuTensor α ι) ι α (fun _ _ => True) where
 
 end CpuTensor
 
-namespace GpuTensor
-
-variable {α : Type*} [PlainDataType α]
-variable {ι : Type*} {n : ℕ} [IndexType ι n]
-
-/-! ## Construction -/
-
-/-- Create from GpuBufferN -/
-@[inline]
-def ofGpuBufferN (buf : GpuBufferN α ι) : GpuTensor α ι := ⟨buf⟩
-
-/-- Extract GpuBufferN -/
-@[inline]
-def toGpuBufferN (t : GpuTensor α ι) : GpuBufferN α ι := t.data
-
-/-! ## Zero-Cost Coercions -/
-
-instance : Coe (GpuBufferN α ι) (GpuTensor α ι) where
-  coe := ofGpuBufferN
-
-instance : Coe (GpuTensor α ι) (GpuBufferN α ι) where
-  coe := toGpuBufferN
-
-/-! ## Basic Properties -/
-
-/-- Number of elements -/
-def size (_ : GpuTensor α ι) : ℕ := n
-
-/-- Size as USize -/
-def usize (_ : GpuTensor α ι) : USize := n.toUSize
-
-end GpuTensor
 
 /-! ## Notation -/
 
-/-- Notation for tensor types: `α^[ι]@d` for Tensor d α ι -/
+/-- Notation for tensor types: {lit}`α^[ι]@d` for {lit}`Tensor d α ι`. -/
 scoped notation:max α "^[" ι "]@cpu" => CpuTensor α ι
 scoped notation:max α "^[" ι "]@metal" => GpuTensor α ι
+
+/-- Notation for GPU tensors. -/
+scoped notation:max α "^[" ι "]ᵍ" => GpuTensor α ι
 
 end SciLean

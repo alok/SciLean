@@ -1,0 +1,75 @@
+===== GpuTensorTest =====
+===================================
+  GPU Tensor Test Suite
+===================================
+
+=== Testing TensorLayout.contiguous ===
+  ✓ 2D layout strides [4, 1] correct
+  ✓ 3D layout strides [12, 4, 1] correct
+  ✓ 4D NCHW layout strides correct
+
+=== Testing TensorLayout.transpose ===
+  ✓ 2D transpose: shape/strides correct
+  ✓ 3D transpose: shape/strides correct (batch preserved)
+
+=== Testing TensorLayout.isContiguous ===
+  ✓ Fresh contiguous layout detected as contiguous
+  ✓ Transposed layout detected as non-contiguous
+  ✓ Double transpose is contiguous again
+
+=== Testing TensorLayout.isTransposed ===
+  ✓ Contiguous layout is not transposed
+  ✓ Transposed layout detected
+
+=== Testing TensorLayout.slice ===
+  ✓ Slice dim 0: shape [2, 6], offset 6
+  ✓ Slice dim 1: shape [4, 3], offset 2
+
+=== Testing TensorLayout.permute ===
+  ✓ Permute [2,0,1]: shape and strides correct
+
+=== Testing TensorLayout.numel ===
+  ✓ numel([3,4,5]) = 60
+  ✓ Transposed numel still 60
+
+=== Testing TensorLayout.flatIndex ===
+  ✓ flatIndex([1,2]) = 6 for [3,4] layout
+  ✓ Transposed flatIndex([2,1]) = 6
+
+
+--- GPU Tests ---
+
+=== Testing GpuTensor basic operations ===
+  ✓ Shape [2, 3] correct
+  ✓ Detected as contiguous
+  ✓ Not transposed
+
+=== Testing GpuTensor.transpose (O(1)) ===
+  ✓ Transposed shape [3, 2] correct
+  ✓ Detected as transposed
+  ✓ Detected as non-contiguous
+  ✓ Transpose is O(1) - no data copy (same underlying buffer)
+
+=== Testing GpuTensor.gemm (contiguous) ===
+  ✓ Contiguous GEMM result correct
+
+=== Testing GpuTensor.gemm with B transposed ===
+  ✓ GEMM with transposed B correct
+
+=== Testing GpuTensor.gemm with A transposed ===
+  ✓ GEMM with transposed A correct
+
+=== Testing GpuTensor.gemmBackward ===
+  ✓ dA shape [2, 3] correct
+  ✓ dB shape [3, 2] correct
+  ✓ dA values correct
+  ✓ dB values correct
+  ✓ GEMM backward with O(1) transpose views working!
+
+=== Testing GpuTensor.batchTranspose ===
+  ✓ Batch transpose shape [2, 4, 3] correct
+  ✓ Batch transpose strides [12, 1, 4] correct
+
+===================================
+  All tests completed
+===================================

@@ -1,34 +1,28 @@
 import SciLean.Analysis.Calculus.RevFDeriv
 import SciLean.Analysis.Calculus.Monad.DifferentiableMonad
+import SciLean.VersoPrelude
 
 namespace SciLean
 
 set_option linter.unusedVariables false
 
-/-- `FwdFDerivMonad K m m'` states that the monad `m'` allows us to compute reverse pass of the
- reverse derivative of functions in the  monad `m`. The rought idea is that if the monad `m` reads
-some state `S` then the monad `m'` should write into `S`. State monad reads and writes, so for
-`m = StateM S` we have `m' = StateM S`.
+/-- {lit}`RevFDerivMonad K m m'` states that the monad {lit}`m'` allows us to compute the reverse pass
+of the reverse derivative of functions in the monad {lit}`m`. The rough idea is that if the monad
+{lit}`m` reads some state {lit}`S` then the monad {lit}`m'` should write into {lit}`S`. The state
+monad reads and writes, so for {lit}`m = StateM S` we have {lit}`m' = StateM S`.
 
-This class provides two main functions, such that monadic function `(f : X → m Y)`:
-  - `revFDerivM K f` is generalization of reverse mode derivative of `f`
-  - `DifferentiableM K f` is generalization of differentiability of `f`
+This class provides two main functions, such that a monadic function {lit}`(f : X → m Y)`:
+  - {lit}`revFDerivM K f` is a generalization of the reverse mode derivative of {lit}`f`
+  - {lit}`DifferentiableM K f` is a generalization of differentiability of {lit}`f`
 
-For `StateM S` the `revFDerivM` and `DifferentiableM` is:
-```
-   revFDerivM K f
-   =
-   fun x s =>
-     let ((y,s),df) := revFDeriv K (fun (x,s) => f x s) (x,s)
-     ((y,s), fun dy ds => df (dy,ds))
-
-   DifferentiableM K f
-   =
-   Differentiable K (fun (x,s) => f x s)
-```
-In short, `revFDerviM` also differentiates w.r.t. to the state variable and `DifferentiableM` checks
-that a function is differentiable also w.r.t. to the state variable too.
-
+For {lit}`StateM S` the {lit}`revFDerivM` and {lit}`DifferentiableM` are:
+{lit}`revFDerivM K f = fun x s =>
+  let ((y,s),df) := revFDeriv K (fun (x,s) => f x s) (x,s)
+  ((y,s), fun dy ds => df (dy,ds))`
+and
+{lit}`DifferentiableM K f = Differentiable K (fun (x,s) => f x s)`.
+In short, {lit}`revFDerivM` also differentiates w.r.t. the state variable and {lit}`DifferentiableM`
+checks that a function is differentiable also w.r.t. the state variable too.
 -/
 class RevFDerivMonad (K : Type) [RCLike K] (m : Type → Type) (m' : outParam $ Type → Type) [Monad m] [Monad m'] [DifferentiableMonad K m]  where
 

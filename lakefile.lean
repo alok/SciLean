@@ -34,12 +34,15 @@ def inclArgs :=
 package scilean {
   -- Global link args should be minimal; Metal frameworks are added per-executable.
   moreLinkArgs := linkArgs
-  -- leanOptions := #[⟨`doc.verso, true⟩]  -- disabled for now
+  leanOptions := #[⟨`doc.verso, true⟩, ⟨`experimental.module, true⟩]
 }
 
 
--- Use latest mathlib (includes compile_inductive fix PR #32225)
-require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "master"
+-- Pin mathlib to the Lean 4.27.0-rc1 compatible tag
+require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "v4.27.0-rc1"
+
+-- Pin ProofWidgets to a release tag so cloud releases are available
+require proofwidgets from git "https://github.com/leanprover-community/ProofWidgets4" @ "v0.0.84"
 
 -- Use local LeanBLAS
 require leanblas from ".." / "LeanBLAS"
@@ -64,9 +67,9 @@ require sorryproof from ".." / "SorryProof"
 -- makes executables link successfully.
 target libleanblasc : FilePath := do
   let ws ← getWorkspace
-  let some leanblasPkg := ws.findPackage? `leanblas
+  let some leanblasPkg := ws.findPackageByName? `leanblas
     | error "SciLean: dependency package `leanblas` not found in workspace."
-  let depJob : Job (CustomData `leanblas `libleanblasc) ← fetch <| leanblasPkg.target `libleanblasc
+  let depJob ← fetch <| leanblasPkg.target `libleanblasc
   let libPath := leanblasPkg.sharedLibDir / nameToStaticLib "leanblasc"
   depJob.mapM (sync := true) fun _ => pure libPath
 
@@ -83,7 +86,8 @@ target libscileanc pkg : FilePath := do
   let mut oFiles : Array (Job FilePath) := #[]
   for file in (← (pkg.dir / "C").readDir) do
     if file.path.extension == some "c" then
-      let oFile := pkg.buildDir / "c" / (file.fileName.stripSuffix ".c" ++ ".o")
+      let baseName := (file.fileName.dropSuffix ".c").toString
+      let oFile := pkg.buildDir / "c" / (baseName ++ ".o")
       let srcJob ← inputTextFile file.path
       let weakArgs := #["-I", (← getLeanIncludeDir).toString] ++ inclArgs
       let cFlags := #["-fPIC", "-O3", "-DNDEBUG"] ++ cFlagsOSX
@@ -131,6 +135,11 @@ lean_lib SciLean.FFI.Metal where
   roots := #[`SciLean.FFI.Metal]
   precompileModules := false
   moreLinkObjs := #[libscileanmetal]
+
+-- W&B bindings (raw HTTP helpers and minimal client)
+lean_lib Wandb where
+  roots := #[`Wandb]
+  precompileModules := false
 
 
 @[test_driver]
@@ -212,7 +221,7 @@ lean_exe FloatTest {
 lean_exe ForLoopTest {
   buildType := .release
   moreLinkArgs := #["-O3", "-UNDEBUG"]
-  root := `tests.sum_speed_test
+  root := `test.sum_speed_test
 }
 
 lean_exe SurfaceMeshTests {
@@ -233,6 +242,7 @@ lean_exe ProfileKMeansDirection {
 
 lean_exe ProfileTensorOps {
   root := `examples.Profile.TensorOps
+  moreLinkArgs := metalLinkArgs
 }
 
 lean_exe ProfileGMM {
@@ -326,8 +336,8 @@ lean_exe AttentionTest where
   root := `examples.AttentionTest
   moreLinkArgs := metalLinkArgs
 
-lean_exe GpuBufferBenchmark where
-  root := `examples.GpuBufferBenchmark
+lean_exe GpuTensorBenchmark where
+  root := `examples.GpuTensorBenchmark
   moreLinkArgs := metalLinkArgs
 
 lean_exe KernelTest where
@@ -350,6 +360,15 @@ lean_exe GpuFusedKernelTest where
   root := `test.gpu_fused_kernels
   moreLinkArgs := metalLinkArgs
 
+lean_exe GpuTensorTest where
+  root := `test.gpu_tensor
+  moreLinkArgs := metalLinkArgs
+
+lean_exe GemmViewBenchmark where
+  buildType := .release
+  root := `examples.GemmViewBenchmark
+  moreLinkArgs := metalLinkArgs
+
 lean_exe GpuBatchingBenchmark where
   buildType := .release
   root := `examples.GpuBatchingBenchmark
@@ -358,3 +377,36 @@ lean_exe GpuBatchingBenchmark where
 lean_exe GpuMNIST where
   root := `examples.GpuMNIST
   moreLinkArgs := metalLinkArgs
+
+lean_exe AMXBenchmark where
+  root := `examples.AMXBenchmark
+  moreLinkArgs := metalLinkArgs
+
+lean_exe AMXTest where
+  root := `examples.AMXTest
+  moreLinkArgs := metalLinkArgs
+
+lean_exe SquareGemmTest where
+  root := `examples.SquareGemmTest
+  moreLinkArgs := metalLinkArgs
+
+lean_exe PodTypesTest where
+  root := `test.pod_types_test
+
+lean_exe PodBenchmark where
+  root := `test.pod_benchmark
+
+lean_exe StructMarshalingTest where
+  root := `test.struct_marshaling_test
+  moreLinkArgs := metalLinkArgs
+
+lean_exe DerivePlainDataTypeTest where
+  root := `test.derive_plaindatatype_test
+
+lean_exe StructVsTupleBenchmark where
+  buildType := .release
+  root := `test.struct_vs_tuple_benchmark
+
+lean_exe NestedPodStressTest where
+  buildType := .release
+  root := `test.nested_pod_stress_test

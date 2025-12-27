@@ -1,0 +1,3 @@
+===== VerifyPyTorchMNIST =====
+missing executable .lake/build/bin/VerifyPyTorchMNIST
+

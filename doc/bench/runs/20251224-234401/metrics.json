@@ -1,0 +1,80 @@
+{
+  "metrics": {
+    "gpu_tensor.gemm.256": {
+      "value": 0.35804,
+      "unit": "ms"
+    },
+    "gpu_tensor.gemm.512": {
+      "value": 0.34771,
+      "unit": "ms"
+    },
+    "gpu_tensor.gemm.1024": {
+      "value": 1.26069,
+      "unit": "ms"
+    },
+    "gpu_tensor.chain.256": {
+      "value": 0.59683,
+      "unit": "ms"
+    },
+    "gpu_tensor.chain.512": {
+      "value": 0.56605,
+      "unit": "ms"
+    },
+    "gpu_tensor.transfer_total.256": {
+      "value": 0.01158,
+      "unit": "ms"
+    },
+    "gpu_tensor.transfer_total.512": {
+      "value": 0.14504,
+      "unit": "ms"
+    },
+    "gpu_tensor.transfer_total.1024": {
+      "value": 0.4625,
+      "unit": "ms"
+    },
+    "gemm_view.baseline_ms.256": {
+      "value": 0.263808,
+      "unit": "ms"
+    },
+    "gemm_view.tflops.256": {
+      "value": 0.13,
+      "unit": "TFLOPs/s"
+    },
+    "gemm_view.baseline_ms.512": {
+      "value": 0.5768869999999999,
+      "unit": "ms"
+    },
+    "gemm_view.tflops.512": {
+      "value": 0.47,
+      "unit": "TFLOPs/s"
+    },
+    "gemm_view.baseline_ms.1024": {
+      "value": 1.350887,
+      "unit": "ms"
+    },
+    "gemm_view.tflops.1024": {
+      "value": 1.59,
+      "unit": "TFLOPs/s"
+    },
+    "gemm_view.baseline_ms.2048": {
+      "value": 2.665891,
+      "unit": "ms"
+    },
+    "gemm_view.tflops.2048": {
+      "value": 6.44,
+      "unit": "TFLOPs/s"
+    },
+    "gpu_mnist.initial_accuracy": {
+      "value": 9.8,
+      "unit": "percent"
+    },
+    "gpu_mnist.final_accuracy": {
+      "value": 98.3,
+      "unit": "percent"
+    },
+    "gpu_mnist.epoch_time_ms_avg": {
+      "value": 473.8,
+      "unit": "ms"
+    }
+  }
+}

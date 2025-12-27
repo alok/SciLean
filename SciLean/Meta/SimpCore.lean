@@ -63,7 +63,7 @@ attribute [simp_core]
 
 -- Lawful Monad
 
-/-- The same as `pure_bind` but we should include let binding on rhs for better code generations. -/
+/-- The same as {name}`pure_bind` but we should include let binding on rhs for better code generations. -/
 @[simp_core]
 theorem pure_bind' {m} [Monad m] [LawfulMonad m] (x : α) (f : α → m β) :
   pure x >>= f = let x := x; f x := by simp

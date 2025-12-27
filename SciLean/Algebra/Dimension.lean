@@ -6,21 +6,21 @@ import SciLean.Util.RewriteBy
 namespace SciLean
 
 
-/-- Dimension of `X` over the ring `R` is `dim`.
+/-- Dimension of {given}`X` over the ring {given}`R` is {given}`dim`.
 
-The need for this typeclass comes when we want to write code, the function `Module.finrank` is
-noncomputable. This calss allow you to add implicit argument `dim` which will be resolved   -/
+The need for this typeclass comes when we want to write code: {name}`Module.finrank` is
+noncomputable. This class allows you to add implicit argument {lean}`dim` for {lean}`R` and {lean}`X`,
+which will be resolved. -/
 class Dimension (R : Type*) (X : Type*) (dim : outParam ℕ) [Ring R] [AddCommGroup X] [Module R X] where
   is_dim : Module.finrank R X = dim
 
 
 open Lean Meta Elab Qq in
-/-- Dimension of `X`.
+/-- Dimension of {given}`X` (i.e. {lean}`X`).
 
-The dimension is over the default scalar `R` set with
-```
-set_default_scalar R
-``` -/
+The dimension is over the default scalar {given}`R` (i.e. {lean}`R`) set with
+{lit}`set_default_scalar R`.
+-/
 elab "dim(" X:term ")" : term => do
 
   let R ← Term.elabTerm (← `(defaultScalar%)) none
@@ -60,11 +60,11 @@ instance [RealScalar R] : Dimension ℝ R 1 where
   is_dim := sorry_proof
 
 instance {R} [Field R] {n m}
-    {X} [AddCommGroup X] [Module R X] [Module.Finite R X] [dX : Dimension R X n]
+      {X} [AddCommGroup X] [Module R X] [Module.Finite R X] [dX : Dimension R X n]
     {Y} [AddCommGroup Y] [Module R Y] [Module.Finite R Y] [dY : Dimension R Y m] :
     Dimension R (X×Y) (n+m) where
   is_dim := by
-    simp [dX.is_dim, dY.is_dim]
+    simp
 
 -- instance {R} [Field R] {n}
 --     {I} [IndexType I]

@@ -1,6 +1,7 @@
 import SciLean.Probability.Rand
 import SciLean.Probability.Tactic
 import SciLean.Analysis.SpecialFunctions.Gaussian
+import SciLean.VersoPrelude
 
 open MeasureTheory ENNReal Finset
 
@@ -44,7 +45,7 @@ variable {R}
 
 ----------------------------------------------------------------------------------------------------
 
-/-- Normal random variable with mean `μ` and standard deviation `σ`. -/
+/-- Normal random variable with mean {lit}`μ` and standard deviation {lit}`σ`. -/
 def normal (μ σ : R)  : Rand R := {
   spec := default -- erase (fun φ => ∫ x, φ x * (Scalar.toReal R (gaussian μ σ x)))
   rand := do

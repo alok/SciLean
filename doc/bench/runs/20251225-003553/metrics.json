@@ -1,0 +1,36 @@
+{
+  "metrics": {
+    "gpu_tensor.gemm.256": {
+      "value": 0.42895,
+      "unit": "ms"
+    },
+    "gpu_tensor.gemm.512": {
+      "value": 0.38384,
+      "unit": "ms"
+    },
+    "gpu_tensor.gemm.1024": {
+      "value": 0.68237,
+      "unit": "ms"
+    },
+    "gpu_tensor.chain.256": {
+      "value": 0.51778,
+      "unit": "ms"
+    },
+    "gpu_tensor.chain.512": {
+      "value": 0.63216,
+      "unit": "ms"
+    },
+    "gpu_tensor.transfer_total.256": {
+      "value": 0.0077,
+      "unit": "ms"
+    },
+    "gpu_tensor.transfer_total.512": {
+      "value": 0.02761,
+      "unit": "ms"
+    },
+    "gpu_tensor.transfer_total.1024": {
+      "value": 0.13143,
+      "unit": "ms"
+    }
+  }
+}

@@ -16,7 +16,7 @@ abbrev Metric.closedBallP (p) [MetricSpace (WithLp p α)] (x : α) (ε : ℝ) : 
 
 /-- Distance in Lp norm.
 
-Function `dist` usually returns distance in maximum norm but often we need euclidean distance
+Function {name}`dist` usually returns distance in maximum norm but often we need euclidean distance
 i.e. L2 norm. -/
 abbrev distP {X} (p) [Dist (WithLp p X)] (x y : X) :=
   dist ((WithLp.equiv p _).symm x) ((WithLp.equiv p _).symm y)

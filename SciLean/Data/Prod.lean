@@ -13,6 +13,7 @@
        `uncurryN 3 (λ i j k : Nat => i + j) = λ (i,j,k) => i + j`
  -/
 
+import SciLean.VersoPrelude
 ----------------------------------------------------------------------
 
 class Prod.Size (α : Type) where
@@ -35,14 +36,14 @@ instance (α β) [sa : Prod.SizeFlat α] [sb : Prod.SizeFlat β] : Prod.SizeFlat
 
 /-- Size of a product type
 
-Counts types only at the top level, so `A×B` and `(A×B)×C` have both size 2 but `A×B×C` has size 3.
+Counts types only at the top level, so {lit}`A×B` and {lit}`(A×B)×C` have both size 2 but {lit}`A×B×C` has size 3.
  -/
 @[reducible]
 def Prod.size {α β : Type} [Prod.Size β] (_ : α × β) : Nat := Prod.Size.size (α × β)
 
 /-- Size of a product type
 
-Counts all types, so `A×B` has flat size 2 and `(A×B)×C` have both `A×B×C` flat size 3.
+Counts all types, so {lit}`A×B` has flat size 2 and {lit}`(A×B)×C` have both {lit}`A×B×C` flat size 3.
  -/
 @[reducible]
 def Prod.sizeFlat {α β : Type} [Prod.SizeFlat α] [Prod.SizeFlat β]

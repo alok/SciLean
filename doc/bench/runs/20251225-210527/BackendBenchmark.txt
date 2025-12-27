@@ -1,0 +1,52 @@
+===== BackendBenchmark =====
+╔═══════════════════════════════════════════════════════════╗
+║          CPU vs Metal GPU Benchmark                       ║
+╚═══════════════════════════════════════════════════════════╝
+
+Metal GPU: Available ✓
+
+Warming up...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILL OPERATION (create array of N identical values)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  N=10000: CPU 0.017004ms, Metal 0.996108ms  (CPU 58.580x faster)
+  N=100000: CPU 0.162442ms, Metal 0.046750ms  (Metal 3.4746x faster)
+  N=1000000: CPU 8.096271ms, Metal 3.130904ms  (Metal 2.5859x faster)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEGATION (element-wise negate N floats)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  N=10000: CPU 0.179012ms, Metal 0.366350ms  (CPU 2.0465x faster)
+  N=100000: CPU 0.191613ms, Metal 0.085008ms  (Metal 2.2540x faster)
+  N=1000000: CPU 2.042271ms, Metal 0.922221ms  (Metal 2.2145x faster)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADDITION (element-wise add two arrays of N floats)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  N=10000: CPU 0.026696ms, Metal 0.067171ms  (CPU 2.5161x faster)
+  N=100000: CPU 0.337267ms, Metal 0.360804ms  (CPU 1.0697x faster)
+  N=1000000: CPU 3.208000ms, Metal 0.236033ms  (Metal 13.591x faster)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REDUCE SUM (sum N floats)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  N=10000: CPU 0.007921ms, Metal 0.265550ms  (CPU 33.525x faster)
+  N=100000: CPU 0.083150ms, Metal 0.172738ms  (CPU 2.0774x faster)
+  N=1000000: CPU 1.359071ms, Metal 0.741192ms  (Metal 1.8336x faster)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MATRIX MULTIPLY (NxN @ NxN = O(N³) operations)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  32x32: CPU 109.729025ms, Metal 0.249983ms  (Metal 438.94x faster)
+  64x64: CPU 4297.98839ms, Metal 1.470858ms  (Metal 2922.0x faster)
+
+  [Metal-only for larger matrices - CPU too slow]
+  128x128: Metal 0.109150ms  (38.426 GFLOP/s)
+  256x256: Metal 0.475500ms  (70.566 GFLOP/s)
+  512x512: Metal 0.268667ms  (999.13 GFLOP/s)
+  1024x1024: Metal 5.441775ms  (394.62 GFLOP/s)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Benchmark complete!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

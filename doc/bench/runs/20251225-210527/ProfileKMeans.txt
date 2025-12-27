@@ -1,0 +1,9 @@
+===== ProfileKMeans =====
+k-means profile test
+k := 1000, n := 10000, d := 16
+
+reference c impl       time := 0.000042ms 	loss := 7260.677923
+best lean impl         time := 0.000084ms 	loss := 7260.677923
+scilean for loops      time := 0.000083ms 	loss := 7260.677923
+scilean no BLAS        time := 0.000125ms 	loss := 7260.677923
+target scilean impl    time := 0.000167ms 	loss := 7260.677923

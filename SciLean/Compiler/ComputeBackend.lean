@@ -31,7 +31,7 @@ def Backend.current : Backend := Backend.detect
 
 /-! ## Backend Operations Interface
 
-These functions dispatch to the appropriate backend based on `Backend.current`.
+These functions dispatch to the appropriate backend based on {name}`Backend.current`.
 -/
 
 namespace BackendOps

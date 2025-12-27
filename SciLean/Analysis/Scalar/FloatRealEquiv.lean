@@ -10,17 +10,17 @@ set_option linter.unusedVariables false
 
 namespace SciLean
 
-/-- Class indicating that type `RealType` containing real values corresponds to type `FloatType`
+/-- Class indicating that type {given}`RealType` containing real values corresponds to type {given}`FloatType`
 containing equivalent floats.
 
 It is difficult to say what does this supposed to satisfy. Therefore it is empty class that is
-used only as a tag for metaprogramming purposed. -/
+used only as a tag for metaprogramming purposes. -/
 class RealFloatEquiv (RealType FloatType : Type*) : Prop where
 
 class RealToFloatType (RealType : Type*) (FloatType : outParam Type*)
 
-/-- Type `T` doe not contain any real numbers in it and should be preserved by Real -> Float
-conversion -/
+/-- Type {given}`T` does not contain any real numbers in it and should be preserved by Real -> Float
+conversion. -/
 class NotRealType (T : Type*) where
 instance [NotRealType T] : RealToFloatType T T := ⟨⟩
 

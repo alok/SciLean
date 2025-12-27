@@ -6,3 +6,4 @@ import SciLean.Modules.ML.SoftMax
 import SciLean.Modules.ML.Pool
 
 import SciLean.Modules.ML.MNIST
+import SciLean.Modules.ML.Jaxpr

@@ -3,6 +3,7 @@ import Qq
 
 import SciLean.Lean.Meta.Basic
 import SciLean.Data.ArraySet
+import SciLean.VersoPrelude
 
 set_option linter.unusedVariables false
 
@@ -39,9 +40,9 @@ def HeadFunInfo.isFVar (info : HeadFunInfo) (id : FVarId) : Bool :=
 inductive MainArgCase where
   /-- there are no main arguments -/
   | noMainArg
-  /-- Main arguments are just `x` i.e. `x = (a'₁, ..., a'ₖ)` where `a' = mainIds.map (fun i => aᵢ)` are main arguments -/
+  /-- Main arguments are just {given}`x` i.e. {lit}`x = (a'₁, ..., a'ₖ)` where {lit}`a' = mainIds.map (fun i => aᵢ)` are main arguments -/
   | trivialUncurried
-  /-- Main arguments are just functions of `x` and do not depend on `yⱼ`
+  /-- Main arguments are just functions of {given}`x` and do not depend on {given}`yⱼ`
 
   This allows to write the lambda function as composition
   ```
@@ -51,9 +52,9 @@ inductive MainArgCase where
   =
   (fun (a'₁, ..., a'ₖ) y₀ ... yₙ₋₁ => f a₀ ... aₘ₋₁) ∘ (fun x => (a'₁, ..., a'ₖ))
   ```
-  where the function `f'` is in `MainArgCase.trivialUncurried` case -/
-  | nonTrivailNoTrailing
-  /-- Main arguments depend on `x` and `yⱼ` -/
+  where the function {given}`f'` is in {name}`MainArgCase.trivialUncurried` case -/
+  | nonTrivialNoTrailing
+  /-- Main arguments depend on {given}`x` and {given}`yⱼ` -/
   | nonTrivialWithTrailing
 deriving DecidableEq, Repr
 
@@ -61,19 +62,19 @@ inductive TrailingArgCase where
   /-- there are no trailing arguments -/
   | noTrailingArg
 
-  /-- Trailing arguments are exactly equal to `yⱼ`
-  i.e. `yⱼ = a''ⱼ` where `a'' := trailingArgs.map (fun i => aᵢ)` -/
+  /-- Trailing arguments are exactly equal to {given}`yⱼ`
+  i.e. {lit}`yⱼ = a''ⱼ` where {lit}`a'' := trailingArgs.map (fun i => aᵢ)` -/
   | trivial
 
-  /-- Traling arguments are just `y₀` i.e. `n=1` and `y₀ = (a''₁, ..., a''ₖ)`
-  where `a'' := trailingIds.map (fun i => aᵢ)`
+  /-- Trailing arguments are just {given}`y₀` i.e. {lit}`n=1` and {lit}`y₀ = (a''₁, ..., a''ₖ)`
+  where {lit}`a'' := trailingIds.map (fun i => aᵢ)`
 
-  It is guaranteed that `k>1`, when `k=1` then we are in `TrailingArgCase.trivial` case -/
+  It is guaranteed that {lit}`k>1`, when {lit}`k=1` then we are in {name}`TrailingArgCase.trivial` case -/
   | trivialUncurried
 
-  /-- Trailing arguments are non trivial function of `yⱼ`
+  /-- Trailing arguments are non trivial function of {given}`yⱼ`
 
-  In this case we usually want to find inverse map `h` mapping `a''` to `yⱼ`
+  In this case we usually want to find inverse map {given}`h` mapping {given}`a''` to {given}`yⱼ`
   ```
   fun x y₀ ... yₙ₋₁ => f a₀ ... aₘ₋₁
   =
@@ -81,15 +82,15 @@ inductive TrailingArgCase where
   =
   (·∘h) ∘ (fun x a''₁ ... a''ₖ => f a₀ ... aₘ₋₁
   ```
-  where the function `f'` is now in `TrailingArgCase.trivial` case
-  (constructing such `f'` is a bit tricky as it potentially requires to also
-  use `h` to replace `yⱼ` with `a''` in main arguments)
+  where the function {given}`f'` is now in {name}`TrailingArgCase.trivial` case
+  (constructing such {given}`f'` is a bit tricky as it potentially requires to also
+  use {given}`h` to replace {given}`yⱼ` with {given}`a''` in main arguments)
    -/
   | nonTrivial
 deriving DecidableEq, Repr
 
 
-/-- Info about lambda function `fun x y₀ ... yₙ₋₁ => f a₀ ... aₘ₋₁`
+/-- Info about lambda function {lit}`fun x y₀ ... yₙ₋₁ => f a₀ ... aₘ₋₁`
 -/
 structure LambdaInfo where
   -- /-- the lambda function itself -/
@@ -98,11 +99,11 @@ structure LambdaInfo where
   arity : Nat -- n+1
   /-- number of function arguments in the body -/
   argNum : Nat -- m
-  /-- info on the head function `f` -/
+  /-- info on the head function {given}`f` -/
   headFunInfo : HeadFunInfo
-  /-- Set of argument indices `i` saying that `aᵢ` depends on `x`, they might depend `yⱼ` too -/
+  /-- Set of argument indices {given}`i` saying that {given}`aᵢ` depends on {given}`x`, they might depend {given}`yⱼ` too -/
   mainIds : ArraySet Nat
-  /-- Set of argument indices `i` saying that `aᵢ` depends on at least one of `yⱼ` but not on `x` -/
+  /-- Set of argument indices {given}`i` saying that {given}`aᵢ` depends on at least one of {given}`yⱼ` but not on {given}`x` -/
   trailingIds : ArraySet Nat
   -- /-- Set of argument indices `i` saying that `aᵢ` does not depend of `x` or `yⱼ`
   -- This is a complement of `mainIds ∪ trailinIds` -/
@@ -111,9 +112,9 @@ structure LambdaInfo where
   trailingArgCase : TrailingArgCase
 
 
-/-- Analyze head function `f` of lambda `fun x₁ ... xₙ => f ...` where `xs = #[x₁, ..., xₙ]`
+/-- Analyze head function {given}`f` of lambda {lit}`fun x₁ ... xₙ => f ...` where {lit}`xs = #[x₁, ..., xₙ]`
 
-Returns `HeadFunInfo.bvar` if the head function is fvar and one of `xs`
+Returns {name}`HeadFunInfo.bvar` if the head function is fvar and one of {given}`xs`
 -/
 private def analyzeHeadFun (fn : Expr) (xs : Array Expr) : MetaM HeadFunInfo := do
   match fn with
@@ -128,9 +129,9 @@ private def analyzeHeadFun (fn : Expr) (xs : Array Expr) : MetaM HeadFunInfo := 
   | _ => throwError s!"invalid head function {← ppExpr fn}"
 
 /--
-Decompose function as `fun x i₁ ... iₙ => f (g x) (h i₁ ... iₙ)`
+Decompose function as {lit}`fun x i₁ ... iₙ => f (g x) (h i₁ ... iₙ)`
 
-`f = fun y₁ ... yₘ i₁ ... iₙ => f' y₁ ... yₘ`
+{lit}`f = fun y₁ ... yₘ i₁ ... iₙ => f' y₁ ... yₘ`
 -/
 partial def analyzeLambda (e : Expr) : MetaM LambdaInfo := do
   lambdaTelescope e fun xs body => do
@@ -174,15 +175,15 @@ partial def analyzeLambda (e : Expr) : MetaM LambdaInfo := do
         as'' := as''.push arg
 
 
-    -- determina main arg case
+    -- determine main arg case
     let a' ← mkProdElem as'
     if as'.size ≠ 0 && mainCase ≠ .nonTrivialWithTrailing then
       if (← isDefEq x a') then
         mainCase := .trivialUncurried
       else
-        mainCase := .nonTrivailNoTrailing
+        mainCase := .nonTrivialNoTrailing
 
-    -- determina trailing arg case
+    -- determine trailing arg case
     if as''.size ≠ 0 then
       trailingCase := .nonTrivial
 

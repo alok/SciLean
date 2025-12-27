@@ -4,6 +4,7 @@ import SciLean.Meta.GenerateFunProp
 import SciLean.Tactic.Autodiff
 import SciLean.Tactic.FunTrans.Core
 import SciLean.Util.RewriteBy
+import SciLean.VersoPrelude
 
 open Lean Meta Elab Term Command Mathlib.Meta
 
@@ -120,8 +121,10 @@ def generateFunTransDefAndTheorem (statement proof : Expr) (ctx : Array Expr)
 
 
 /--
-Given a proof of function property `proof` like `q(by fun_prop : Differentiable Real.sin)`
-generate theorems for all the function transformations that follow from this. -/
+Given a proof of function property {lit}`proof` like
+{lit}`q(by fun_prop : Differentiable Real.sin)`, generate theorems for all the
+function transformations that follow from this.
+-/
 partial def defineTransitiveFunTransFromFunProp (proof : Expr) (ctx : Array Expr)
     (suffix : Option Name := none) : MetaM Unit := do
   trace[Meta.Tactic.fun_prop.generate] "generating transformations from `{← inferType proof}`"
@@ -271,7 +274,7 @@ def defFunTrans (f : Ident) (args : TSyntaxArray `ident)
 
     let statement ← mkEq lhs rhs
 
-    -- add new theorem to the enviroment
+    -- add new theorem to the environment
     let _ ← generateFunTransDefAndTheorem statement proof ctx cfg.suffix {defineNewFunction:=isDef}
 
     pure ()
@@ -300,37 +303,38 @@ def defFunPropCommand (f : TSyntax `ident) (args : TSyntaxArray `ident)
 /-- Define function transformation for a function in particular arguments.
 
 Example:
-```
+```lean +error
 def foo (x y z : ℝ) := x*x+y*z
 
 def_fun_trans foo in x y z : fderiv ℝ
 ```
-Computes derivative of `foo` in `x`, `y` and `z` and adds is as a new definition `foo.arg_xyz.fderiv`
-and adds a new `fun_trans` theorem `foo.arg_xyz.fderiv_rule`.
+Computes derivative of {lit}`foo` in {lit}`x`, {lit}`y` and {lit}`z` and adds it as
+a new definition {lit}`foo.arg_xyz.fderiv` and adds a new {lit}`fun_trans` theorem
+{lit}`foo.arg_xyz.fderiv_rule`.
 
 You can add additional assumptions, custom tactic to prove the property as demonstrated by the
 following example:
-```
+```lean +error
 def_fun_prop bar in x y
   add_suffix _simple
   (xy : R×R) (h : xy.2 ≠ 0) : (DifferentiableAt R · xy) by unfold bar; fun_prop (disch:=assumption)
 ```
 where
-- `add_suffix _simple` adds `_simple` to the end of the generated theorems
-- `(xy : R×R) (h : xy.2 ≠ 0)` are additional assumptions added to the theorem. These assumptions
-  are stated in the context of the function so for example here we can use `R` without introducing it.
-- `by unfold bar; autodiff ...` you can specify custom tactic to prove the function transformation.
+- {lit}`add_suffix _simple` adds {lit}`_simple` to the end of the generated theorems
+- {lit}`(xy : R×R) (h : xy.2 ≠ 0)` are additional assumptions added to the theorem. These assumptions
+  are stated in the context of the function so for example here we can use {lit}`R` without introducing it.
+- {lit}`by unfold bar; autodiff ...` you can specify custom tactic to prove the function transformation.
 
 
 
-Variant `abbrev_fun_trans`
+Variant {lit}`abbrev_fun_trans`
 ---
 
 Often the derivative/function transformation is simple enough that we do not want to hide it
-behind a new definition like `foo.arg_xyz.fderiv_rule`. For example
-`fderiv ℝ (fun x => matmul A x) x dx` should simplify to `matmul A dx` instead of
-`matmul.arg_x.fderiv A x dx`. In cases like this, use `abbrev_fun_trans` which does not use
-the newly defined function on the `fun_trans` theorem.
+behind a new definition like {lit}`foo.arg_xyz.fderiv_rule`. For example
+{lit}`fderiv ℝ (fun x => matmul A x) x dx` should simplify to {lit}`matmul A dx` instead of
+{lit}`matmul.arg_x.fderiv A x dx`. In cases like this, use {lit}`abbrev_fun_trans` which does not use
+the newly defined function on the {lit}`fun_trans` theorem.
 
 -/
 elab (name:=defFunTransElab) "def_fun_trans " f:ident "in" args:ident* ppLine

@@ -69,7 +69,7 @@ theorem div_elemwise {n : Nat} [Div α]
 -- Notation --------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-/-- Notation for list literals with list lenght in its type. -/
+/-- Notation for list literals with list length in its type. -/
 syntax "[" term,* "]'" : term
 
 open Lean in

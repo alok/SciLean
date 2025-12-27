@@ -177,7 +177,10 @@ where
     | e                => return .yield e
 
 
-/-- Replaces `xᵢ` with `yᵢ`, subterms of e with loose bvars are ignored. -/
+/--
+Given {given}`e`, {given}`xs`, and {given}`ys`, replace entries from {lean}`xs` with the corresponding entries
+from {lean}`ys`; subterms of {lean}`e` with loose bvars are ignored.
+-/
 def replaceExprs (e : Expr) (xs ys : Array Expr) : MetaM Expr :=
   e.replaceM (fun e' => do
     if e'.hasLooseBVars then
@@ -188,11 +191,14 @@ def replaceExprs (e : Expr) (xs ys : Array Expr) : MetaM Expr :=
           return .yield y
       return .noMatch)
 
-/-- Replace `nth`-th occurance of bound variable i in `e` with `v`.
+/--
+Given {given}`e`, {given}`i`, {given}`nth`, and {given}`v`, replace the {lean}`nth`-th occurrence of bound variable
+{lean}`i` in {lean}`e` with {lean}`v`.
 
-Returns `.inl e'` if succesfully replaced or `.inr n` if `n` occurances, `n < nth`, of `i`-th bound variables have been found in `e`.
+Returns {name}`Sum.inl` if successfully replaced or {name}`Sum.inr` if fewer than {lean}`nth` occurrences
+of {lean}`i`-th bound variables have been found in {lean}`e`.
 
-WARRNING: Currently it ignores types.
+WARNING: Currently it ignores types.
 -/
 def instantiateOnceNth (e v : Expr) (i : Nat) (nth : Nat) : Expr ⊕ Nat :=
   match e with
@@ -231,11 +237,12 @@ def instantiateOnceNth (e v : Expr) (i : Nat) (nth : Nat) : Expr ⊕ Nat :=
   | _ => .inr 0
 
 
-/-- Replace bound variable with index `i` in `e` with `v` only once.
+/--
+Given {given}`e`, {given}`i`, {given}`v`, and {given}`nth`, replace the bound variable with index {lean}`i` in
+{lean}`e` with {lean}`v` only once. You can specify that you want to replace the {lean}`nth`-th occurrence
+of that bvar.
 
-You can specify that you want to replace `nth`-th occurance of that bvar.
-
-WARRNING: Currently it ignores types.
+WARNING: Currently it ignores types.
 -/
 def instantiateOnce (e v : Expr) (i : Nat) (nth := 0) : Expr :=
   match instantiateOnceNth e v i nth with
@@ -302,8 +309,7 @@ def letBodyRec' (e : Expr) : Expr :=
   | e => e
 
 
-/-- Is `e` function type with no dependent types?
--/
+/-- Is the input expression a function type with no dependent types? -/
 def isSimpleFunType (e : Expr) : Bool :=
   if ¬e.consumeMData.isForall then false else go e
 where
@@ -319,14 +325,14 @@ where
 
 
 /--
-Apply the given arguments to `f`, introduce let binding for every argument
+Given {given}`f : Expr`, apply the given arguments to {lean}`f`, introducing let binding for every argument
 that beta-reduces.
 
-Examples:
-- `betaWithLet (fun x y => t x y) #[]` ==> `fun x y => t x y`
-- `betaWithLet (fun x y => t x y) #[a]` ==> `let x:=a; fun y => t x y`
-- `betaWithLet (fun x y => t x y) #[a, b]` ==> `let x:=a; let y:=b; t x y`
-- `betaWithLet (fun x y => t x y) #[a, b, c, d]` ==> `let x:=a; let y:=b; t x y c d`
+Examples (with {given}`f : Expr` and {given}`a : Expr`, {given}`b : Expr`, {given}`c : Expr`, {given}`d : Expr`):
+- {lean}`betaWithLet f #[]`
+- {lean}`betaWithLet f #[a]`
+- {lean}`betaWithLet f #[a, b]`
+- {lean}`betaWithLet f #[a, b, c, d]`
 
 TODO: maybe introduce let binding only if the variable appears multiple times
 -/
@@ -343,7 +349,7 @@ where
     else
       e
 
-/-- `(fun x => e) a` ==> `e[x/a]`. -/
+/-- If {given}`e : Expr` is a head beta-redex, reduce it; otherwise return {lean}`e`. -/
 def headBetaWithLet (e : Expr) : Expr :=
   let f := e.getAppFn
   if f.isHeadBetaTargetFn false then betaWithLet f e.getAppArgs else e
