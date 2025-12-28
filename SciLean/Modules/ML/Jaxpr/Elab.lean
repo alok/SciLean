@@ -117,21 +117,30 @@ elab_rules : term
       for line in lines do
         let lineRaw := line.raw
         if lineRaw.isOfKind ``jaxpr_line_in then
-          let atomsExprs ← atomsFromArgs lineRaw.getArgs
-          invars := invars ++ atomsExprs
-        else if lineRaw.isOfKind ``jaxpr_line_out then
-          let atomsExprs ← atomsFromArgs lineRaw.getArgs
-          outvars := outvars ++ atomsExprs
-        else if lineRaw.isOfKind ``jaxpr_line_let then
+          -- Structure: [in_token, null_node_with_atoms]
           let args := lineRaw.getArgs
           if args.size < 2 then
+            throwErrorAt line "expected atoms after 'in'"
+          let atomsExprs ← atomsFromArgs #[args[1]!]
+          invars := invars ++ atomsExprs
+        else if lineRaw.isOfKind ``jaxpr_line_out then
+          -- Structure: [out_token, null_node_with_atoms]
+          let args := lineRaw.getArgs
+          if args.size < 2 then
+            throwErrorAt line "expected atoms after 'out'"
+          let atomsExprs ← atomsFromArgs #[args[1]!]
+          outvars := outvars ++ atomsExprs
+        else if lineRaw.isOfKind ``jaxpr_line_let then
+          -- Structure: [let_token, jaxpr_var, :=_token, ident, null_node_with_atoms]
+          let args := lineRaw.getArgs
+          if args.size < 5 then
             throwErrorAt line "expected a JAXPR let line"
-          let outStx := args[0]!
-          let primStx := args[1]!
-          let rest := args.extract 2 args.size
+          let outStx := args[1]!     -- jaxpr_var (after "let")
+          let primStx := args[3]!    -- ident (after ":=")
+          let atomsNode := args[4]!  -- null node with atoms
           let outExpr ← varFromSyntax outStx
           let primExpr : Expr := toExpr primStx.getId.toString
-          let argExprs ← atomsFromArgs rest
+          let argExprs ← atomsFromArgs #[atomsNode]
           let argsList ← mkListLit (mkConst ``Atom) argExprs
           let eqnExpr := mkApp3 (mkConst ``Eqn.mk) outExpr primExpr argsList
           eqns := eqns.concat eqnExpr
